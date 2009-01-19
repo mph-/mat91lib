@@ -76,7 +76,8 @@ usb_cdc_connected_p (usb_cdc_t dev __UNUSED__)
 void
 usb_cdc_connect (usb_cdc_t dev __UNUSED__)
 {
-    // Connect pull-up, wait for configuration
+    /* Connect pull-up, wait for configuration.  This does nothing if the
+       pull-up is always connected.  */
     USBD_Connect ();
 }
 

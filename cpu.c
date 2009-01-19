@@ -16,7 +16,22 @@
 #define PLL_DELAY 0.9e-3
 #define PLL_COUNT (uint16_t) (PLL_DELAY * F_SLCK)
 
+
+#ifndef CPU_USB_DIV
+/* When using USB the PLL clock must be 48, 96, or 192 MHz.  
+   Assuming 96 MHz PLL clock then divide by 2 to get 48 MHz USB clock.  */
+#define CPU_USB_DIV 2
+#endif
+
+#if CPU_USB_DIV == 1
 #define USB_LOG2_DIV 0
+#elif CPU_USB_DIV == 2
+#define USB_LOG2_DIV 1
+#elif CPU_USB_DIV == 4
+#define USB_LOG2_DIV 2
+#else
+#error Unsupported divide ratio CPU_USB_DIV
+#endif
 
 
 /* The AT91 Flash is single plane so it is not possible
