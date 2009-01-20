@@ -160,7 +160,7 @@ const CDCDSerialDriverConfigurationDescriptors configurationDescriptors = {
         1, // This is configuration #1
         0, // No string descriptor for this configuration
         BOARD_USB_BMATTRIBUTES,
-        USBConfigurationDescriptor_POWER(100)
+        USBConfigurationDescriptor_POWER(500)
     },
     // Communication class interface standard descriptor
     {
