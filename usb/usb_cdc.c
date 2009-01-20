@@ -57,10 +57,9 @@ usb_cdc_init (char *tx_buffer, ring_size_t tx_size,
 
     CDCDSerialDriver_Initialize ();
 
+    /* Intialise ring buffers although these are not currently used.  */
     ring_init (&dev->tx_ring, tx_buffer, tx_size);
-    
     ring_init (&dev->rx_ring, rx_buffer, rx_size);
-
 
     return dev;
 }

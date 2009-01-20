@@ -66,6 +66,11 @@
 #define CDCDSerialDriverDescriptors_VENDORID        0x03EB
 /// Device release number.
 #define CDCDSerialDriverDescriptors_RELEASE         0x0100
+
+#ifndef BOARD_USB_CURRENT
+#define BOARD_USB_CURRENT 100
+#endif
+
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -160,7 +165,7 @@ const CDCDSerialDriverConfigurationDescriptors configurationDescriptors = {
         1, // This is configuration #1
         0, // No string descriptor for this configuration
         BOARD_USB_BMATTRIBUTES,
-        USBConfigurationDescriptor_POWER(500)
+        USBConfigurationDescriptor_POWER(BOARD_USB_CURRENT)
     },
     // Communication class interface standard descriptor
     {
@@ -272,7 +277,7 @@ const CDCDSerialDriverConfigurationDescriptors otherSpeedDescriptorsFS = {
         1, // This is configuration #1
         0, // No string descriptor for this configuration
         BOARD_USB_BMATTRIBUTES,
-        USBConfigurationDescriptor_POWER(100)
+        USBConfigurationDescriptor_POWER(BOARD_USB_CURRENT)
     },
     // Communication class interface standard descriptor
     {
@@ -376,7 +381,7 @@ const CDCDSerialDriverConfigurationDescriptors configurationDescriptorsHS = {
         1, // This is configuration #1
         0, // No string descriptor for this configuration
         BOARD_USB_BMATTRIBUTES,
-        USBConfigurationDescriptor_POWER(100)
+        USBConfigurationDescriptor_POWER(BOARD_USB_CURRENT)
     },
     // Communication class interface standard descriptor
     {
@@ -479,7 +484,7 @@ const CDCDSerialDriverConfigurationDescriptors otherSpeedDescriptorsHS = {
         1, // This is configuration #1
         0, // No string descriptor for this configuration
         BOARD_USB_BMATTRIBUTES,
-        USBConfigurationDescriptor_POWER(100)
+        USBConfigurationDescriptor_POWER(BOARD_USB_CURRENT)
     },
     // Communication class interface standard descriptor
     {
