@@ -1,0 +1,7 @@
+ADC_DIR = $(PERIPHERAL_DIR)/adc
+
+VPATH += $(ADC_DIR)
+INCLUDES += -I$(ADC_DIR)
+
+SRC += adc.c
+
