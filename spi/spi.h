@@ -195,4 +195,7 @@ extern spi_ret_t
 spi_transfer (spi_t spi, const void *txbuffer, void *rxbuffer, 
               spi_size_t len, bool terminate);
 
+extern void
+spi_multichannel_select (void);
+
 #endif
