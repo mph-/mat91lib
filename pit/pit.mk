@@ -1,0 +1,7 @@
+PIT_DIR = $(PERIPHERAL_DIR)/pit
+
+VPATH += $(PIT_DIR)
+INCLUDES += -I$(PIT_DIR)
+
+SRC += pit.c
+
