@@ -161,7 +161,7 @@ _times (void *tp __UNUSED__)
 
 
 int
-isatty (int fd)
+_isatty (int fd)
 {
     return (fd <= 2) ? 1 : 0;  /* one of stdin, stdout, stderr */
 }
