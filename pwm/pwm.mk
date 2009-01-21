@@ -1,0 +1,7 @@
+PWM_DIR = $(PERIPHERAL_DIR)/pwm
+
+VPATH += $(PWM_DIR)
+INCLUDES += -I$(PWM_DIR)
+
+SRC += pwm.c
+
