@@ -7,7 +7,7 @@
 #define MAT91LIB_H
 
 #include <stdint.h>
-//typedef uint8_t bool;
+typedef uint8_t bool;
 
 
 #ifndef BIT
