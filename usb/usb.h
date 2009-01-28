@@ -28,3 +28,23 @@ usb_connect (usb_t dev);
 
 extern usb_t 
 usb_init (void);
+
+
+extern bool
+usb_read_ready_p (usb_t usb);
+
+
+/* Read character.  */
+extern int8_t
+usb_getc (usb_t usb);
+
+
+/* Write character.  */
+extern int8_t
+usb_putc (usb_t usb, char ch);
+
+
+/* Write string.  This blocks until the string is buffered.  */
+extern int8_t
+usb_puts (usb_t usb, const char *str);
+

@@ -533,6 +533,22 @@ usb_read (usb_t usb, char *data, usb_size_t length)
 }
 
 
+bool
+usb_read_ready_p (usb_t usb)
+{
+    AT91PS_UDP pUDP = usb->pUDP;
+    uint32_t currentReceiveBank = usb->currentRcvBank;
+
+    if (! usb_configured_p (usb))
+        return 0;
+
+    if (! (pUDP->UDP_CSR[AT91C_EP_OUT] & currentReceiveBank))
+        return 0;
+    
+return pUDP->UDP_CSR[AT91C_EP_OUT] != 0;
+}
+
+
 usb_size_t
 usb_write (usb_t usb, const char *data, usb_size_t length)
 {
@@ -655,4 +671,39 @@ usb_init (void)
     usb->currentRcvBank = AT91C_UDP_RX_DATA_BK0;
 
     return usb;
+}
+
+
+
+/** Read character.  This blocks until the character can be read.  */
+int8_t
+usb_getc (usb_t usb)
+{
+    uint8_t ch;
+
+    usb_read (usb, &ch, sizeof (ch));
+    return ch;
+}
+
+
+/** Write character.  This blocks until the character can be
+    written.  */
+int8_t
+usb_putc (usb_t usb, char ch)
+{
+    if (ch == '\n')
+        usb_putc (usb, '\r');    
+
+    usb_write (usb, &ch, sizeof (ch));
+    return ch;
+}
+
+
+/** Write string.  This blocks until the string is buffered.  */
+int8_t
+usb_puts (usb_t usb, const char *str)
+{
+    while (*str)
+        usb_putc (usb, *str++);
+    return 1;
 }

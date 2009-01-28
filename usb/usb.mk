@@ -5,4 +5,3 @@ INCLUDES += -I$(USB_DIR)
 
 SRC += usb.c
 
-
