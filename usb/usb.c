@@ -42,9 +42,11 @@
    current configuration.  The device then enters the configured
    state.
 
-   
    Note for a full speed device D+ is pulled up while for a low speed device
    D- is pulled up.
+
+   This code should probably be split into a UDP hardware abstraction layer
+   plus a generic USB CDC driver.
 
    The default Vendor ID is Atmel's vendor ID 0x03EB.  The default
    product ID is 0x6124.  With these lsusb gives
@@ -245,10 +247,10 @@ typedef struct
     char bCharFormat;
     char bParityType;
     char bDataBits;
-} AT91S_CDC_LINE_CODING, *AT91PS_CDC_LINE_CODING;
+} USB_CDC_LINE_CODING;
 
 
-AT91S_CDC_LINE_CODING line =
+USB_CDC_LINE_CODING line =
 {
     115200, // baudrate
     0,      // 1 Stop Bit
@@ -303,7 +305,8 @@ usb_control_write (usb_t usb, const char *data, usb_size_t length)
 }
 
 
-void usb_control_write_zlp (usb_t usb)
+static void
+usb_control_write_zlp (usb_t usb)
 {
     AT91PS_UDP pUDP = usb->pUDP;
 
@@ -317,7 +320,8 @@ void usb_control_write_zlp (usb_t usb)
 }
 
 
-void usb_control_stall (usb_t usb)
+static void
+usb_control_stall (usb_t usb)
 {
     AT91PS_UDP pUDP = usb->pUDP;
 
