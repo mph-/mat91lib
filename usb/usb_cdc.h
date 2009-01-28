@@ -23,7 +23,7 @@ usb_cdc_init (char *tx_buffer, ring_size_t tx_size,
 
 
 extern bool 
-usb_cdc_connected_p (usb_cdc_t dev);
+usb_cdc_configured_p (usb_cdc_t dev);
 
 
 extern void

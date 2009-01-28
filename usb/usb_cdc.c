@@ -66,7 +66,7 @@ usb_cdc_init (char *tx_buffer, ring_size_t tx_size,
 
 
 bool 
-usb_cdc_connected_p (usb_cdc_t dev __UNUSED__)
+usb_cdc_configured_p (usb_cdc_t dev __UNUSED__)
 {
     return USBD_GetState () >= USBD_STATE_CONFIGURED;
 }
