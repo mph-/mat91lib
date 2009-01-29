@@ -7,8 +7,12 @@
 #define MAT91LIB_H
 
 #include <stdint.h>
+#ifndef _BOOL_DEFINED
+#define _BOOL_DEFINED
 typedef uint8_t bool;
-
+#define true 1
+#define false 0
+#endif
 
 #ifndef BIT
 #define BIT(X) (1U << (X))
