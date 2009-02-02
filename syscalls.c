@@ -10,22 +10,90 @@
 #include <unistd.h>
 
 
-static void (*stdio_putc) (int ch) = 0;
-static int (*stdio_getc) (void) = 0;
+static int
+stdio_write_block (void *stream, const char *buffer, int size);
+
+static int
+stdio_read_block (void *stream, char *buffer, int size);
+
+
+static void (*stdio_putc) (void *stream, int ch) = 0;
+static int (*stdio_getc) (void *stream) = 0;
+static int (*stdio_write) (void *stream, const char *buffer, int size) = stdio_write_block;
+static int (*stdio_read) (void *stream, char *buffer, int size) = stdio_read_block;
+static void *stdio_stream = 0;
+
+extern char _heap_start__;    /** Start of heap.  */
 
 
 void
-stdio_redirect (void (*putc1) (int ch), int (*getc1) (void))
+stdio_redirect (void (*putc1) (void *stream, int ch),
+                int (*getc1) (void *stream), void *stream)
 {
     stdio_putc = putc1;
     stdio_getc = getc1;
+    stdio_stream = stream;
+}
+
+
+void
+stdio_redirect_block (int (*write1) (void *stream, const char *buffer, int size),
+                      int (*read1) (void *stream, char *buffer, int size),
+                      void *stream)
+{
+    stdio_write = write1;
+    stdio_read = read1;
+    stdio_stream = stream;
+}
+
+
+/* Helper write routine if no block write exists.  */
+static int
+stdio_write_block (void *stream, const char *buffer, int size)
+{
+    int i;
+    
+    if (!stdio_putc)
+    {
+        errno = ENODEV;
+        return -1;
+    }
+
+    for (i = 0; i < size; i++)
+        stdio_putc (stream, *buffer++);
+
+    return size;
+}
+
+
+/* Helper read routine if no block read exists.  */
+static int
+stdio_read_block (void *stream, char *buffer, int size)
+{
+    int i;
+    
+    if (!stdio_getc)
+    {
+        errno = ENODEV;
+        return -1;
+    }
+
+    for (i = 0; i < size; i++)
+        *buffer++ = stdio_getc (stream);
+
+    return size;
 }
 
 
 int
-_read (int file __UNUSED__, char *ptr __UNUSED__, int len __UNUSED__)
+_read (int file __UNUSED__, char *buffer, int size)
 {
-    return -1;
+    if (!stdio_read)
+    {
+        errno = ENODEV;
+        return -1;
+    }
+    return stdio_read (stdio_stream, buffer, size);
 }
 
 
@@ -39,13 +107,12 @@ _lseek (int file __UNUSED__, int ptr __UNUSED__, int dir __UNUSED__)
 int
 _write (int file __UNUSED__, char *buffer, int size)
 {
-    int i;
-    
-    for (i = 0; i < size; i++)
-        if (stdio_putc)
-            stdio_putc (*buffer++);
-
-    return size;
+    if (!stdio_write)
+    {
+        errno = ENODEV;
+        return -1;
+    }
+    return stdio_write (stdio_stream, buffer, size);
 }
 
 
