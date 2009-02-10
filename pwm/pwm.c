@@ -101,7 +101,7 @@ pwm_enable (pwm_channel_t channel)
     switch (channel)
     {
 #ifdef PWM0_BIT
-    case 0:
+    case PWM_CHANNEL_0:
 #if PWM0_BIT == 0
         AT91C_BASE_PIOA->PIO_ASR = AT91C_PA0_PWM0;
         AT91C_BASE_PIOA->PIO_PDR = AT91C_PA0_PWM0;
@@ -116,7 +116,7 @@ pwm_enable (pwm_channel_t channel)
 #endif
 
 #ifdef PWM1_BIT
-    case 1:
+    case PWM_CHANNEL_1:
 #if PWM1_BIT == 1
         AT91C_BASE_PIOA->PIO_ASR = AT91C_PA1_PWM1;
         AT91C_BASE_PIOA->PIO_PDR = AT91C_PA1_PWM1;
@@ -131,7 +131,7 @@ pwm_enable (pwm_channel_t channel)
 #endif
 
 #ifdef PWM2_BIT
-    case 2:
+    case PWM_CHANNEL_2:
 #if PWM2_BIT == 2
         AT91C_BASE_PIOA->PIO_ASR = AT91C_PA2_PWM2;
         AT91C_BASE_PIOA->PIO_PDR = AT91C_PA2_PWM2;
@@ -146,7 +146,7 @@ pwm_enable (pwm_channel_t channel)
 #endif
 
 #ifdef PWM3_BIT
-    case 3:
+    case PWM_CHANNEL_3:
 #if PWM3_BIT == 7
         AT91C_BASE_PIOA->PIO_BSR = AT91C_PA7_PWM3;
         AT91C_BASE_PIOA->PIO_PDR = AT91C_PA7_PWM3;
