@@ -502,13 +502,15 @@ usb_enumerate (usb_t usb)
 
 
 usb_size_t
-usb_read (usb_t usb, char *data, usb_size_t length)
+usb_read (usb_t usb, void *buffer, usb_size_t length)
 {
     AT91PS_UDP pUDP = usb->pUDP;
     uint32_t packetSize;
     uint32_t nbBytesRcv = 0;
     uint32_t currentReceiveBank = usb->currentRcvBank;
+    uint8_t *data;
 
+    data = buffer;
     while (length)
     {
         if (! usb_configured_p (usb))
@@ -554,10 +556,13 @@ return pUDP->UDP_CSR[AT91C_EP_OUT] != 0;
 
 
 usb_size_t
-usb_write (usb_t usb, const char *data, usb_size_t length)
+usb_write (usb_t usb, const void *buffer, usb_size_t length)
 {
     AT91PS_UDP pUDP = usb->pUDP;
     usb_size_t cpt = 0;
+    const uint8_t *data;
+
+    data = buffer;
 
     // Send the first packet
     cpt = MIN (length, AT91C_EP_IN_SIZE);

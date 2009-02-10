@@ -15,10 +15,10 @@ typedef uint16_t usb_size_t;
 
 
 extern usb_size_t
-usb_write (usb_t usb, const char *data, usb_size_t length);
+usb_write (usb_t usb, const void *buffer, usb_size_t length);
 
 extern usb_size_t
-usb_read (usb_t usb, char *data, usb_size_t length);
+usb_read (usb_t usb, void *buffer, usb_size_t length);
 
 extern bool
 usb_configured_p (usb_t dev);
