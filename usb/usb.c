@@ -90,10 +90,11 @@
 #define LOW_BYTE(v) ((v) & 0xff)
 #endif
 
-#define AT91C_EP_OUT 1
-#define AT91C_EP_OUT_SIZE 0x40
-#define AT91C_EP_IN  2
-#define AT91C_EP_IN_SIZE 0x40
+
+/* IN and OUT are referred to the host so we transmit on the IN endpoint
+   and receive on the OUT endpoint.  */
+enum {AT91C_EP_OUT = 1, AT91C_EP_IN = 2};
+enum {AT91C_EP_OUT_SIZE = 64, AT91C_EP_IN_SIZE = 64};
 
 
 static const char devDescriptor[] =
@@ -372,19 +373,22 @@ usb_enumerate (usb_t usb)
     while ((pUDP->UDP_CSR[0]  & AT91C_UDP_RXSETUP))
         continue;
 
-    // Handle supported standard device request Cf Table 9-3 in USB
-    // specification Rev 1.1
     switch ((request << 8) | request_type) 
     {
     case STD_GET_DESCRIPTOR:
-        if (value == 0x100)       // Return Device Descriptor
+        switch (value)
+        {
+        case 0x100:             // Return Device Descriptor
             usb_control_write (usb, devDescriptor, 
                                MIN (sizeof (devDescriptor), length));
-        else if (value == 0x200)  // Return Configuration Descriptor
+            break;
+        case 0x200:             // Return Configuration Descriptor
             usb_control_write (usb, cfgDescriptor, 
                                MIN (sizeof (cfgDescriptor), length));
-        else
+            break;
+        default:
             usb_control_stall (usb);
+        }
         break;
 
     case STD_SET_ADDRESS:
@@ -394,17 +398,18 @@ usb_enumerate (usb_t usb)
         break;
 
     case STD_SET_CONFIGURATION:
-        usb->currentConfiguration = value;
+        usb->configured = value;
         usb_control_write_zlp (usb);
         pUDP->UDP_GLBSTATE  = (value) ? AT91C_UDP_CONFG : AT91C_UDP_FADDEN;
+
         pUDP->UDP_CSR[1] = (value) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT) : 0;
         pUDP->UDP_CSR[2] = (value) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN)  : 0;
         pUDP->UDP_CSR[3] = (value) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_ISO_IN)   : 0;
         break;
 
     case STD_GET_CONFIGURATION:
-        usb_control_write (usb, (char *) &usb->currentConfiguration,
-                           sizeof (usb->currentConfiguration));
+        usb_control_write (usb, (char *) &usb->configured,
+                           sizeof (usb->configured));
         break;
 
     case STD_GET_STATUS_ZERO:
@@ -465,13 +470,19 @@ usb_enumerate (usb_t usb)
         index &= 0x0F;
         if ((value == 0) && index && (index <= 3)) 
         {
-            if (index == 1)
+            /* Configure and enable selected endpoint.  */
+            switch (index)
+            {
+            case 1:
                 pUDP->UDP_CSR[1] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT);
-            else if (index == 2)
+                break;
+            case 2:
                 pUDP->UDP_CSR[2] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN);
-            else if (index == 3)
+                break;
+            case 3:
                 pUDP->UDP_CSR[3] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_ISO_IN);
-
+                break;
+            }
             usb_control_write_zlp (usb);
         }
         else
@@ -490,7 +501,7 @@ usb_enumerate (usb_t usb)
         break;
 
     case SET_CONTROL_LINE_STATE:
-        usb->currentConnection = value;
+        usb->connection = value;
         usb_control_write_zlp (usb);
         break;
 
@@ -505,37 +516,55 @@ usb_size_t
 usb_read (usb_t usb, void *buffer, usb_size_t length)
 {
     AT91PS_UDP pUDP = usb->pUDP;
-    uint32_t packetSize;
-    uint32_t nbBytesRcv = 0;
-    uint32_t currentReceiveBank = usb->currentRcvBank;
+    uint32_t bytes_read;
+    uint32_t total;
+    uint32_t rx_bank = usb->rx_bank;
     uint8_t *data;
 
     data = buffer;
+    total = 0;
+
     while (length)
     {
+        if (usb->rx_bytes)
+        {
+            bytes_read = MIN (usb->rx_bytes, length);
+            length -= bytes_read;
+            usb->rx_bytes -= bytes_read;
+
+            /* Transfer data from FIFO.  */
+            while (bytes_read--)
+                data[total++] = pUDP->UDP_FDR[AT91C_EP_OUT];
+
+            if (!usb->rx_bytes)
+            {
+                /* Indicate finished reading current bank.  */
+                pUDP->UDP_CSR[AT91C_EP_OUT] &= ~rx_bank;
+                
+                /* Switch to other bank.  */
+                if (rx_bank == AT91C_UDP_RX_DATA_BK0)
+                    rx_bank = AT91C_UDP_RX_DATA_BK1;
+                else
+                    rx_bank = AT91C_UDP_RX_DATA_BK0;
+            }
+        }
+
+        if (!length)
+            break;
+
         if (! usb_configured_p (usb))
             break;
 
-        if (pUDP->UDP_CSR[AT91C_EP_OUT] & currentReceiveBank) 
+        if (pUDP->UDP_CSR[AT91C_EP_OUT] & rx_bank) 
         {
-            packetSize = MIN (pUDP->UDP_CSR[AT91C_EP_OUT] >> 16, length);
-            length -= packetSize;
-            if (packetSize < AT91C_EP_OUT_SIZE)
-                length = 0;
-
-            while (packetSize--)
-                data[nbBytesRcv++] = pUDP->UDP_FDR[AT91C_EP_OUT];
-
-            pUDP->UDP_CSR[AT91C_EP_OUT] &= ~currentReceiveBank;
-
-            if (currentReceiveBank == AT91C_UDP_RX_DATA_BK0)
-                currentReceiveBank = AT91C_UDP_RX_DATA_BK1;
-            else
-                currentReceiveBank = AT91C_UDP_RX_DATA_BK0;
+            /* It appears that the received byte count is not
+               decremented after reads from the FIFO so we keep out
+               own count.  */
+            usb->rx_bytes = pUDP->UDP_CSR[AT91C_EP_OUT] >> 16;
         }
     }
-    usb->currentRcvBank = currentReceiveBank;
-    return nbBytesRcv;
+    usb->rx_bank = rx_bank;
+    return total;
 }
 
 
@@ -543,15 +572,18 @@ bool
 usb_read_ready_p (usb_t usb)
 {
     AT91PS_UDP pUDP = usb->pUDP;
-    uint32_t currentReceiveBank = usb->currentRcvBank;
+    uint32_t rx_bank = usb->rx_bank;
+
+    if (usb->rx_bytes)
+        return 1;
 
     if (! usb_configured_p (usb))
         return 0;
 
-    if (! (pUDP->UDP_CSR[AT91C_EP_OUT] & currentReceiveBank))
+    if (! (pUDP->UDP_CSR[AT91C_EP_OUT] & rx_bank))
         return 0;
     
-return pUDP->UDP_CSR[AT91C_EP_OUT] != 0;
+    return (pUDP->UDP_CSR[AT91C_EP_OUT] >> 16) != 0;
 }
 
 
@@ -623,7 +655,7 @@ usb_configured_p (usb_t usb)
         pUDP->UDP_FADDR = AT91C_UDP_FEN;
         // Configure endpoint 0
         pUDP->UDP_CSR[0] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_CTRL);
-        usb->currentConfiguration = 0;
+        usb->configured = 0;
     }
     else if (isr & AT91C_UDP_EPINT0)
     {
@@ -634,7 +666,7 @@ usb_configured_p (usb_t usb)
         usb_enumerate (usb);
     }
 
-    return usb->currentConfiguration;
+    return usb->configured;
 }
 
 
@@ -675,9 +707,10 @@ usb_init (void)
     usb_connect (usb);
 
     usb->pUDP = AT91C_BASE_UDP;
-    usb->currentConfiguration = 0;
-    usb->currentConnection = 0;
-    usb->currentRcvBank = AT91C_UDP_RX_DATA_BK0;
+    usb->configured = 0;
+    usb->connection = 0;
+    usb->rx_bytes = 0;
+    usb->rx_bank = AT91C_UDP_RX_DATA_BK0;
 
     return usb;
 }

@@ -4,9 +4,10 @@
 typedef struct usb_struct
 {
     AT91PS_UDP pUDP;
-    unsigned char currentConfiguration;
-    unsigned char currentConnection;
-    unsigned int  currentRcvBank;
+    uint32_t rx_bank;
+    uint16_t rx_bytes;
+    uint8_t connection;
+    bool configured;
 } usb_dev_t;
 
 typedef usb_dev_t *usb_t;
