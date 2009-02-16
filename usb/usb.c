@@ -516,8 +516,8 @@ usb_size_t
 usb_read (usb_t usb, void *buffer, usb_size_t length)
 {
     AT91PS_UDP pUDP = usb->pUDP;
-    uint32_t bytes_read;
-    uint32_t total;
+    unsigned int rx_bytes;
+    unsigned int total;
     uint32_t rx_bank = usb->rx_bank;
     uint8_t *data;
 
@@ -528,12 +528,12 @@ usb_read (usb_t usb, void *buffer, usb_size_t length)
     {
         if (usb->rx_bytes)
         {
-            bytes_read = MIN (usb->rx_bytes, length);
-            length -= bytes_read;
-            usb->rx_bytes -= bytes_read;
+            rx_bytes = MIN (usb->rx_bytes, length);
+            length -= rx_bytes;
+            usb->rx_bytes -= rx_bytes;
 
             /* Transfer data from FIFO.  */
-            while (bytes_read--)
+            while (rx_bytes--)
                 data[total++] = pUDP->UDP_FDR[AT91C_EP_OUT];
 
             if (!usb->rx_bytes)
@@ -591,16 +591,21 @@ usb_size_t
 usb_write (usb_t usb, const void *buffer, usb_size_t length)
 {
     AT91PS_UDP pUDP = usb->pUDP;
-    usb_size_t cpt = 0;
+    unsigned int tx_bytes = 0;
+    unsigned int total;
     const uint8_t *data;
 
+    if (! usb_configured_p (usb))
+        return 0;
+
     data = buffer;
+    total = 0;
 
-    // Send the first packet
-    cpt = MIN (length, AT91C_EP_IN_SIZE);
-    length -= cpt;
+    tx_bytes = MIN (length, AT91C_EP_IN_SIZE);
+    length -= tx_bytes;
+    total += tx_bytes;
 
-    while (cpt--) 
+    while (tx_bytes--) 
         pUDP->UDP_FDR[AT91C_EP_IN] = *data++;
 
     pUDP->UDP_CSR[AT91C_EP_IN] |= AT91C_UDP_TXPKTRDY;
@@ -608,15 +613,16 @@ usb_write (usb_t usb, const void *buffer, usb_size_t length)
     while (length)
     {
         // Fill the second bank
-        cpt = MIN (length, AT91C_EP_IN_SIZE);
-        length -= cpt;
-        while (cpt--)
+        tx_bytes = MIN (length, AT91C_EP_IN_SIZE);
+        total += tx_bytes;
+        length -= tx_bytes;
+        while (tx_bytes--)
             pUDP->UDP_FDR[AT91C_EP_IN] = *data++;
 
         // Wait for the the first bank to be sent
         while (! (pUDP->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP))
             if (! usb_configured_p (usb))
-                return length;
+                return total;
 
         pUDP->UDP_CSR[AT91C_EP_IN] &= ~AT91C_UDP_TXCOMP;
         while (pUDP->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP);
@@ -626,13 +632,13 @@ usb_write (usb_t usb, const void *buffer, usb_size_t length)
     // Wait for the end of transfer
     while (! (pUDP->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP))
         if (! usb_configured_p (usb))
-            return length;
+            return total;
 
     pUDP->UDP_CSR[AT91C_EP_IN] &= ~AT91C_UDP_TXCOMP;
     while (pUDP->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP)
         continue;
 
-    return length;
+    return total;
 }
 
 
