@@ -44,6 +44,20 @@
 */
 
 
+/* Number of independent SPI controllers.  */
+#ifdef AT91C_BASE_SPI1
+#define SPI_CONTROLLERS_NUM 2
+#else
+#define SPI_CONTROLLERS_NUM 1
+#endif
+
+
+/* Number of channels per controller.  */
+#define SPI_CHANNELS_NUM 4
+
+
+/* Currently the maximum of SPI devices is 32 due to the size
+   of the mask used for recording active devices.  */
 #ifndef SPI_DEVICES_NUM
 #define SPI_DEVICES_NUM 1
 #endif
@@ -65,14 +79,40 @@ enum
 
 /* Macros.  */
 
+#ifndef AT91C_BASE_SPI0
+#define AT91C_BASE_SPI0 AT91C_BASE_SPI
+#endif
+
+#ifndef AT91C_BASE_SPI1
+#define AT91C_BASE_SPI1 0
+#endif
+
+
+#define SPI_BASE_GET(channel) (((channel) < SPI_CHANNELS_NUM) ? AT91C_BASE_SPI0 : AT91C_BASE_SPI1)
+
+#define SPI_CHANNEL_MASK(channel) (0x0f ^ BIT (channel & (SPI_CHANNELS_NUM - 1)))
+
+
+/* Macros for behind the scenes manipulation of the SPI peripheral.  These
+   should not be used for normal use.  */
+#ifdef HOSTED
+#define SPI_READY_P(BASE) (HOSTED || ((BASE)->SPI_SR & AT91C_SPI_RDRF))
+#else
+#define SPI_READY_P(BASE) ((BASE)->SPI_SR & AT91C_SPI_RDRF)
+#endif
+
+#define SPI_TXEMPTY_P(BASE) ((BASE)->SPI_SR & AT91C_SPI_TXEMPTY)
+
+/* Set lastxfer bit for use in fixed mode.  */
+#define SPI_LASTXFER(BASE) ((BASE)->SPI_CR = AT91C_SPI_LASTXFER)
+
+
 
 /* Read SPI and then send new data.  Blocks while the new data is
    being sent by the spi.  */
-#define SPI_XFER(txdata, rxdata)                                        \
+#define SPI_XFER(pSPI, txdata, rxdata)                                  \
     do                                                                  \
     {                                                                   \
-        AT91S_SPI *pSPI = AT91C_BASE_SPI;                               \
-                                                                        \
         /* Dummy read from RDR to ensure RDRF clear.   */               \
         (rxdata) = pSPI->SPI_RDR;                                       \
                                                                         \
@@ -80,7 +120,7 @@ enum
         pSPI->SPI_TDR = (txdata);                                       \
                                                                         \
         /* Wait until spi port finishes transmitting/receiving.  */     \
-        while (!SPI_READY_P())                                          \
+        while (!SPI_READY_P(pSPI))                                          \
             continue;                                                   \
                                                                         \
         /* Read new data from RDR (this clears RDRF).  */               \
@@ -98,14 +138,18 @@ static uint32_t spi_devices_enabled = 0;
 static inline uint32_t
 spi_channel_csr_get (spi_channel_t channel)
 {
-    return AT91C_BASE_SPI->SPI_CSR[channel];
+    AT91S_SPI *pSPI = SPI_BASE_GET (channel);
+
+    return pSPI->SPI_CSR[channel & (SPI_CHANNELS_NUM - 1)];
 }
 
 
 static inline void
 spi_channel_csr_set (spi_channel_t channel, uint32_t csr)
 {
-    AT91C_BASE_SPI->SPI_CSR[channel] = csr;
+    AT91S_SPI *pSPI = SPI_BASE_GET (channel);
+
+    pSPI->SPI_CSR[channel & (SPI_CHANNELS_NUM - 1)] = csr;
 }
 
 
@@ -250,144 +294,102 @@ spi_channel_cs_mode_set (spi_channel_t channel, spi_cs_mode_t mode)
 }
 
 
-static bool
-spi_channel_cs_enable (spi_channel_t channel, port_mask_t bitmask)
+enum {PERIPH_A = 0, PERIPH_B};
+
+typedef struct spi_cs_struct
 {
-    switch (channel)
+    uint8_t channel;
+    port_cfg_t port;
+    uint8_t periph;
+} spi_cs_t;
+
+
+#define SPI_CS(CHANNEL, PORT, PORTBIT, PERIPH) \
+ {(CHANNEL), PORT_CFG (PORT, PORTBIT), (PERIPH)}
+
+
+#if SPI_CONTROLLERS_NUM == 2
+/* AT91SAM7X  */
+static const spi_cs_t spi_cs[] = 
+{
+    SPI_CS (0, PORT_A, 21, PERIPH_B),
+    SPI_CS (1, PORT_A, 25, PERIPH_B),
+    SPI_CS (2, PORT_A, 26, PERIPH_B),
+    SPI_CS (3, PORT_A, 29, PERIPH_B),
+    SPI_CS (1, PORT_B, 10, PERIPH_B),
+    SPI_CS (2, PORT_B, 11, PERIPH_B),
+    SPI_CS (3, PORT_B, 16, PERIPH_B),
+};
+
+#define SPI0_PINS (AT91C_PA17_MOSI0 | AT91C_PA16_MISO0 | AT91C_PA18_SPCK0)
+#define SPI1_PINS (AT91C_PA23_MOSI1 | AT91C_PA24_MISO1 | AT91C_PA22_SPCK1)
+
+#else
+/* AT91SAM7S  */
+static const spi_cs_t spi_cs[] = 
+{
+    SPI_CS (0, PORT_A, 11, PERIPH_A),
+    SPI_CS (1, PORT_A, 9, PERIPH_B),
+    SPI_CS (1, PORT_A, 31, PERIPH_A),
+    SPI_CS (2, PORT_A, 10, PERIPH_B),
+    SPI_CS (2, PORT_A, 30, PERIPH_B),
+    SPI_CS (3, PORT_A, 3, PERIPH_B),
+    SPI_CS (3, PORT_A, 5, PERIPH_B),
+    SPI_CS (3, PORT_A, 22, PERIPH_B)
+};
+
+#define SPI0_PINS (AT91C_PA13_MOSI | AT91C_PA12_MISO | AT91C_PA14_SPCK)
+
+#endif
+
+
+
+#define SPI_CS_NUM ARRAY_SIZE (spi_cs)
+
+
+static bool
+spi_channel_cs_enable (spi_channel_t channel, port_cfg_t *port_cfg)
+{
+    unsigned int i;
+
+    for (i = 0; i < SPI_CS_NUM; i++)
     {
-    case 0:
-        if (bitmask == BIT (11))
+        if (channel == spi_cs[i].channel
+            && port_cfg->port == spi_cs[i].port.port
+            && port_cfg->bitmask == spi_cs[i].port.bitmask)
         {
-            *AT91C_PIOA_ASR = AT91C_PA11_NPCS0;
-            *AT91C_PIOA_PDR = AT91C_PA11_NPCS0;
+            *AT91C_PIOA_PDR = port_cfg->bitmask;
+            if (spi_cs[i].periph == PERIPH_A)
+                *AT91C_PIOA_ASR = port_cfg->bitmask;
+            else
+                *AT91C_PIOA_BSR = port_cfg->bitmask;
             return 1;
         }
-        break;
-
-    case 1:
-        if (bitmask == BIT (9))
-        {
-            *AT91C_PIOA_BSR = AT91C_PA9_NPCS1;
-            *AT91C_PIOA_PDR = AT91C_PA9_NPCS1;
-            return 1;
-        }
-        else if (bitmask == BIT (31))
-        {
-            *AT91C_PIOA_ASR = AT91C_PA31_NPCS1;
-            *AT91C_PIOA_PDR = AT91C_PA31_NPCS1;
-            return 1;
-        }
-        break;
-
-    case 2:
-        if (bitmask == BIT (10))
-        {
-            *AT91C_PIOA_BSR = AT91C_PA10_NPCS2;
-            *AT91C_PIOA_PDR = AT91C_PA10_NPCS2;
-            return 1;
-        }
-        else if (bitmask == BIT (30))
-        {
-            *AT91C_PIOA_BSR = AT91C_PA30_NPCS2;
-            *AT91C_PIOA_PDR = AT91C_PA30_NPCS2;
-            return 1;
-        }
-        break;
-
-    case 3:
-        if (bitmask == BIT (3))
-        {
-            *AT91C_PIOA_BSR = AT91C_PA3_NPCS3;
-            *AT91C_PIOA_PDR = AT91C_PA3_NPCS3;
-            return 1;
-        }
-        else if (bitmask == BIT (5))        
-        {
-            *AT91C_PIOA_BSR = AT91C_PA5_NPCS3;
-            *AT91C_PIOA_PDR = AT91C_PA5_NPCS3;
-            return 1;
-        }
-        else if (bitmask == BIT (22))        
-        {
-            *AT91C_PIOA_BSR = AT91C_PA22_NPCS3;
-            *AT91C_PIOA_PDR = AT91C_PA22_NPCS3;
-            return 1;
-        }
-        break;
-
-    default:
-        break;
     }
     return 0;
 }
 
 
 static bool
-spi_channel_cs_disable (spi_channel_t channel, port_mask_t bitmask)
+spi_channel_cs_disable (spi_channel_t channel, port_cfg_t *port_cfg)
 {
     /* Disable the NPCSx signals from being asserted by reassigning them
        as GPIO.  */
 
-    switch (channel)
+    unsigned int i;
+
+    for (i = 0; i < SPI_CS_NUM; i++)
     {
-    case 0:
-        if (bitmask == BIT (11))
+        if (channel == spi_cs[i].channel
+            && port_cfg->port == spi_cs[i].port.port
+            && port_cfg->bitmask == spi_cs[i].port.bitmask)
         {
-            *AT91C_PIOA_PER = AT91C_PA11_NPCS0;
+            *AT91C_PIOA_PER = port_cfg->bitmask;
             return 1;
         }
-        break;
-
-    case 1:
-        if (bitmask == BIT (9))
-        {
-            *AT91C_PIOA_PER = AT91C_PA9_NPCS1;
-            return 1;
-        }
-        else if (bitmask == BIT (31))
-        {
-            *AT91C_PIOA_PER = AT91C_PA31_NPCS1;
-            return 1;
-        }
-        break;
-
-    case 2:
-        if (bitmask == BIT (10))
-        {
-            *AT91C_PIOA_PER = AT91C_PA10_NPCS2;
-            return 1;
-        }
-        else if (bitmask == BIT (30))
-        {
-            *AT91C_PIOA_PER = AT91C_PA30_NPCS2;
-            return 1;
-        }
-        break;
-
-    case 3:
-        if (bitmask == BIT (3))
-        {
-            *AT91C_PIOA_PER = AT91C_PA3_NPCS3;
-            return 1;
-        }
-        else if (bitmask == BIT (5))        
-        {
-            *AT91C_PIOA_PER = AT91C_PA5_NPCS3;
-            return 1;
-        }
-        else if (bitmask == BIT (22))        
-        {
-            *AT91C_PIOA_PER = AT91C_PA22_NPCS3;
-            return 1;
-        }
-        break;
-
-    default:
-        break;
     }
     return 0;
 }
-
 
 
 void
@@ -420,31 +422,29 @@ spi_bits_set (spi_t spi, uint8_t bits)
 
 /* This performs a software reset.  It puts the peripheral in slave mode.  */
 void
-spi_reset (void)
+spi_reset (spi_t spi)
 {
-    AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SWRST;
-}
+    AT91S_SPI *pSPI = SPI_BASE_GET (spi->channel);
 
-
-static void
-spi_lastxfer (void)
-{
-    /* Set lastxfer bit for use in fixed mode.  */
-    AT91C_BASE_SPI->SPI_CR = AT91C_SPI_LASTXFER;
+    pSPI->SPI_CR = AT91C_SPI_SWRST;
 }
 
 
 void
-spi_enable (void)
+spi_enable (spi_t spi)
 {
-    AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIEN;
+    AT91S_SPI *pSPI = SPI_BASE_GET (spi->channel);
+
+    pSPI->SPI_CR = AT91C_SPI_SPIEN;
 }
 
 
 void 
-spi_disable (void)
+spi_disable (spi_t spi)
 {
-    AT91C_BASE_SPI->SPI_CR = AT91C_SPI_SPIDIS;
+    AT91S_SPI *pSPI = SPI_BASE_GET (spi->channel);
+
+    pSPI->SPI_CR = AT91C_SPI_SPIDIS;
 }
 
 
@@ -462,19 +462,11 @@ spi_cs_mode_set (spi_t spi, spi_cs_mode_t mode)
 }
 
 
-/** Enable variable peripheral select.  */
-void
-spi_multichannel_select (void)
-{
-    AT91C_BASE_SPI->SPI_MR |= AT91C_SPI_PS_VARIABLE;
-}
-
-
 /** Enable fixed peripheral select and use specified channel.  */
-void
+static void
 spi_channel_select (spi_channel_t channel)
 {
-    AT91S_SPI *pSPI = AT91C_BASE_SPI;
+    AT91S_SPI *pSPI = SPI_BASE_GET (channel);
 
     pSPI->SPI_MR &= ~AT91C_SPI_PS_VARIABLE;
 
@@ -482,18 +474,10 @@ spi_channel_select (spi_channel_t channel)
 }
 
 
-/** Enable fixed peripheral select and use specified channel.  */
-static void
-spi_channel_deselect (void)
-{
-    BITS_INSERT (AT91C_BASE_SPI->SPI_MR, 0x0f, 16, 19);
-}
-
-
 bool
 spi_cs_enable (spi_t spi)
 {
-    spi->cs_auto = spi_channel_cs_enable (spi->channel, spi->cs.bitmask);
+    spi->cs_auto = spi_channel_cs_enable (spi->channel, &spi->cs);
     return spi->cs_auto;
 }
 
@@ -502,7 +486,7 @@ bool
 spi_cs_disable (spi_t spi)
 {
     spi->cs_auto = 0;
-    return spi_channel_cs_disable (spi->channel, spi->cs.bitmask);
+    return spi_channel_cs_disable (spi->channel, &spi->cs);
 }
 
 
@@ -584,6 +568,7 @@ spi_wakeup (spi_t spi)
 {
     uint8_t dev_num;
     bool wakeup;
+    AT91S_SPI *pSPI = SPI_BASE_GET (spi->channel);
 
     dev_num = spi - spi_devices;
 
@@ -597,30 +582,36 @@ spi_wakeup (spi_t spi)
     if (!wakeup)
         return;
 
-    /* Configure PIO for MISO, MOSI, SPCK, NPCS[3:0] (chip selects).
-       There is a choice of which pins to use for some of these signals:
-       MISO  PA12(A)
-       MOSI  PA13(A)
-       SPCK  PA14(A)
-       NPCS0 PA11(A)
-       NPCS1 PA9(B)  PA31(A)
-       NPCS2 PA10(B) PA30(B)
-       NPCS3 PA3(B)  PA5(B)  PA22(B)
-    */
-
-    *AT91C_PIOA_ASR = AT91C_PA13_MOSI | AT91C_PA12_MISO | AT91C_PA14_SPCK; 
+    /* Configure PIO for MISO, MOSI, SPCK.    */
+#if SPI_CONTROLLERS_NUM == 2
+    *AT91C_PIOA_ASR = SPI0_PINS;
+    *AT91C_PIOB_ASR = SPI1_PINS;
 
     /* Disable pins as GPIO.  */
-    *AT91C_PIOA_PDR = AT91C_PA13_MOSI | AT91C_PA12_MISO | AT91C_PA14_SPCK;
+    *AT91C_PIOA_PDR = SPI0_PINS;
+    *AT91C_PIOB_PDR = SPI1_PINS;
 
     /* Disable pullups.  */
-    *AT91C_PIOA_PPUDR = AT91C_PA13_MOSI | AT91C_PA12_MISO | AT91C_PA14_SPCK;
+    *AT91C_PIOA_PPUDR = SPI0_PINS;
+    *AT91C_PIOB_PPUDR = SPI1_PINS;
+
+    /* Enable SPI peripheral clocks.  */
+    AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_SPI0) | BIT (AT91C_ID_SPI1);
+#else
+    *AT91C_PIOA_ASR = SPI0_PINS;
+
+    /* Disable pins as GPIO.  */
+    *AT91C_PIOA_PDR = SPI0_PINS;
+
+    /* Disable pullups.  */
+    *AT91C_PIOA_PPUDR = SPI0_PINS;
 
     /* Enable SPI peripheral clock.  */
     AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_SPI);
-
+#endif
+   
     /* Reset the SPI (it is possible to reset the SPI even if disabled).  */
-    spi_reset ();
+    spi_reset (spi);
 
     /* Desire PS = 0 (fixed peripheral select)
        PCSDEC = 0 (no decoding of chip selects)
@@ -629,9 +620,9 @@ spi_wakeup (spi_t spi)
        CSAAT = 0 (chip select rises after transmission)
     */
 
-    AT91C_BASE_SPI->SPI_MR = AT91C_SPI_MSTR + AT91C_SPI_MODFDIS;
+    pSPI->SPI_MR = AT91C_SPI_MSTR + AT91C_SPI_MODFDIS;
 
-    spi_enable ();
+    spi_enable (spi);
 }
 
 
@@ -652,39 +643,53 @@ spi_shutdown (spi_t spi)
     if (spi_devices_enabled)
         return;
             
-    spi_disable ();
+    spi_disable (spi);
 
-    /* Make SPI pins GPIO.  */
-    *AT91C_PIOA_PER = AT91C_PA13_MOSI | AT91C_PA14_SPCK;
 
-    /* Disable pullups (they should be disabled anyway).  */
-    *AT91C_PIOA_PPUDR = AT91C_PA13_MOSI | AT91C_PA12_MISO | AT91C_PA14_SPCK;
+#if SPI_CONTROLLERS_NUM == 2
+    /* Enable pins as GPIO.  */
+    *AT91C_PIOA_PER = SPI0_PINS;
+    *AT91C_PIOB_PER = SPI1_PINS;
 
     /* Force lines low to prevent powering devices.  */
-    *AT91C_PIOA_CODR = AT91C_PA13_MOSI | AT91C_PA14_SPCK;
+    *AT91C_PIOA_CODR = SPI0_PINS;
+    *AT91C_PIOB_CODR = SPI1_PINS;
+
+    /* Disable SPI peripheral clocks.  */
+    AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_SPI0) | BIT (AT91C_ID_SPI1);
+#else
+    /* Enable pins as GPIO.  */
+    *AT91C_PIOA_PER = SPI0_PINS;
+
+    /* Disable pullups.  */
+    *AT91C_PIOA_PPUDR = SPI0_PINS;
+
+    /* Force lines low to prevent powering devices.  */
+    *AT91C_PIOA_CODR = SPI0_PINS;
 
     /* Disable SPI peripheral clock.  */
     AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_SPI);
+#endif
 }
 
 
 /* Return non-zero if there is a character ready to be read.  */
 bool
-spi_read_ready_p (spi_t spi __UNUSED__)
+spi_read_ready_p (spi_t spi)
 {
 #if HOSTED
     return 1;
 #else
-    return SPI_READY_P ();
+    return SPI_READY_P (SPI_BASE_GET (spi->channel));
 #endif
 }
 
 
 /* Return non-zero if a character can be written without blocking.  */
 bool
-spi_write_ready_p (spi_t spi __UNUSED__)
+spi_write_ready_p (spi_t spi)
 {
-    return SPI_READY_P ();
+    return SPI_READY_P (SPI_BASE_GET (spi->channel));
 }
 
 
@@ -693,10 +698,11 @@ uint8_t
 spi_xferc (spi_t spi, char ch)
 {
     uint8_t rxdata;
+    AT91S_SPI *pSPI = SPI_BASE_GET (spi->channel);
 
     spi_config (spi);
     spi_cs_assert (spi);
-    SPI_XFER (ch, rxdata);
+    SPI_XFER (pSPI, ch, rxdata);
     spi_cs_negate (spi);
 
     return rxdata;
@@ -726,6 +732,7 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
     spi_size_t i;
     const uint8_t *txdata = txbuffer;
     uint8_t *rxdata = rxbuffer;
+    AT91S_SPI *pSPI = SPI_BASE_GET (spi->channel);
         
     if (!len)
         return 0;
@@ -749,7 +756,7 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
             if (terminate && i >= len - 1)
                 spi_channel_cs_mode_set (spi->channel, SPI_CS_MODE_TOGGLE);
 
-            SPI_XFER (tx, rx);
+            SPI_XFER (pSPI, tx, rx);
 
             if (rxdata)
                 *rxdata++ = rx;
@@ -771,7 +778,7 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
 
         tx = *txdata++;
         
-        SPI_XFER (tx, rx);
+        SPI_XFER (pSPI, tx, rx);
 
         if (rxdata)
             *rxdata++ = rx;
@@ -794,6 +801,7 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
     spi_size_t i;
     const uint16_t *txdata = txbuffer;
     uint16_t *rxdata = rxbuffer;
+    AT91S_SPI *pSPI = SPI_BASE_GET (spi->channel);
         
     if (!len)
         return 0;
@@ -815,11 +823,11 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
             uint16_t tx;
 
             if (terminate && i >= len - 1)
-                spi_lastxfer ();
+                SPI_LASTXFER (pSPI);
 
             tx = *txdata++;
 
-            SPI_XFER (tx, rx);
+            SPI_XFER (pSPI, tx, rx);
 
             if (rxdata)
                 *rxdata++ = rx;
@@ -840,7 +848,7 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
 
         tx = *txdata++;
         
-        SPI_XFER (tx, rx);
+        SPI_XFER (pSPI, tx, rx);
 
         if (rxdata)
             *rxdata++ = rx;

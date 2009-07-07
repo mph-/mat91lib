@@ -13,7 +13,13 @@
 #define PORT_ARM7
 
 /** Define ports.  */
+#ifdef AT91C_BASE_PIOB
+/* The AT91SAM7X has two GPIO ports.  */
 #define PORT_A AT91C_BASE_PIOA
+#define PORT_B AT91C_BASE_PIOB
+#else
+#define PORT_A AT91C_BASE_PIOA
+#endif
 
 /* By default all ports default to inputs with pullups enabled.  */
 

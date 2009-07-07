@@ -11,55 +11,74 @@
 #include "config.h"
 
 extern bool
-spi_dma_write_finished_p (void);
+spi_dma_write_finished_p (spi_t spi);
 
 
 extern bool
-spi_dma_read_finished_p (void);
+spi_dma_read_finished_p (spi_t spi);
 
 
 extern bool
-spi_dma_write_completed_p (void);
+spi_dma_write_completed_p (spi_t spi);
 
 
 extern bool
-spi_dma_read_completed_p (void);
+spi_dma_read_completed_p (spi_t spi);
 
 
 extern bool
-spi_dma_write_enable_p (void);
+spi_dma_write_enable_p (spi_t spi);
 
 
 extern bool
-spi_dma_read_enable_p (void);
+spi_dma_read_enable_p (spi_t spi);
 
 
 extern void
-spi_dma_write_enable (void);
+spi_dma_write_enable (spi_t spi);
 
 
 extern void 
-spi_dma_write_disable (void);
+spi_dma_write_disable (spi_t spi);
 
 
 extern void
-spi_dma_read_enable (void);
+spi_dma_read_enable (spi_t spi);
 
 
 extern void 
-spi_dma_read_disable (void);
+spi_dma_read_disable (spi_t spi);
 
 
 extern void
-spi_dma_write_init (void *buffer, uint16_t size);
+spi_dma_write_init (spi_t spi, void *buffer, uint16_t size);
+
 
 extern void
-spi_dma_read_init (void *buffer, uint16_t size);
+spi_dma_read_init (spi_t spi, void *buffer, uint16_t size);
+
 
 extern void
-spi_dma_write_next (void *buffer, uint16_t size);
+spi_dma_write_next (spi_t spi, void *buffer, uint16_t size);
+
 
 extern void
-spi_dma_read_next (void *buffer, uint16_t size);
+spi_dma_read_next (spi_t spi, void *buffer, uint16_t size);
+
+
+extern void
+spi_dma_init (spi_t spi, void *txbuffer, void *rxbuffer, uint16_t size);
+
+
+extern void
+spi_dma_next (spi_t spi, void *txbuffer, void *rxbuffer, uint16_t size);
+
+
+extern void
+spi_dma_enable (spi_t spi);
+
+
+extern void
+spi_dma_disable (spi_t spi);
 
 #endif

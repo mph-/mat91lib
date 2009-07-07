@@ -10,20 +10,6 @@
 #include "config.h"
 #include "port.h"
 
-/* Macros for behind the scenes manipulation of the SPI peripheral.  These
-   should not be used for normal use.  */
-#ifdef HOSTED
-#define SPI_READY_P() (HOSTED || (AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF))
-#else
-#define SPI_READY_P() (AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF)
-#endif
-
-#define SPI_TXEMPTY_P() (AT91C_BASE_SPI->SPI_SR & AT91C_SPI_TXEMPTY)
-
-#define SPI_CHANNEL_MASK(channel) (0x0f ^ BIT (channel))
-
-
-
 typedef uint16_t spi_size_t;
 
 typedef int16_t spi_ret_t;
@@ -33,7 +19,12 @@ typedef uint8_t spi_channel_t;
 typedef uint16_t spi_clock_divisor_t;
 
 
-enum {SPI_CHANNEL0 = 0, SPI_CHANNEL1, SPI_CHANNEL2, SPI_CHANNEL3};
+/* The AT91SAM7S has a single SPI controller with 4 channels;
+   the AT91SAM7S has two SPI controllers each with 4 channels.
+   SPI_CHANNELX is a logical channel number.  */
+
+enum {SPI_CHANNEL0 = 0, SPI_CHANNEL1, SPI_CHANNEL2, SPI_CHANNEL3,
+      SPI_CHANNEL4, SPI_CHANNEL5, SPI_CHANNEL6, SPI_CHANNEL7};
 
 
 /* SPI Mode Settings.  */
@@ -52,7 +43,9 @@ typedef enum {SPI_DATA_MSB_FIRST = 0,
 
 typedef enum
 {
+    /* The chip select is only active per SPI transfer.  */
     SPI_CS_MODE_TOGGLE,
+    /* The chip select is active for multiple SPI transfers.  */
     SPI_CS_MODE_FRAME
 } spi_cs_mode_t;
 
@@ -63,9 +56,12 @@ typedef struct
     uint8_t channel;
     uint8_t bits;
     uint16_t clock_divisor;
+    /* Delay from CS asserted (set low) until SPI transfer starts.  */
     uint16_t cs_assert_delay;
+    /* Delay from CS negated (set high) after SPI transfer stops.  */
     uint16_t cs_negate_delay;
     spi_mode_t mode;
+    /* The GPIO port that drives the CS.  */
     port_cfg_t cs;
     spi_cs_mode_t cs_mode;
     bool cs_active;
@@ -195,7 +191,7 @@ extern spi_ret_t
 spi_transfer (spi_t spi, const void *txbuffer, void *rxbuffer, 
               spi_size_t len, bool terminate);
 
-extern void
-spi_multichannel_select (void);
+//extern void
+//spi_multichannel_select (void);
 
 #endif
