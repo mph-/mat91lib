@@ -59,7 +59,7 @@
 /* Currently the maximum of SPI devices is 32 due to the size
    of the mask used for recording active devices.  */
 #ifndef SPI_DEVICES_NUM
-#define SPI_DEVICES_NUM 1
+#define SPI_DEVICES_NUM 8
 #endif
 
 
@@ -87,14 +87,10 @@ enum
 #define AT91C_BASE_SPI1 0
 #endif
 
-
 #define SPI_BASE_GET(channel) (((channel) < SPI_CHANNELS_NUM) ? AT91C_BASE_SPI0 : AT91C_BASE_SPI1)
 
 #define SPI_CHANNEL_MASK(channel) (0x0f ^ BIT (channel & (SPI_CHANNELS_NUM - 1)))
 
-
-/* Macros for behind the scenes manipulation of the SPI peripheral.  These
-   should not be used for normal use.  */
 #ifdef HOSTED
 #define SPI_READY_P(BASE) (HOSTED || ((BASE)->SPI_SR & AT91C_SPI_RDRF))
 #else
@@ -105,7 +101,6 @@ enum
 
 /* Set lastxfer bit for use in fixed mode.  */
 #define SPI_LASTXFER(BASE) ((BASE)->SPI_CR = AT91C_SPI_LASTXFER)
-
 
 
 /* Read SPI and then send new data.  Blocks while the new data is
@@ -120,7 +115,7 @@ enum
         pSPI->SPI_TDR = (txdata);                                       \
                                                                         \
         /* Wait until spi port finishes transmitting/receiving.  */     \
-        while (!SPI_READY_P(pSPI))                                          \
+        while (!SPI_READY_P (pSPI))                                     \
             continue;                                                   \
                                                                         \
         /* Read new data from RDR (this clears RDRF).  */               \
@@ -493,14 +488,17 @@ spi_cs_disable (spi_t spi)
 static inline void
 spi_cs_assert (spi_t spi)
 {
+    /* This does nothing if the CS is automatically driven by the SPI
+       controller since the port in is not configured as a GPIO.  */
     port_pins_set_low (spi->cs.port, spi->cs.bitmask);
-    spi->cs_active = 1;
-}
+    spi->cs_active = 1; }
 
 
 static inline void
 spi_cs_negate (spi_t spi)
 {
+    /* This does nothing if the CS is automatically driven by the SPI
+       controller since the port in is not configured as a GPIO.  */
     port_pins_set_high (spi->cs.port, spi->cs.bitmask);
     spi->cs_active = 0;
 }
@@ -673,58 +671,6 @@ spi_shutdown (spi_t spi)
 }
 
 
-/* Return non-zero if there is a character ready to be read.  */
-bool
-spi_read_ready_p (spi_t spi)
-{
-#if HOSTED
-    return 1;
-#else
-    return SPI_READY_P (SPI_BASE_GET (spi->channel));
-#endif
-}
-
-
-/* Return non-zero if a character can be written without blocking.  */
-bool
-spi_write_ready_p (spi_t spi)
-{
-    return SPI_READY_P (SPI_BASE_GET (spi->channel));
-}
-
-
-/* Write character to SPI, return received character.  */
-uint8_t
-spi_xferc (spi_t spi, char ch)
-{
-    uint8_t rxdata;
-    AT91S_SPI *pSPI = SPI_BASE_GET (spi->channel);
-
-    spi_config (spi);
-    spi_cs_assert (spi);
-    SPI_XFER (pSPI, ch, rxdata);
-    spi_cs_negate (spi);
-
-    return rxdata;
-}
-
-
-/* Read character from SPI by sending a dummy word.  */
-uint8_t
-spi_getc (spi_t spi)
-{
-    return spi_xferc (spi, 0);
-}
-
-
-/* Write character to SPI, ignore received character.  */
-void
-spi_putc (spi_t spi, char ch)
-{
-    spi_xferc (spi, ch);
-}
-
-
 spi_ret_t
 spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
                 spi_size_t len, bool terminate)
@@ -889,4 +835,68 @@ spi_ret_t
 spi_read (spi_t spi, void *buffer, spi_size_t len, bool terminate)
 {
     return spi_transfer (spi, 0, buffer, len, terminate);
+}
+
+
+/* Return non-zero if there is a character ready to be read.  */
+bool
+spi_read_ready_p (spi_t spi)
+{
+#if HOSTED
+    return 1;
+#else
+    return SPI_READY_P (SPI_BASE_GET (spi->channel));
+#endif
+}
+
+
+/* Return non-zero if a character can be written without blocking.  */
+bool
+spi_write_ready_p (spi_t spi)
+{
+    return SPI_READY_P (SPI_BASE_GET (spi->channel));
+}
+
+
+/* Write character to SPI, return received character.  */
+uint8_t
+spi_xferc (spi_t spi, char ch)
+{
+#if 0
+    uint8_t txdata;
+    uint8_t rxdata;
+
+    txdata = ch;
+    spi_transfer_8 (spi, &txdata, &rxdata, 1, 1);
+
+    return rxdata;
+#else
+    uint8_t rxdata;
+    AT91S_SPI *pSPI = SPI_BASE_GET (spi->channel);
+
+    spi_config (spi);
+    /* This is a nop if CS automatically driven.  */
+    spi_cs_assert (spi);
+    SPI_XFER (pSPI, ch, rxdata);
+    /* This is a nop if CS automatically driven.  */
+    spi_cs_negate (spi);
+
+    return rxdata;
+#endif
+}
+
+
+/* Read character from SPI by sending a dummy word.  */
+uint8_t
+spi_getc (spi_t spi)
+{
+    return spi_xferc (spi, 0);
+}
+
+
+/* Write character to SPI, ignore received character.  */
+void
+spi_putc (spi_t spi, char ch)
+{
+    spi_xferc (spi, ch);
 }
