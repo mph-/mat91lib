@@ -7,12 +7,8 @@
 #define MAT91LIB_H
 
 #include <stdint.h>
-#ifndef _BOOL_DEFINED
-#define _BOOL_DEFINED
 typedef uint8_t bool;
-#define true 1
-#define false 0
-#endif
+
 
 #ifndef BIT
 #define BIT(X) (1U << (X))
@@ -26,8 +22,24 @@ typedef uint8_t bool;
 #define  __UNUSED__ __attribute__ ((unused))
 #endif
 
-#ifndef HOSTED
-#define HOSTED 0
+#define __inline static inline
+
+
+#if defined (AT91SAM7S512)
+#include "AT91SAM7S512.h"
+#elif defined (AT91SAM7S256)
+#include "AT91SAM7S256.h"
+#elif defined (AT91SAM7X256)
+#include "AT91SAM7X256.h"
+#elif defined (AT91SAM7S128)
+#include "AT91SAM7S128.h"
+#elif defined (AT91SAM7S64)
+#include "AT91SAM7S64.h"
+#elif defined (AT91SAM7S32)
+#include "AT91SAM7S32.h"
+#else
+#error "device type not defined"
 #endif
+
 
 #endif

@@ -18,22 +18,6 @@
 // #define CPU_FLASH_READ_CYCLES ((int) ((F_CPU + CPU_FLASH_SPEED - 1) / CPU_FLASH_SPEED))
 #endif
 
-#ifndef CPU_USB_DIV
-/* When using USB the PLL clock must be 48, 96, or 192 MHz.  
-   Assuming 96 MHz PLL clock then divide by 2 to get 48 MHz USB clock.  */
-#define CPU_USB_DIV 2
-#endif
-
-#if CPU_USB_DIV == 1
-#define CPU_USB_LOG2_DIV 0
-#elif CPU_USB_DIV == 2
-#define CPU_USB_LOG2_DIV 1
-#elif CPU_USB_DIV == 4
-#define CPU_USB_LOG2_DIV 2
-#else
-#error Unsupported divide ratio CPU_USB_DIV
-#endif
-
 
 /** The ARM7 has 7 processor modes: user, system, supervisor, abort,
     undefined, interrupt, and fast interrupt.  All except user mode
@@ -170,14 +154,13 @@ uint32_t cpu_spsr_get (void)
 }
 
 
-
-/** Remap SRAM so that SRAM exists at 0x200000 as well as at 0x000000.
-    On reset the Flash at 0x100000 is mapped to address 0x00000 as
-    well as 0x100000.  Note writing to the remap bit a second time
-    toggles the remapping so that the Flash appears at address
-    0x000000.  This causes problems if running from the debugger since
-    the CPU is not reset.  Thus we don't toggle the remap bit if the
-    SRAM is already remapped.  */
+/** Remap SRAM that SRAM exists at 0x200000 as well as at 0x000000.  On
+    reset the Flash at 0x100000 is mapped to address 0x00000 as well as
+    0x100000.  Note writing to the remap bit a second time toggles the
+    remapping so that the Flash appears at address 0x000000.  This
+    causes problems if running from the debugger since the CPU is not
+    reset.  Thus we don't toggle the remap bit if the SRAM is already
+    remapped.  */
 __inline void
 cpu_sram_remap (void)
 {
@@ -278,6 +261,8 @@ cpu_flash_init (void)
 
 #define CPU_PLL_DELAY 0.9e-3
 #define CPU_PLL_COUNT (uint16_t) (CPU_PLL_DELAY * F_SLCK)
+
+#define CPU_USB_LOG2_DIV 0
 
 
 /** Set up the main clock (MAINCK), PLL clock, and master clock (MCK).   */
@@ -418,6 +403,8 @@ extern void _irq_spurious_handler (void);
 static inline void 
 cpu_init (void)
 {
+    irq_id_t id;
+
     /* Disable all interrupts to be sure when debugging.  */
     AT91C_BASE_AIC->AIC_IDCR = ~0;
     AT91C_BASE_AIC->AIC_FFDR = ~0;
@@ -440,7 +427,7 @@ cpu_init (void)
 
     AT91C_BASE_AIC->AIC_SPU = (int) _irq_spurious_handler;
 
-    for (irq_id_t id = IRQ_ID_MIN; id <= IRQ_ID_MAX; id++) 
+    for (id = IRQ_ID_MIN; id <= IRQ_ID_MAX; id++) 
         irq_vector_set (id, _irq_unexpected_handler);
 }
 

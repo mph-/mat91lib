@@ -19,7 +19,7 @@ typedef struct spi_dev_struct
     uint16_t cs_negate_delay;
     spi_mode_t mode;
     /* The GPIO port that drives the CS.  */
-    port_cfg_t cs;
+    pio_t cs;
     spi_cs_mode_t cs_mode;
     bool cs_active;
     bool cs_auto;
