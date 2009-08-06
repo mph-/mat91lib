@@ -294,26 +294,26 @@ enum {PERIPH_A = 0, PERIPH_B};
 typedef struct spi_cs_struct
 {
     uint8_t channel;
-    port_cfg_t port;
+    pio_t pio;
     uint8_t periph;
 } spi_cs_t;
 
 
-#define SPI_CS(CHANNEL, PORT, PORTBIT, PERIPH) \
- {(CHANNEL), PORT_CFG (PORT, PORTBIT), (PERIPH)}
+#define SPI_CS(CHANNEL, PIO, PERIPH) \
+    {(CHANNEL), (PIO), (PERIPH)}
 
 
 #if SPI_CONTROLLERS_NUM == 2
 /* AT91SAM7X  */
 static const spi_cs_t spi_cs[] = 
 {
-    SPI_CS (0, PORT_A, 21, PERIPH_B),
-    SPI_CS (1, PORT_A, 25, PERIPH_B),
-    SPI_CS (2, PORT_A, 26, PERIPH_B),
-    SPI_CS (3, PORT_A, 29, PERIPH_B),
-    SPI_CS (1, PORT_B, 10, PERIPH_B),
-    SPI_CS (2, PORT_B, 11, PERIPH_B),
-    SPI_CS (3, PORT_B, 16, PERIPH_B),
+    SPI_CS (0, PIO (PORT_A, 21), PERIPH_B),
+    SPI_CS (1, PIO (PORT_A, 25), PERIPH_B),
+    SPI_CS (2, PIO (PORT_A, 26), PERIPH_B),
+    SPI_CS (3, PIO (PORT_A, 29), PERIPH_B),
+    SPI_CS (1, PIO (PORT_B, 10), PERIPH_B),
+    SPI_CS (2, PIO (PORT_B, 11), PERIPH_B),
+    SPI_CS (3, PIO (PORT_B, 16), PERIPH_B),
 };
 
 #define SPI0_PINS (AT91C_PA17_MOSI0 | AT91C_PA16_MISO0 | AT91C_PA18_SPCK0)
@@ -323,14 +323,14 @@ static const spi_cs_t spi_cs[] =
 /* AT91SAM7S  */
 static const spi_cs_t spi_cs[] = 
 {
-    SPI_CS (0, PORT_A, 11, PERIPH_A),
-    SPI_CS (1, PORT_A, 9, PERIPH_B),
-    SPI_CS (1, PORT_A, 31, PERIPH_A),
-    SPI_CS (2, PORT_A, 10, PERIPH_B),
-    SPI_CS (2, PORT_A, 30, PERIPH_B),
-    SPI_CS (3, PORT_A, 3, PERIPH_B),
-    SPI_CS (3, PORT_A, 5, PERIPH_B),
-    SPI_CS (3, PORT_A, 22, PERIPH_B)
+    SPI_CS (0, PIO (PORT_A, 11), PERIPH_A),
+    SPI_CS (1, PIO (PORT_A, 9), PERIPH_B),
+    SPI_CS (1, PIO (PORT_A, 31), PERIPH_A),
+    SPI_CS (2, PIO (PORT_A, 10), PERIPH_B),
+    SPI_CS (2, PIO (PORT_A, 30), PERIPH_B),
+    SPI_CS (3, PIO (PORT_A, 3), PERIPH_B),
+    SPI_CS (3, PIO (PORT_A, 5), PERIPH_B),
+    SPI_CS (3, PIO (PORT_A, 22), PERIPH_B)
 };
 
 #define SPI0_PINS (AT91C_PA13_MOSI | AT91C_PA12_MISO | AT91C_PA14_SPCK)
@@ -343,21 +343,21 @@ static const spi_cs_t spi_cs[] =
 
 
 static bool
-spi_channel_cs_enable (spi_channel_t channel, port_cfg_t *port_cfg)
+spi_channel_cs_enable (spi_channel_t channel, pio_t *cs)
 {
     unsigned int i;
 
     for (i = 0; i < SPI_CS_NUM; i++)
     {
         if (channel == spi_cs[i].channel
-            && port_cfg->port == spi_cs[i].port.port
-            && port_cfg->bitmask == spi_cs[i].port.bitmask)
+            && cs->port == spi_cs[i].pio.port
+            && cs->bitmask == spi_cs[i].pio.bitmask)
         {
-            *AT91C_PIOA_PDR = port_cfg->bitmask;
+            *AT91C_PIOA_PDR = cs->bitmask;
             if (spi_cs[i].periph == PERIPH_A)
-                *AT91C_PIOA_ASR = port_cfg->bitmask;
+                *AT91C_PIOA_ASR = cs->bitmask;
             else
-                *AT91C_PIOA_BSR = port_cfg->bitmask;
+                *AT91C_PIOA_BSR = cs->bitmask;
             return 1;
         }
     }
@@ -366,7 +366,7 @@ spi_channel_cs_enable (spi_channel_t channel, port_cfg_t *port_cfg)
 
 
 static bool
-spi_channel_cs_disable (spi_channel_t channel, port_cfg_t *port_cfg)
+spi_channel_cs_disable (spi_channel_t channel, pio_t *cs)
 {
     /* Disable the NPCSx signals from being asserted by reassigning them
        as GPIO.  */
@@ -376,10 +376,10 @@ spi_channel_cs_disable (spi_channel_t channel, port_cfg_t *port_cfg)
     for (i = 0; i < SPI_CS_NUM; i++)
     {
         if (channel == spi_cs[i].channel
-            && port_cfg->port == spi_cs[i].port.port
-            && port_cfg->bitmask == spi_cs[i].port.bitmask)
+            && cs->port == spi_cs[i].pio.port
+            && cs->bitmask == spi_cs[i].pio.bitmask)
         {
-            *AT91C_PIOA_PER = port_cfg->bitmask;
+            *AT91C_PIOA_PER = cs->bitmask;
             return 1;
         }
     }
@@ -490,7 +490,7 @@ spi_cs_assert (spi_t spi)
 {
     /* This does nothing if the CS is automatically driven by the SPI
        controller since the port in is not configured as a GPIO.  */
-    port_pins_set_low (spi->cs.port, spi->cs.bitmask);
+    pio_set_low (spi->cs);
     spi->cs_active = 1; }
 
 
@@ -499,7 +499,7 @@ spi_cs_negate (spi_t spi)
 {
     /* This does nothing if the CS is automatically driven by the SPI
        controller since the port in is not configured as a GPIO.  */
-    port_pins_set_high (spi->cs.port, spi->cs.bitmask);
+    pio_set_high (spi->cs);
     spi->cs_active = 0;
 }
 
@@ -545,7 +545,7 @@ spi_init (const spi_cfg_t *cfg)
 
     if (spi->cs.bitmask && !spi->cs_auto)
     {
-        port_pins_config_output (spi->cs.port, spi->cs.bitmask);
+        pio_config_output (spi->cs);
         spi_cs_negate (spi);
     }
 

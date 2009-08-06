@@ -1,3 +1,6 @@
+#ifndef USB_H
+#define USB_H
+
 #include "config.h"
 
 
@@ -18,14 +21,18 @@ typedef uint16_t usb_size_t;
 extern usb_size_t
 usb_write (usb_t usb, const void *buffer, usb_size_t length);
 
+
 extern usb_size_t
 usb_read (usb_t usb, void *buffer, usb_size_t length);
+
 
 extern bool
 usb_configured_p (usb_t dev);
 
+
 extern void
 usb_connect (usb_t dev);
+
 
 extern usb_t 
 usb_init (void);
@@ -49,3 +56,4 @@ usb_putc (usb_t usb, char ch);
 extern int8_t
 usb_puts (usb_t usb, const char *str);
 
+#endif

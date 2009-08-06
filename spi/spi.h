@@ -49,7 +49,7 @@
 #define SPI_H
 
 #include "config.h"
-#include "port.h"
+#include "pio.h"
 
 typedef uint16_t spi_size_t;
 
@@ -112,13 +112,13 @@ typedef struct
     /* Clock divisor to use for SPI clock rate.  */
     uint16_t clock_divisor;
     /* GPIO port to use for chip select.  */
-    port_cfg_t cs;
+    pio_t cs;
 } spi_cfg_t;
 
 
 /** Macro to initialise configuration structure.  */
-#define SPI_CFG(CHANNEL, DIVISOR, CS_PORT, CS_PORTBIT) \
-{(CHANNEL), (DIVISOR), PORT_CFG (CS_PORT, CS_PORTBIT)}
+#define SPI_CFG(CHANNEL, DIVISOR, CS) \
+{(CHANNEL), (DIVISOR), CS}
 
 
 
