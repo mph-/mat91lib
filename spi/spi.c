@@ -307,13 +307,13 @@ typedef struct spi_cs_struct
 /* AT91SAM7X  */
 static const spi_cs_t spi_cs[] = 
 {
-    SPI_CS (0, PIO (PORT_A, 21), PERIPH_B),
-    SPI_CS (1, PIO (PORT_A, 25), PERIPH_B),
-    SPI_CS (2, PIO (PORT_A, 26), PERIPH_B),
-    SPI_CS (3, PIO (PORT_A, 29), PERIPH_B),
-    SPI_CS (1, PIO (PORT_B, 10), PERIPH_B),
-    SPI_CS (2, PIO (PORT_B, 11), PERIPH_B),
-    SPI_CS (3, PIO (PORT_B, 16), PERIPH_B),
+    SPI_CS (0, PIO_DEFINE (PORT_A, 21), PERIPH_B),
+    SPI_CS (1, PIO_DEFINE (PORT_A, 25), PERIPH_B),
+    SPI_CS (2, PIO_DEFINE (PORT_A, 26), PERIPH_B),
+    SPI_CS (3, PIO_DEFINE (PORT_A, 29), PERIPH_B),
+    SPI_CS (1, PIO_DEFINE (PORT_B, 10), PERIPH_B),
+    SPI_CS (2, PIO_DEFINE (PORT_B, 11), PERIPH_B),
+    SPI_CS (3, PIO_DEFINE (PORT_B, 16), PERIPH_B),
 };
 
 #define SPI0_PINS (AT91C_PA17_MOSI0 | AT91C_PA16_MISO0 | AT91C_PA18_SPCK0)
@@ -323,14 +323,14 @@ static const spi_cs_t spi_cs[] =
 /* AT91SAM7S  */
 static const spi_cs_t spi_cs[] = 
 {
-    SPI_CS (0, PIO (PORT_A, 11), PERIPH_A),
-    SPI_CS (1, PIO (PORT_A, 9), PERIPH_B),
-    SPI_CS (1, PIO (PORT_A, 31), PERIPH_A),
-    SPI_CS (2, PIO (PORT_A, 10), PERIPH_B),
-    SPI_CS (2, PIO (PORT_A, 30), PERIPH_B),
-    SPI_CS (3, PIO (PORT_A, 3), PERIPH_B),
-    SPI_CS (3, PIO (PORT_A, 5), PERIPH_B),
-    SPI_CS (3, PIO (PORT_A, 22), PERIPH_B)
+    SPI_CS (0, PIO_DEFINE (PORT_A, 11), PERIPH_A),
+    SPI_CS (1, PIO_DEFINE (PORT_A, 9), PERIPH_B),
+    SPI_CS (1, PIO_DEFINE (PORT_A, 31), PERIPH_A),
+    SPI_CS (2, PIO_DEFINE (PORT_A, 10), PERIPH_B),
+    SPI_CS (2, PIO_DEFINE (PORT_A, 30), PERIPH_B),
+    SPI_CS (3, PIO_DEFINE (PORT_A, 3), PERIPH_B),
+    SPI_CS (3, PIO_DEFINE (PORT_A, 5), PERIPH_B),
+    SPI_CS (3, PIO_DEFINE (PORT_A, 22), PERIPH_B)
 };
 
 #define SPI0_PINS (AT91C_PA13_MOSI | AT91C_PA12_MISO | AT91C_PA14_SPCK)
@@ -490,7 +490,7 @@ spi_cs_assert (spi_t spi)
 {
     /* This does nothing if the CS is automatically driven by the SPI
        controller since the port in is not configured as a GPIO.  */
-    pio_set_low (spi->cs);
+    pio_output_low (spi->cs);
     spi->cs_active = 1; }
 
 
@@ -499,7 +499,7 @@ spi_cs_negate (spi_t spi)
 {
     /* This does nothing if the CS is automatically driven by the SPI
        controller since the port in is not configured as a GPIO.  */
-    pio_set_high (spi->cs);
+    pio_output_high (spi->cs);
     spi->cs_active = 0;
 }
 
