@@ -545,7 +545,7 @@ spi_init (const spi_cfg_t *cfg)
 
     if (spi->cs.bitmask && !spi->cs_auto)
     {
-        pio_config_output (spi->cs);
+        pio_config_set (spi->cs, PIO_OUTPUT);
         spi_cs_negate (spi);
     }
 

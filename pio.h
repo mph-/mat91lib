@@ -43,35 +43,39 @@ typedef struct
 #define PIO_DEFINE(PORT, PORTBIT) (pio_t){PORT, BIT (PORTBIT)}
 
 
-/** Configure selected PIO as output.
+typedef enum pio_config_enum 
+{
+    PIO_INPUT = 1, PIO_OUTPUT, PIO_PULLUP
+} pio_config_t;
+
+
+/** Configure PIO
     @param pio  */
 static inline
-void pio_config_output (pio_t pio)
+bool pio_config_set (pio_t pio, pio_config_t config)
 {
-    pio.port->PIO_PER = pio.bitmask;
-    pio.port->PIO_OER = pio.bitmask;
-}
+    switch (config)
+    {
+    case PIO_OUTPUT:
+        pio.port->PIO_PER = pio.bitmask;
+        pio.port->PIO_OER = pio.bitmask;
+        return 1;
 
+    case PIO_INPUT:
+        pio.port->PIO_ODR = pio.bitmask;
+        pio.port->PIO_PER = pio.bitmask;
+        pio.port->PIO_PPUDR = pio.bitmask;
+        return 1;
 
-/** Configure selected PIO as input without pullup.
-    @param pio  */
-static inline
-void pio_config_input (pio_t pio)
-{
-    pio.port->PIO_ODR = pio.bitmask;
-    pio.port->PIO_PER = pio.bitmask;
-    pio.port->PIO_PPUDR = pio.bitmask;
-}
+    case PIO_PULLUP:
+        pio.port->PIO_ODR = pio.bitmask;
+        pio.port->PIO_PER = pio.bitmask;
+        pio.port->PIO_PPUER = pio.bitmask;
+        return 1;
 
-
-/** Configure selected PIO as input with pullup.
-    @param pio  */
-static inline
-void pio_config_pullup (pio_t pio)
-{
-    pio.port->PIO_ODR = pio.bitmask;
-    pio.port->PIO_PER = pio.bitmask;
-    pio.port->PIO_PPUER = pio.bitmask;
+    default:
+        return 0;
+    }
 }
 
 
@@ -107,7 +111,7 @@ void pio_output_low (pio_t pio)
     @param pio 
     @param state  */
 static inline
-void pio_output (pio_t pio, bool state)
+void pio_output_set (pio_t pio, bool state)
 {
     state ? pio_output_high (pio) : pio_output_low (pio);
 }
@@ -127,7 +131,7 @@ bool pio_output_get (pio_t pio)
     @param pio
     @return state  */
 static inline
-bool pio_input (pio_t pio)
+bool pio_input_get (pio_t pio)
 {
     return (pio.port->PIO_PDSR & pio.bitmask) != 0;
 }
