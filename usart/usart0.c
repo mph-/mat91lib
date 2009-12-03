@@ -24,7 +24,7 @@ usart0_init (uint16_t baud_divisor)
     /* Disable interrupts.  */
     pUSART->US_IDR = ~0;
 
-    /* Enable RxD1 and TxD1 pins.  */
+    /* Enable RxD0 and TxD0 pins.  */
     *AT91C_PIOA_PDR = AT91C_PA5_RXD0 | AT91C_PA6_TXD0;
 
     /* Disable pullups.  */
@@ -48,6 +48,26 @@ usart0_init (uint16_t baud_divisor)
     pUSART->US_CR = AT91C_US_RXEN | AT91C_US_TXEN; 
     
     return 1;
+}
+
+
+void
+usart0_shutdown (void)
+{
+    AT91S_USART *pUSART = AT91C_BASE_US0;
+
+    /* Disable RxD0 and TxD0 pins.  */
+    *AT91C_PIOA_PER = AT91C_PA5_RXD0 | AT91C_PA6_TXD0;
+
+    /* Disable pullups.  */
+    *AT91C_PIOA_PPUDR = AT91C_PA5_RXD0 | AT91C_PA6_TXD0;
+
+    /* Disable USART0 clock.  */
+    AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_US0);
+    
+    /* Reset and disable receiver and transmitter.  */
+    pUSART->US_CR = AT91C_US_RSTRX | AT91C_US_RSTTX          
+        | AT91C_US_RXDIS | AT91C_US_TXDIS;           
 }
 
 

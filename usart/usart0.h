@@ -39,8 +39,13 @@ usart0_putc (char ch);
 extern void
 usart0_puts (const char *str);
 
-/* Initialise usart0 and set baud rate.  */
+/* Initialise USART0 and set baud rate.  */
 extern uint8_t
 usart0_init (uint16_t baud_divisor);
+
+
+/* Shutdown USART0 in preparation for sleep.  */
+extern void
+usart0_shutdown (void);
 
 #endif

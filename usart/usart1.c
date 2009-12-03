@@ -50,6 +50,26 @@ uint8_t usart1_init (uint16_t baud_divisor)
 }
 
 
+void
+usart1_shutdown (void)
+{
+    AT91S_USART *pUSART = AT91C_BASE_US1;
+
+    /* Disable RxD1 and TxD1 pins.  */
+    *AT91C_PIOA_PER = AT91C_PA21_RXD1 | AT91C_PA22_TXD1;
+
+    /* Disable pullups.  */
+    *AT91C_PIOA_PPUDR = AT91C_PA21_RXD1 | AT91C_PA22_TXD1;
+
+    /* Disable USART1 clock.  */
+    AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_US1);
+    
+    /* Reset and disable receiver and transmitter.  */
+    pUSART->US_CR = AT91C_US_RSTRX | AT91C_US_RSTTX          
+        | AT91C_US_RXDIS | AT91C_US_TXDIS;           
+}
+
+
 /* Return non-zero if there is a character ready to be read.  */
 bool
 usart1_read_ready_p (void)
