@@ -336,42 +336,6 @@ cpu_nop (void)
 }
 
 
-static inline void
-cpu_idle (void)
-{
-    /* Turn off CPU clock after current instruction.  It will be
-       re-enabled when an interrupt occurs.  */
-    AT91C_BASE_PMC->PMC_SCDR = AT91C_PMC_PCK;
-}
-
-
-static inline void
-cpu_reset (void)
-{
-    /* Reset processor and peripherals.  */
-    AT91C_BASE_RSTC->RSTC_RCR = AT91C_RSTC_PROCRST | AT91C_RSTC_PERRST 
-        | (0xa5 << 24);
-}
-
-
-/* Enable NRST pin.  */
-static inline void
-cpu_reset_enable (void)
-{
-    AT91C_BASE_RSTC->RSTC_RMR |= AT91C_RSTC_URSTEN | (0xa5 << 24);
-}
-
-
-/* Disable NRST pin.  */
-static inline void
-cpu_reset_disable (void)
-{
-    /* Enable NRST pin.  */
-    AT91C_BASE_RSTC->RSTC_RMR =
-        (AT91C_BASE_RSTC->RSTC_RMR & ~AT91C_RSTC_URSTEN) | (0xa5 << 24);
-}
-
-
 static inline uint8_t
 cpu_reset_type_get (void)
 {
@@ -399,7 +363,27 @@ extern void _irq_unexpected_handler (void);
 extern void _irq_spurious_handler (void);
 
 
-/** Initialise flash, disable watchdog, set up clocks.  */
+/* Enable NRST pin.  */
+static inline void
+cpu_reset_enable (void)
+{
+    AT91C_BASE_RSTC->RSTC_RMR |= AT91C_RSTC_URSTEN | (0xa5 << 24);
+}
+
+
+/* Disable NRST pin.  */
+static inline void
+cpu_reset_disable (void)
+{
+    /* Enable NRST pin.  */
+    AT91C_BASE_RSTC->RSTC_RMR =
+        (AT91C_BASE_RSTC->RSTC_RMR & ~AT91C_RSTC_URSTEN) | (0xa5 << 24);
+}
+
+
+/** Initialise flash, disable watchdog, set up clocks.  This and any
+    functions it calls must be inline for the C runtime startup to
+    work.  */
 static inline void 
 cpu_init (void)
 {
@@ -432,16 +416,6 @@ cpu_init (void)
 }
 
 
-static inline void
-cpu_sleep (void)
-{
-    /* Turn off main oscillator.  */
-//    AT91C_BASE_PMC->PMC_MOR &= ~AT91C_CKGR_MOSCEN;
-
-    /* Wait for interrupt.  */
-    cpu_idle ();
-}
-
 
 /* Globally disable interrupts.  This only works in ARM mode.  */
 __inline __attribute__ ((always_inline)) 
@@ -466,5 +440,24 @@ void irq_global_enable (void)
     cpu_cpsr_set (cpsr);
 }
 
+
+void
+cpu_idle (void);
+
+
+void
+cpu_reset (void);
+
+
+void
+cpu_power_mode_low (void);
+
+
+void
+cpu_power_mode_normal (void);
+
+
+void
+cpu_sleep (void);
 
 #endif /* CPU_H  */
