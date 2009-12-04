@@ -45,7 +45,7 @@ typedef struct
 
 typedef enum pio_config_enum 
 {
-    PIO_INPUT = 1, PIO_OUTPUT, PIO_PULLUP
+    PIO_INPUT = 1, PIO_OUTPUT, PIO_PULLUP, PIO_PERIPH
 } pio_config_t;
 
 
@@ -71,6 +71,10 @@ bool pio_config_set (pio_t pio, pio_config_t config)
         pio.port->PIO_ODR = pio.bitmask;
         pio.port->PIO_PER = pio.bitmask;
         pio.port->PIO_PPUER = pio.bitmask;
+        return 1;
+
+    case PIO_PERIPH:
+        pio.port->PIO_PDR = pio.bitmask;
         return 1;
 
     default:

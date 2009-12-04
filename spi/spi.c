@@ -369,7 +369,8 @@ static bool
 spi_channel_cs_disable (spi_channel_t channel, pio_t *cs)
 {
     /* Disable the NPCSx signals from being asserted by reassigning them
-       as GPIO.  */
+       as GPIO.  This function is used when we want to shutdown for sleep
+       so the pins need to be configured as outputs and set low.  */
 
     unsigned int i;
 
@@ -379,7 +380,9 @@ spi_channel_cs_disable (spi_channel_t channel, pio_t *cs)
             && cs->port == spi_cs[i].pio.port
             && cs->bitmask == spi_cs[i].pio.bitmask)
         {
-            *AT91C_PIOA_PER = cs->bitmask;
+            /* Switch to PIO mode and configure as output.  */
+            pio_config_set (*cs, PIO_OUTPUT);
+            pio_output_low (*cs);
             return 1;
         }
     }
@@ -628,6 +631,7 @@ void
 spi_shutdown (spi_t spi)
 {
     uint8_t dev_num;
+    int i;
 
     dev_num = spi - spi_devices;
 
@@ -668,6 +672,10 @@ spi_shutdown (spi_t spi)
     /* Disable SPI peripheral clock.  */
     AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_SPI);
 #endif
+
+    /* Set all the chip select pins low.  */
+    for (i = 0; i < spi_devices_num; i++)
+        spi_cs_disable (spi_devices + i);
 }
 
 
