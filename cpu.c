@@ -33,14 +33,15 @@ cpu_reset (void)
 void
 cpu_power_mode_low (void)
 {
-    /* Switch from MCK=48MHz to MCK=32kHz.  */
+    /* Switch main clock (MCK) from PLLCLK to SLCK.  */
 
-    // MCK = SLCK/2 : change source first from 48 000 000 to 18. / 2 = 9M
+    /* MCK = SLCK/2 : change source first from 48 MHz to 18 / 2 = 9 MHz.  */
+    /* Set prescaler to 1 / 2.  */
     AT91C_BASE_PMC->PMC_MCKR = AT91C_PMC_PRES_CLK_2;
     while(!(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY))
         continue;
     
-    // MCK=SLCK : then change prescaler
+    /* Switch to slow clock (SCLK).  */
     AT91C_BASE_PMC->PMC_MCKR = AT91C_PMC_CSS_SLOW_CLK;
     while(!( AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY))
         continue;
@@ -48,10 +49,11 @@ cpu_power_mode_low (void)
     /* Disable PLL.  */
     AT91C_BASE_PMC->PMC_PLLR = 0;
 
-    /* Disable Main Oscillator.  */
+    /* Disable main oscillator.  */
     AT91C_BASE_PMC->PMC_MOR = 0;
 
-    /* Voltage regulator in standby mode : Enable VREG Low Power Mode.  */
+    /* Switch voltage regulator to standby (low-power) mode.
+       This reduces its static current requirement from 100 uA to 25 uA.  */
     AT91C_BASE_VREG->VREG_MR |= AT91C_VREG_PSTDBY;
 }
 
@@ -59,7 +61,7 @@ cpu_power_mode_low (void)
 void
 cpu_power_mode_normal (void)
 {
-    // Voltage regulator in normal mode : Disable VREG Low Power Mode
+    /* Switch voltage regulator to normal mode.  */
     AT91C_BASE_VREG->VREG_MR &= ~AT91C_VREG_PSTDBY;
 
     cpu_clock_init ();
