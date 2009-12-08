@@ -81,22 +81,6 @@ usb_cdc_connect (usb_cdc_t dev __UNUSED__)
 }
 
 
-
-#if 0
-        if( USBState == STATE_SUSPEND )
-        {
-            // Switch to low power mode
-            USBState = STATE_IDLE;
-        }
-        if( USBState == STATE_RESUME ) 
-        {
-            // Switch to normal power mode
-            USBState = STATE_IDLE;
-        }
-#endif
-
-
-
 /** Write size bytes.  Currently this only writes as many bytes (up to
     the desired size) that can currently fit in the ring buffer.   */
 ring_size_t
