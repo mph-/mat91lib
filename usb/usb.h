@@ -34,6 +34,10 @@ extern void
 usb_connect (usb_t dev);
 
 
+extern void
+usb_shutdown (void);
+
+
 extern usb_t 
 usb_init (void);
 

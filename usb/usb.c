@@ -693,6 +693,24 @@ usb_connect (usb_t dev __UNUSED__)
 }
 
 
+void
+usb_shutdown (void)
+{
+    AT91PS_UDP pUDP = AT91C_BASE_UDP;
+
+    /* The USB transceiver is enabled by default.  */
+
+    /* Enable System Peripheral USB Clock.  */
+    AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_UDP);
+
+    /* Disable transceiver.  */
+    pUDP->UDP_TXVC = 0x100;
+
+    /* Disable System Peripheral USB Clock.  */
+    AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_UDP);
+}
+
+
 usb_t
 usb_init (void)
 {
