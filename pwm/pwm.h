@@ -44,6 +44,11 @@ typedef enum
 
 /* Currently no support for frequencies below 730Hz */
 
+
+void
+pwm_shutdown (void);
+
+
 /* Initialises pwm on specified pins */
 uint8_t
 pwm_init (void);

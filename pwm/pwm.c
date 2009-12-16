@@ -32,6 +32,17 @@ static inline AT91S_PWMC_CH *pwm_base (pwm_channel_t channel)
 }
 
 
+void
+pwm_shutdown (void)
+{
+    /* Disable PWM peripheral clock.  */
+    AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_PWMC);
+
+    return 1;
+
+}
+
+
 /* Initialises pwm on specified pins.  */
 uint8_t
 pwm_init (void)

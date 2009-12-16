@@ -33,17 +33,19 @@ cpu_reset (void)
 void
 cpu_power_mode_low (void)
 {
-    /* Switch main clock (MCK) from PLLCLK to SLCK.  */
+    /* Note the prescale (PRES) and clock source (CSS) fields
+       cannot be changed at the same time.  */
 
-    /* MCK = SLCK/2 : change source first from 48 MHz to 18 / 2 = 9 MHz.  */
-    /* Set prescaler to 1 / 2.  */
-    AT91C_BASE_PMC->PMC_MCKR = AT91C_PMC_PRES_CLK_2;
-    while(!(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY))
+    /* Switch main clock (MCK) from PLLCLK to SLCK.  */
+    AT91C_BASE_PMC->PMC_MCKR = (AT91C_BASE_PMC->PMC_MCKR & ~AT91C_PMC_PRES)
+        | AT91C_PMC_CSS_SLOW_CLK;
+    while (!(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY))
         continue;
     
-    /* Switch to slow clock (SCLK).  */
-    AT91C_BASE_PMC->PMC_MCKR = AT91C_PMC_CSS_SLOW_CLK;
-    while(!( AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY))
+    /* Set prescaler to divide by 64.  */
+    AT91C_BASE_PMC->PMC_MCKR = (AT91C_BASE_PMC->PMC_MCKR & ~AT91C_PMC_CSS)
+        | AT91C_PMC_PRES_CLK_64;
+    while (!( AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY))
         continue;
 
     /* Disable PLL.  */

@@ -274,7 +274,7 @@ cpu_clock_init (void)
        selected. 
 
        There are three clock sources: SLCK (the RC oscillator slow
-       clock), MAINCK (the external crytal main clock), and PLLCK (the
+       clock), MAINCK (the external crystal main clock), and PLLCK (the
        output of the phase locked loop driven by MAINCK).  One of
        these three clock sources can be fed to a prescaler (with
        divisors 2^0 ... 2^6) to drive MCK (master clock).
