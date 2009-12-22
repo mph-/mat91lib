@@ -33,10 +33,9 @@ cpu_reset (void)
 void
 cpu_power_mode_low (void)
 {
-    /* Note the prescale (PRES) and clock source (CSS) fields
-       cannot be changed at the same time.  */
-
-    /* Switch main clock (MCK) from PLLCLK to SLCK.  */
+    /* Switch main clock (MCK) from PLLCLK to SLCK.  Note the prescale
+       (PRES) and clock source (CSS) fields cannot be changed at the
+       same time.  */
     AT91C_BASE_PMC->PMC_MCKR = (AT91C_BASE_PMC->PMC_MCKR & ~AT91C_PMC_PRES)
         | AT91C_PMC_CSS_SLOW_CLK;
     while (!(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY))
