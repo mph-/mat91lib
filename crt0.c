@@ -60,21 +60,28 @@ extern void start (void) __attribute__ ((section (".vectors")))
 /** Startup function.  */
 void start (void)
 {
-    /* Vector table.  */
+    /* Vector table.  Note the branch instructions are relative and
+       thus the PC will stay in the first bank of memory and thus
+       confuse the debugger.  We could do an absolute jump but this will
+       need an intermediate handler for each exception.  */
 
-    /* Reset  0x00 */
+    /* Reset  0x00.  */
     __asm__ ("\tb _reset_handler");
-    /* Hang if decoded undefined instruction  0x04 */
+    /* Hang if decoded undefined instruction  0x04.  */
     __asm__ ("\tb ."); 
-    /* Hang if software interrupt 0x08 */
+    /* Hang if software interrupt 0x08.  */
     __asm__ ("\tb .");
-    /* Hang if fetching instruction from invalid address (Prefetch Abort) 0x0c */ 
+    /* Fetched instruction from invalid address (Prefetch Abort) 0x0c.
+       LR - 8 points to the instruction that caused the abort.  SP is
+       for abort mode.  */
+    __asm__ ("\tb ."); 
+    /* Invalid address (or alignment) (Data Abort) 0x10.  LR - 8
+       points to the instruction that caused the abort.  SP is for
+       abort mode.  */ 
+    __asm__ ("\tb ."); 
+    /* Reserved  0x14.  */
     __asm__ ("\tb .");
-    /* Hang if reading data from invalid address (Data Abort) 0x10 */ 
-    __asm__ ("\tb .");
-    /* Reserved  0x14 */
-    __asm__ ("\tb .");
-    /* IRQ 0x18 */
+    /* IRQ 0x18.  */
     __asm__ ("\tb _irq_handler");
 
     /* Fall through to FIQ handler.  */
@@ -224,7 +231,6 @@ void _irq_handler (void)
 void
 _irq_unexpected_handler (void)
 {
-    /* Hang.  */
     while (1)
         continue;
 }
@@ -238,7 +244,7 @@ void
 _irq_spurious_handler (void)
 {
     /* Spurious interrupts are unavoidable but harmless.  They can occur when
-       an interrupt is in the pipeline when it is disabled.  */
+       an interrupt is in the pipeline and then interrupts are disabled.  */
     spurious_interrupts++;
 }
 
@@ -246,6 +252,7 @@ _irq_spurious_handler (void)
 extern void _reset_handler (void)
     __attribute__ ((section (".vectors")))
     __attribute__ ((naked));
+
 
 void _reset_handler (void)
 {
