@@ -460,4 +460,13 @@ cpu_power_mode_normal (void);
 void
 cpu_sleep (void);
 
+
+void
+cpu_watchdog_reset (void);
+
+
+void
+cpu_watchdog_enable (void);
+
+
 #endif /* CPU_H  */

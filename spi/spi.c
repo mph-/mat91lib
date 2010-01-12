@@ -303,6 +303,9 @@ typedef struct spi_cs_struct
     {(CHANNEL), (PIO), (PERIPH)}
 
 
+/* NB, if you get `error: initializer element is not constant' then
+   need to compile without -std=c99 or -std=gnu99  */
+
 #if SPI_CONTROLLERS_NUM == 2
 /* AT91SAM7X  */
 static const spi_cs_t spi_cs[] = 

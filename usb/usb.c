@@ -1,5 +1,6 @@
 #include "config.h"
 #include "usb.h"
+#include "pio.h"
 
 
 /* CDC communication device class. 
@@ -558,7 +559,7 @@ usb_read (usb_t usb, void *buffer, usb_size_t length)
         if (pUDP->UDP_CSR[AT91C_EP_OUT] & rx_bank) 
         {
             /* It appears that the received byte count is not
-               decremented after reads from the FIFO so we keep out
+               decremented after reads from the FIFO so we keep our
                own count.  */
             usb->rx_bytes = pUDP->UDP_CSR[AT91C_EP_OUT] >> 16;
         }
@@ -685,10 +686,9 @@ usb_connect (usb_t dev __UNUSED__)
 #ifdef USB_PIO_PULLUP
     // Enable UDP PullUp (USB_DP_PUP) : enable and clear of the
     // corresponding PIO.  Set in PIO mode and configure as output.
-    *AT91C_PIOA_PER = AT91C_PIO_PA16;
-
-    // Clear to enable Pullup resistor
-    *AT91C_PIOA_CODR = AT91C_PIO_PA16;
+    pio_config (USB_PIO_PULLUP, PIO_OUTPUT);
+    /* Set low to enable pullup.  */
+    pio_output_low (USB_PIO_PULLUP);
 #endif
 }
 

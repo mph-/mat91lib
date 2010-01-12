@@ -74,13 +74,14 @@ static inline void irq_vector_set (irq_id_t id, irq_vector_t isr)
 }
 
 
-/* This sets up a vector for an IRQ interrupt.  Note that the IRQ vectors
-   are stored in special memoy-mapped registers and thus do not depend
-   on RAM or ROM model.  */
+/* This sets up a vector for an IRQ interrupt.  Note that the IRQ
+   vectors are stored in special memory-mapped registers and thus do
+   not depend on RAM or ROM model.  */
 static inline void irq_config (irq_id_t id, irq_priority_t priority,
                                uint32_t type, irq_vector_t isr)
 {
     irq_disable (id);
+    /* Priority is 0 (lowest) to 7 (highest).  */
     irq_priority_set (id, priority);
     irq_type_set (id, type);
     irq_vector_set (id, isr);

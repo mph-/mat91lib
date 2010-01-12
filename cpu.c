@@ -81,4 +81,18 @@ cpu_sleep (void)
 }
 
 
+void
+cpu_watchdog_reset (void)
+{
+    *AT91C_WDTC_WDCR = 0xA5000000 | AT91C_WDTC_WDRSTT;
+}
 
+
+void
+cpu_watchdog_enable (void)
+{
+    /* Enable watchdog with 2s timeout.  */
+    *AT91C_WDTC_WDMR = AT91C_WDTC_WDD | AT91C_WDTC_WDRSTEN
+        | AT91C_WDTC_WDDBGHLT | 0x200;
+    cpu_watchdog_reset ();
+}
