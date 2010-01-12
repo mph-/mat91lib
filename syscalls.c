@@ -3,7 +3,7 @@
     @date   18 February 2008
     @brief  This file contains a collection of stub functions to replace those
     used by the C library newlib.  Primarily, it provides functionality
-    to redirect standard I/O.  */
+    to redirect standard I/O and to interface to a file system.  */
 
 #include "config.h"
 #include <errno.h>
@@ -16,6 +16,7 @@
 #define SYS_FILE_NUM 4
 #endif
 
+#define SYS_FD_NUM (SYS_FILE_NUM + 3)
 
 
 typedef struct sys_file_struct
@@ -28,13 +29,13 @@ static sys_dev_t stdin_dev;
 static sys_dev_t stdout_dev;
 static sys_dev_t stderr_dev;
 
-static sys_file_t sys_files[SYS_FILE_NUM + 3] =
+static sys_file_t sys_files[SYS_FD_NUM] =
 {
     {.dev = &stdin_dev, .file = 0},
     {.dev = &stdout_dev, .file = 0},
     {.dev = &stderr_dev, .file = 0}
 };
-static int sys_file_num = 3;
+
 static sys_fs_t *sys_fs;
 static void *sys_fs_arg;
 static void (*stdio_putc) (void *stream, int ch) = 0;
@@ -123,7 +124,7 @@ sys_redirect_stderr (sys_write_t write1, void *file)
 int
 _read (int fd, char *buffer, int size)
 {
-    if (fd >= sys_file_num || !sys_files[fd].dev->read)
+    if ((fd >= SYS_FD_NUM) || !sys_files[fd].dev->read)
     {
         errno = ENODEV;
         return -1;
@@ -134,9 +135,9 @@ _read (int fd, char *buffer, int size)
 
 
 int
-_lseek (int fd __UNUSED__, int offset __UNUSED__, int dir __UNUSED__)
+_lseek (int fd, int offset, int dir)
 {
-    if (fd >= sys_file_num || !sys_files[fd].dev->lseek)
+    if ((fd >= SYS_FD_NUM) || !sys_files[fd].dev->lseek)
     {
         errno = ENODEV;
         return -1;
@@ -149,7 +150,7 @@ _lseek (int fd __UNUSED__, int offset __UNUSED__, int dir __UNUSED__)
 int
 _write (int fd, char *buffer, int size)
 {
-    if (fd >= sys_file_num || !sys_files[fd].dev->write)
+    if ((fd >= SYS_FD_NUM) || !sys_files[fd].dev->write)
     {
         errno = ENODEV;
         return -1;
@@ -167,18 +168,18 @@ _open (const char *path, int flags, ...)
 
     /* This is not called for stdin, stdout, stderr.  */
 
-    for (fd = 3; fd < SYS_FILE_NUM + 3; fd++)
+    for (fd = 3; fd < SYS_FD_NUM; fd++)
     {
         if (!sys_files[fd].dev)
             break;
     }
-    if (fd == SYS_FILE_NUM + 3)
+    if (fd == SYS_FD_NUM)
     {
         errno = ENFILE;
         return -1;
     }
 
-    if (!sys_fs)
+    if (!sys_fs || !sys_fs->dev || !sys_fs->dev->open)
     {
         errno = EACCES;
         return -1;
@@ -231,13 +232,13 @@ _sbrk (int incr)
 {
     /* Defined by the linker.  */
     extern char end __asm ("end");
-   /* Register name faking - works in collusion with the linker.  */
+   /* Register name faking using collusion with the linker.  */
     register char *stack_ptr __asm ("sp");
     static char *heap_end;
     char *prev_heap_end;
     
     if (heap_end == NULL)
-        heap_end = & end;
+        heap_end = &end;
     
     prev_heap_end = heap_end;
   
@@ -274,9 +275,14 @@ _link (void)
 
 
 int
-_unlink (const char *path __UNUSED__)
+_unlink (const char *path)
 {
-    return -1;
+    if (!sys_fs || !sys_fs->dev || !sys_fs->unlink)
+    {
+        errno = EACCES;
+        return -1;
+    }
+    return sys_fs->unlink (path);
 }
 
 
@@ -323,7 +329,10 @@ _rename (const char *oldpath __UNUSED__, const char *newpath __UNUSED__)
 }
 
 
-void sys_fs_register (sys_fs_t *fs, void *arg)
+/* Register a file system for file I/O.  Currently only a single
+   file system is supported.  */
+void
+sys_fs_register (sys_fs_t *fs, void *arg)
 {
     sys_fs = fs;
     sys_fs_arg = arg;
