@@ -1,15 +1,17 @@
 #ifndef SYS_H
 #define SYS_H
 
-typedef int (*sys_write_t) (void *file, const char *buffer, int size);
+#include <unistd.h>
 
-typedef int (*sys_read_t) (void *file, char *buffer, int size);
+typedef ssize_t (*sys_write_t) (void *file, const char *buffer, size_t size);
+
+typedef ssize_t (*sys_read_t) (void *file, char *buffer, size_t size);
 
 typedef void *(*sys_open_t) (void *fs, const char *pathname, int flags);
 
 typedef int (*sys_close_t) (void *file);
 
-typedef long (*sys_lseek_t) (void *file, long offset, int dir);
+typedef off_t (*sys_lseek_t) (void *file, off_t offset, int dir);
 
 typedef int (*sys_unlink_t) (const char *pathname);
 

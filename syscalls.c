@@ -47,10 +47,10 @@ extern char _heap_start__;    /** Start of heap.  */
 
 
 /* Helper write routine if no block write exists.  */
-static int
-stdio_write_block (void *stream, const char *buffer, int size)
+static ssize_t
+stdio_write_block (void *stream, const char *buffer, size_t size)
 {
-    int i;
+    size_t i;
     
     if (!stdio_putc)
     {
@@ -66,10 +66,10 @@ stdio_write_block (void *stream, const char *buffer, int size)
 
 
 /* Helper read routine if no block read exists.  */
-static int
-stdio_read_block (void *stream, char *buffer, int size)
+static ssize_t
+stdio_read_block (void *stream, char *buffer, size_t size)
 {
-    int i;
+    size_t i;
     
     if (!stdio_getc)
     {
@@ -121,8 +121,8 @@ sys_redirect_stderr (sys_write_t write1, void *file)
 }
 
 
-int
-_read (int fd, char *buffer, int size)
+ssize_t
+_read (int fd, char *buffer, size_t size)
 {
     if ((fd >= SYS_FD_NUM) || !sys_files[fd].dev->read)
     {
@@ -134,8 +134,8 @@ _read (int fd, char *buffer, int size)
 }
 
 
-int
-_lseek (int fd, int offset, int dir)
+off_t
+_lseek (int fd, off_t offset, int dir)
 {
     if ((fd >= SYS_FD_NUM) || !sys_files[fd].dev->lseek)
     {
@@ -147,8 +147,8 @@ _lseek (int fd, int offset, int dir)
 }
 
 
-int
-_write (int fd, char *buffer, int size)
+ssize_t
+_write (int fd, char *buffer, size_t size)
 {
     if ((fd >= SYS_FD_NUM) || !sys_files[fd].dev->write)
     {

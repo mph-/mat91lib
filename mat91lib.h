@@ -23,6 +23,17 @@ typedef uint8_t bool;
 #define  __UNUSED__ __attribute__ ((unused))
 #endif
 
+#ifndef __unused__
+#define  __unused__ __attribute__ ((unused))
+#endif
+
+
+#ifndef _DOXYGEN_
+#define __packed__ __attribute__((packed))
+#else
+#define __packed__
+#endif
+
 #define __inline static inline
 
 
