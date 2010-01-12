@@ -37,9 +37,6 @@ pwm_shutdown (void)
 {
     /* Disable PWM peripheral clock.  */
     AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_PWMC);
-
-    return 1;
-
 }
 
 
@@ -51,7 +48,6 @@ pwm_init (void)
     AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_PWMC);
 
     return 1;
-
 }
 
 
