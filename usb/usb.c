@@ -1,9 +1,6 @@
-#include "config.h"
 #include "usb.h"
-#include "pio.h"
 
-
-/* CDC communication device class. 
+/* 
    UDP USB device port.
 
    There are two communication endpoints and endpoint 0 is used for
@@ -46,16 +43,12 @@
    Note for a full speed device D+ is pulled up while for a low speed device
    D- is pulled up.
 
-   This code should probably be split into a UDP hardware abstraction layer
-   plus a generic USB CDC driver.
-
    The default Vendor ID is Atmel's vendor ID 0x03EB.  The default
    product ID is 0x6124.  With these lsusb gives
    ``Atmel Corp. at91sam SAMBA bootloader''
 
-   Using sudo modprobe usbserial vendor=0x03EB product=0x6124
-   will create a tty device such as /dev/ttyUSB0
 */
+
 
 #ifndef USB_VENDOR_ID
 #define USB_VENDOR_ID 0x03EB
@@ -95,7 +88,6 @@
 /* IN and OUT are referred to the host so we transmit on the IN endpoint
    and receive on the OUT endpoint.  */
 enum {AT91C_EP_OUT = 1, AT91C_EP_IN = 2};
-enum {AT91C_EP_OUT_SIZE = 64, AT91C_EP_IN_SIZE = 64};
 
 
 static const char devDescriptor[] =
@@ -105,113 +97,20 @@ static const char devDescriptor[] =
     0x01,   // bDescriptorType
     0x10,   // bcdUSBL
     0x01,   //
-    0x02,   // bDeviceClass:    CDC class code
-    0x00,   // bDeviceSubclass: CDC class sub code
-    0x00,   // bDeviceProtocol: CDC Device protocol
+    0x00,   // bDeviceClass (use class specified by interface)
+    0x00,   // bDeviceSubclass
+    0x00,   // bDeviceProtocol
     0x08,   // bMaxPacketSize0
-    LOW_BYTE (USB_VENDOR_ID),   // idVendorL
+    LOW_BYTE (USB_VENDOR_ID),    // idVendorL
     HIGH_BYTE (USB_VENDOR_ID),   //
     LOW_BYTE (USB_PRODUCT_ID),   // idProductL
-    HIGH_BYTE (USB_PRODUCT_ID),   //
+    HIGH_BYTE (USB_PRODUCT_ID),  //
     LOW_BYTE (USB_RELEASE_ID),   // bcdDeviceL
-    HIGH_BYTE (USB_RELEASE_ID),   //
-    0x00,   // iManufacturer    // 0x01
+    HIGH_BYTE (USB_RELEASE_ID),  //
+    0x00,   // iManufacturer
     0x00,   // iProduct
     0x00,   // SerialNumber
     0x01    // bNumConfigs
-};
-
-
-static const char cfgDescriptor[] = 
-{
-    /* ============== CONFIGURATION 1 =========== */
-    /* Configuration 1 descriptor */
-    0x09,   // CbLength
-    0x02,   // CbDescriptorType
-    0x43,   // CwTotalLength 2 EP + Control
-    0x00,
-    0x02,   // CbNumInterfaces
-    0x01,   // CbConfigurationValue
-    0x00,   // CiConfiguration
-    0xC0,   // CbmAttributes 0xA0
-    USB_CURRENT_MA / 2,   // CMaxPower
-    
-    /* Communication Class Interface Descriptor Requirement */
-    0x09, // bLength
-    0x04, // bDescriptorType
-    0x00, // bInterfaceNumber
-    0x00, // bAlternateSetting
-    0x01, // bNumEndpoints
-    0x02, // bInterfaceClass
-    0x02, // bInterfaceSubclass
-    0x00, // bInterfaceProtocol
-    0x00, // iInterface
-    
-    /* Header Functional Descriptor */
-    0x05, // bFunction Length
-    0x24, // bDescriptor type: CS_INTERFACE
-    0x00, // bDescriptor subtype: Header Func Desc
-    0x10, // bcdCDC:1.1
-    0x01,
-    
-    /* ACM Functional Descriptor */
-    0x04, // bFunctionLength
-    0x24, // bDescriptor Type: CS_INTERFACE
-    0x02, // bDescriptor Subtype: ACM Func Desc
-    0x00, // bmCapabilities
-    
-    /* Union Functional Descriptor */
-    0x05, // bFunctionLength
-    0x24, // bDescriptorType: CS_INTERFACE
-    0x06, // bDescriptor Subtype: Union Func Desc
-    0x00, // bMasterInterface: Communication Class Interface
-    0x01, // bSlaveInterface0: Data Class Interface
-    
-    /* Call Management Functional Descriptor */
-    0x05, // bFunctionLength
-    0x24, // bDescriptor Type: CS_INTERFACE
-    0x01, // bDescriptor Subtype: Call Management Func Desc
-    0x00, // bmCapabilities: D1 + D0
-    0x01, // bDataInterface: Data Class Interface 1
-    
-    /* Endpoint 1 descriptor */
-    0x07,   // bLength
-    0x05,   // bDescriptorType
-    0x83,   // bEndpointAddress, Endpoint 03 - IN
-    0x03,   // bmAttributes      INT
-    0x08,   // wMaxPacketSize
-    0x00,
-    0xFF,   // bInterval
-    
-    /* Data Class Interface Descriptor Requirement */
-    0x09, // bLength
-    0x04, // bDescriptorType
-    0x01, // bInterfaceNumber
-    0x00, // bAlternateSetting
-    0x02, // bNumEndpoints
-    0x0A, // bInterfaceClass
-    0x00, // bInterfaceSubclass
-    0x00, // bInterfaceProtocol
-    0x00, // iInterface
-    
-    /* First alternate setting */
-    /* Endpoint 1 descriptor */
-    0x07,   // bLength
-    0x05,   // bDescriptorType
-    0x01,   // bEndpointAddress, Endpoint 01 - OUT
-    0x02,   // bmAttributes      BULK
-    AT91C_EP_OUT_SIZE,   // wMaxPacketSize
-    0x00,
-    0x00,   // bInterval
-    
-    /* Endpoint 2 descriptor */
-    0x07,   // bLength
-    0x05,   // bDescriptorType
-    0x82,   // bEndpointAddress, Endpoint 02 - IN
-    0x02,   // bmAttributes      BULK
-    AT91C_EP_IN_SIZE,   // wMaxPacketSize
-    0x00,
-    0x00    // bInterval
 };
 
 
@@ -237,41 +136,19 @@ static const char cfgDescriptor[] =
 #define STD_SET_INTERFACE             0x0B01
 #define STD_SYNCH_FRAME               0x0C82
 
-/* CDC Class Specific Request Code */
-#define GET_LINE_CODING               0x21A1
-#define SET_LINE_CODING               0x2021
-#define SET_CONTROL_LINE_STATE        0x2221
-
-
-typedef struct 
-{
-    unsigned int dwDTERRate;
-    char bCharFormat;
-    char bParityType;
-    char bDataBits;
-} USB_CDC_LINE_CODING;
-
-
-USB_CDC_LINE_CODING line =
-{
-    115200, // baudrate
-    0,      // 1 Stop Bit
-    0,      // None Parity
-    8
-};     // 8 Data bits
-
 
 static usb_dev_t usb_dev;
 
-
-static void 
-usb_control_write (usb_t usb, const char *data, usb_size_t length)
+void 
+usb_control_write (usb_t usb, const void *buffer, usb_size_t length)
 {
     AT91PS_UDP pUDP = usb->pUDP;
     uint32_t cpt;
     AT91_REG csr;
+    const char *data = buffer;
 
-    do {
+    do 
+    {
         cpt = MIN (length, 8);
         length -= cpt;
 
@@ -307,7 +184,7 @@ usb_control_write (usb_t usb, const char *data, usb_size_t length)
 }
 
 
-static void
+void
 usb_control_write_zlp (usb_t usb)
 {
     AT91PS_UDP pUDP = usb->pUDP;
@@ -322,7 +199,7 @@ usb_control_write_zlp (usb_t usb)
 }
 
 
-static void
+void
 usb_control_stall (usb_t usb)
 {
     AT91PS_UDP pUDP = usb->pUDP;
@@ -337,181 +214,23 @@ usb_control_stall (usb_t usb)
 }
 
 
-static void
-usb_enumerate (usb_t usb)
+bool
+usb_read_ready_p (usb_t usb)
 {
     AT91PS_UDP pUDP = usb->pUDP;
-    uint8_t request_type;
-    uint8_t request;
-    uint16_t value;
-    uint16_t index;
-    uint16_t length;
-    uint16_t status;
+    uint32_t rx_bank = usb->rx_bank;
 
-    if (! (pUDP->UDP_CSR[0] & AT91C_UDP_RXSETUP))
-        return;
+    if (usb->rx_bytes)
+        return 1;
 
-    request_type = pUDP->UDP_FDR[0];
-    request = pUDP->UDP_FDR[0];
+    if (! usb_configured_p (usb))
+        return 0;
 
-    value = (pUDP->UDP_FDR[0] & 0xFF);
-    value |= (pUDP->UDP_FDR[0] << 8);
-
-    index = (pUDP->UDP_FDR[0] & 0xFF);
-    index |= (pUDP->UDP_FDR[0] << 8);
-
-    length = (pUDP->UDP_FDR[0] & 0xFF);
-    length |= (pUDP->UDP_FDR[0] << 8);
-
-    if (request_type & 0x80)
-    {
-        pUDP->UDP_CSR[0] |= AT91C_UDP_DIR;
-        while (! (pUDP->UDP_CSR[0] & AT91C_UDP_DIR))
-            continue;
-    }
-    pUDP->UDP_CSR[0] &= ~AT91C_UDP_RXSETUP;
-
-    while ((pUDP->UDP_CSR[0]  & AT91C_UDP_RXSETUP))
-        continue;
-
-    switch ((request << 8) | request_type) 
-    {
-    case STD_GET_DESCRIPTOR:
-        switch (value)
-        {
-        case 0x100:             // Return Device Descriptor
-            usb_control_write (usb, devDescriptor, 
-                               MIN (sizeof (devDescriptor), length));
-            break;
-        case 0x200:             // Return Configuration Descriptor
-            usb_control_write (usb, cfgDescriptor, 
-                               MIN (sizeof (cfgDescriptor), length));
-            break;
-        default:
-            usb_control_stall (usb);
-        }
-        break;
-
-    case STD_SET_ADDRESS:
-        usb_control_write_zlp (usb);
-        pUDP->UDP_FADDR = (AT91C_UDP_FEN | value);
-        pUDP->UDP_GLBSTATE  = (value) ? AT91C_UDP_FADDEN : 0;
-        break;
-
-    case STD_SET_CONFIGURATION:
-        usb->configured = value;
-        usb_control_write_zlp (usb);
-        pUDP->UDP_GLBSTATE  = (value) ? AT91C_UDP_CONFG : AT91C_UDP_FADDEN;
-
-        pUDP->UDP_CSR[1] = (value) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT) : 0;
-        pUDP->UDP_CSR[2] = (value) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN)  : 0;
-        pUDP->UDP_CSR[3] = (value) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_ISO_IN)   : 0;
-        break;
-
-    case STD_GET_CONFIGURATION:
-        usb_control_write (usb, (char *) &usb->configured,
-                           sizeof (usb->configured));
-        break;
-
-    case STD_GET_STATUS_ZERO:
-        status = 0;
-        usb_control_write (usb, (char *) &status, sizeof (status));
-        break;
-
-    case STD_GET_STATUS_INTERFACE:
-        status = 0;
-        usb_control_write (usb, (char *) &status, sizeof (status));
-        break;
-
-    case STD_GET_STATUS_ENDPOINT:
-        status = 0;
-        index &= 0x0F;
-        if ((pUDP->UDP_GLBSTATE & AT91C_UDP_CONFG) && (index <= 3))
-        {
-            status = (pUDP->UDP_CSR[index] & AT91C_UDP_EPEDS) ? 0 : 1;
-            usb_control_write (usb, (char *) &status, sizeof (status));
-        }
-        else if ((pUDP->UDP_GLBSTATE & AT91C_UDP_FADDEN) && (index == 0))
-        {
-            status = (pUDP->UDP_CSR[index] & AT91C_UDP_EPEDS) ? 0 : 1;
-            usb_control_write (usb, (char *) &status, sizeof (status));
-        }
-        else
-            usb_control_stall (usb);
-        break;
-
-    case STD_SET_FEATURE_ZERO:
-        usb_control_stall (usb);
-        break;
-
-    case STD_SET_FEATURE_INTERFACE:
-        usb_control_write_zlp (usb);
-        break;
-
-    case STD_SET_FEATURE_ENDPOINT:
-        index &= 0x0F;
-        if ((value == 0) && index && (index <= 3))
-        {
-            pUDP->UDP_CSR[index] = 0;
-            usb_control_write_zlp (usb);
-        }
-        else
-            usb_control_stall (usb);
-        break;
-
-    case STD_CLEAR_FEATURE_ZERO:
-        usb_control_stall (usb);
-        break;
-
-    case STD_CLEAR_FEATURE_INTERFACE:
-        usb_control_write_zlp (usb);
-        break;
-
-    case STD_CLEAR_FEATURE_ENDPOINT:
-        index &= 0x0F;
-        if ((value == 0) && index && (index <= 3)) 
-        {
-            /* Configure and enable selected endpoint.  */
-            switch (index)
-            {
-            case 1:
-                pUDP->UDP_CSR[1] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT);
-                break;
-            case 2:
-                pUDP->UDP_CSR[2] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN);
-                break;
-            case 3:
-                pUDP->UDP_CSR[3] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_ISO_IN);
-                break;
-            }
-            usb_control_write_zlp (usb);
-        }
-        else
-            usb_control_stall (usb);
-        break;
-
-        // handle CDC class requests
-    case SET_LINE_CODING:
-        while (! (pUDP->UDP_CSR[0] & AT91C_UDP_RX_DATA_BK0));
-        pUDP->UDP_CSR[0] &= ~AT91C_UDP_RX_DATA_BK0;
-        usb_control_write_zlp (usb);
-        break;
-
-    case GET_LINE_CODING:
-        usb_control_write (usb, (char *) &line, MIN (sizeof (line), length));
-        break;
-
-    case SET_CONTROL_LINE_STATE:
-        usb->connection = value;
-        usb_control_write_zlp (usb);
-        break;
-
-    default:
-        usb_control_stall (usb);
-        break;
-    }
+    if (! (pUDP->UDP_CSR[AT91C_EP_OUT] & rx_bank))
+        return 0;
+    
+    return (pUDP->UDP_CSR[AT91C_EP_OUT] >> 16) != 0;
 }
-
 
 usb_size_t
 usb_read (usb_t usb, void *buffer, usb_size_t length)
@@ -566,25 +285,6 @@ usb_read (usb_t usb, void *buffer, usb_size_t length)
     }
     usb->rx_bank = rx_bank;
     return total;
-}
-
-
-bool
-usb_read_ready_p (usb_t usb)
-{
-    AT91PS_UDP pUDP = usb->pUDP;
-    uint32_t rx_bank = usb->rx_bank;
-
-    if (usb->rx_bytes)
-        return 1;
-
-    if (! usb_configured_p (usb))
-        return 0;
-
-    if (! (pUDP->UDP_CSR[AT91C_EP_OUT] & rx_bank))
-        return 0;
-    
-    return (pUDP->UDP_CSR[AT91C_EP_OUT] >> 16) != 0;
 }
 
 
@@ -643,6 +343,187 @@ usb_write (usb_t usb, const void *buffer, usb_size_t length)
 }
 
 
+
+static void
+usb_enumerate (usb_t usb)
+{
+    AT91PS_UDP pUDP = usb->pUDP;
+    uint8_t request_type;
+    uint8_t request;
+    uint16_t value;
+    uint16_t index;
+    uint16_t length;
+    uint16_t status;
+
+    if (! (pUDP->UDP_CSR[0] & AT91C_UDP_RXSETUP))
+        return;
+
+    request_type = pUDP->UDP_FDR[0];
+    request = pUDP->UDP_FDR[0];
+
+    value = (pUDP->UDP_FDR[0] & 0xFF);
+    value |= (pUDP->UDP_FDR[0] << 8);
+
+    index = (pUDP->UDP_FDR[0] & 0xFF);
+    index |= (pUDP->UDP_FDR[0] << 8);
+
+    length = (pUDP->UDP_FDR[0] & 0xFF);
+    length |= (pUDP->UDP_FDR[0] << 8);
+
+    if (request_type & 0x80)
+    {
+        pUDP->UDP_CSR[0] |= AT91C_UDP_DIR;
+        while (! (pUDP->UDP_CSR[0] & AT91C_UDP_DIR))
+            continue;
+    }
+    pUDP->UDP_CSR[0] &= ~AT91C_UDP_RXSETUP;
+
+    while ((pUDP->UDP_CSR[0]  & AT91C_UDP_RXSETUP))
+        continue;
+
+    switch ((request << 8) | request_type) 
+    {
+    case STD_GET_DESCRIPTOR:
+        switch (value)
+        {
+        case 0x100:             // Return Device Descriptor
+            usb_control_write (usb, devDescriptor, 
+                               MIN (sizeof (devDescriptor), length));
+            break;
+
+        case 0x200:             // Return Configuration Descriptor
+            if (!usb->cfg || !usb->cfg->cfg_descriptor)
+            {
+                usb_control_stall (usb);
+                break;
+            }
+                
+            usb_control_write (usb, usb->cfg->cfg_descriptor, 
+                               MIN (usb->cfg->cfg_descriptor_size, length));
+            break;
+
+        default:
+            usb_control_stall (usb);
+        }
+        break;
+
+    case STD_SET_ADDRESS:
+        usb_control_write_zlp (usb);
+        pUDP->UDP_FADDR = (AT91C_UDP_FEN | value);
+        pUDP->UDP_GLBSTATE  = (value) ? AT91C_UDP_FADDEN : 0;
+        break;
+
+    case STD_SET_CONFIGURATION:
+        usb->configured = value;
+        usb_control_write_zlp (usb);
+        pUDP->UDP_GLBSTATE  = (value) ? AT91C_UDP_CONFG : AT91C_UDP_FADDEN;
+
+        pUDP->UDP_CSR[1] = (value) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT) : 0;
+        pUDP->UDP_CSR[2] = (value) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN)  : 0;
+        pUDP->UDP_CSR[3] = (value) ? (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_ISO_IN)   : 0;
+        break;
+
+    case STD_GET_CONFIGURATION:
+        usb_control_write (usb, &usb->configured,
+                           sizeof (usb->configured));
+        break;
+
+    case STD_GET_STATUS_ZERO:
+        status = 0;
+        usb_control_write (usb, &status, sizeof (status));
+        break;
+
+    case STD_GET_STATUS_INTERFACE:
+        status = 0;
+        usb_control_write (usb, &status, sizeof (status));
+        break;
+
+    case STD_GET_STATUS_ENDPOINT:
+        status = 0;
+        index &= 0x0F;
+        if ((pUDP->UDP_GLBSTATE & AT91C_UDP_CONFG) && (index <= 3))
+        {
+            status = (pUDP->UDP_CSR[index] & AT91C_UDP_EPEDS) ? 0 : 1;
+            usb_control_write (usb, &status, sizeof (status));
+        }
+        else if ((pUDP->UDP_GLBSTATE & AT91C_UDP_FADDEN) && (index == 0))
+        {
+            status = (pUDP->UDP_CSR[index] & AT91C_UDP_EPEDS) ? 0 : 1;
+            usb_control_write (usb, &status, sizeof (status));
+        }
+        else
+            usb_control_stall (usb);
+        break;
+
+    case STD_SET_FEATURE_ZERO:
+        usb_control_stall (usb);
+        break;
+
+    case STD_SET_FEATURE_INTERFACE:
+        usb_control_write_zlp (usb);
+        break;
+
+    case STD_SET_FEATURE_ENDPOINT:
+        index &= 0x0F;
+        if ((value == 0) && index && (index <= 3))
+        {
+            pUDP->UDP_CSR[index] = 0;
+            usb_control_write_zlp (usb);
+        }
+        else
+            usb_control_stall (usb);
+        break;
+
+    case STD_CLEAR_FEATURE_ZERO:
+        usb_control_stall (usb);
+        break;
+
+    case STD_CLEAR_FEATURE_INTERFACE:
+        usb_control_write_zlp (usb);
+        break;
+
+    case STD_CLEAR_FEATURE_ENDPOINT:
+        index &= 0x0F;
+        if ((value == 0) && index && (index <= 3)) 
+        {
+            /* Configure and enable selected endpoint.  */
+            switch (index)
+            {
+            case 1:
+                pUDP->UDP_CSR[1] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT);
+                break;
+            case 2:
+                pUDP->UDP_CSR[2] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_IN);
+                break;
+            case 3:
+                pUDP->UDP_CSR[3] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_ISO_IN);
+                break;
+            }
+            usb_control_write_zlp (usb);
+        }
+        else
+            usb_control_stall (usb);
+        break;
+
+        // Perhaps this should move to usb_cdc
+#define SET_LINE_CODING               0x2021
+
+    case SET_LINE_CODING:
+        while (! (pUDP->UDP_CSR[0] & AT91C_UDP_RX_DATA_BK0));
+        pUDP->UDP_CSR[0] &= ~AT91C_UDP_RX_DATA_BK0;
+        usb_control_write_zlp (usb);
+        break;
+
+    default:
+        if (!usb->cfg->request_callback 
+            || !usb->cfg->request_callback (usb, (request << 8) | request_type,
+                                            value, index, length))
+            usb_control_stall (usb);
+        break;
+    }
+}
+
+
 bool
 usb_configured_p (usb_t usb)
 {
@@ -677,10 +558,11 @@ usb_configured_p (usb_t usb)
 }
 
 
+
 void
-usb_connect (usb_t dev __UNUSED__)
+usb_connect (usb_t usb __UNUSED__)
 {
-    /* Connect pull-up, wait for configuration.  This does nothing if the
+   /* Connect pull-up, wait for configuration.  This does nothing if the
        pull-up is always connected.  */
 
 #ifdef USB_PIO_PULLUP
@@ -691,6 +573,7 @@ usb_connect (usb_t dev __UNUSED__)
     pio_output_low (USB_PIO_PULLUP);
 #endif
 }
+
 
 
 void
@@ -711,10 +594,11 @@ usb_shutdown (void)
 }
 
 
-usb_t
-usb_init (void)
+usb_t usb_init (const usb_cfg_t *cfg)
 {
     usb_t usb = &usb_dev;
+
+    usb->cfg = cfg;
 
     /* Set the PLL USB Divider (PLLCK / 2).  This assumes that the PLL
        clock is 96 MHz since the USB clock must be 48 MHz.  */
@@ -737,39 +621,4 @@ usb_init (void)
     usb->rx_bank = AT91C_UDP_RX_DATA_BK0;
 
     return usb;
-}
-
-
-
-/** Read character.  This blocks until the character can be read.  */
-int8_t
-usb_getc (usb_t usb)
-{
-    uint8_t ch;
-
-    usb_read (usb, &ch, sizeof (ch));
-    return ch;
-}
-
-
-/** Write character.  This blocks until the character can be
-    written.  */
-int8_t
-usb_putc (usb_t usb, char ch)
-{
-    if (ch == '\n')
-        usb_putc (usb, '\r');    
-
-    usb_write (usb, &ch, sizeof (ch));
-    return ch;
-}
-
-
-/** Write string.  This blocks until the string is buffered.  */
-int8_t
-usb_puts (usb_t usb, const char *str)
-{
-    while (*str)
-        usb_putc (usb, *str++);
-    return 1;
 }
