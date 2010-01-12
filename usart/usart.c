@@ -21,8 +21,8 @@
 
 struct usart_dev_struct
 {
-    int8_t (*putc) (char ch);
-    int8_t (*getc) (void);
+    int8_t (*putch) (char ch);
+    int8_t (*getch) (void);
     bool (*read_ready_p) (void);
     bool (*write_ready_p) (void);
     bool (*write_finished_p) (void);
@@ -109,7 +109,7 @@ usart_getc (usart_t usart)
 {
     usart_dev_t *dev = usart;
 
-    return dev->getc ();
+    return dev->getch ();
 }
 
 
@@ -119,7 +119,7 @@ usart_putc (usart_t usart, char ch)
 {
     usart_dev_t *dev = usart;
 
-    return dev->putc (ch);
+    return dev->putch (ch);
 }
 
 
