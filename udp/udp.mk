@@ -1,0 +1,8 @@
+UDP_DIR = $(PERIPHERAL_DIR)/udp
+
+VPATH += $(UDP_DIR)
+INCLUDES += -I$(UDP_DIR)
+
+SRC += udp.c
+
+

@@ -146,6 +146,7 @@ spi_dma_multichannel_select (spi_t spi)
 }
 
 
+#if 0
 /** Enable fixed peripheral select.  */
 static void
 spi_dma_multichannel_deselect (spi_t spi)
@@ -154,6 +155,7 @@ spi_dma_multichannel_deselect (spi_t spi)
 
     BITS_INSERT (pSPI->SPI_MR, 0x0f, 16, 19);
 }
+#endif
 
 
 void
