@@ -752,8 +752,8 @@ udp_enumerate1 (udp_t udp, udp_ep_t endpoint)
     udp_setup_t setup;
 
     // Get request parameters
-    setup.type = pUDP->UDP_FDR[0] & 0xFF;
-    setup.request = pUDP->UDP_FDR[0] & 0xFF;
+    setup.type = pUDP->UDP_FDR[0];
+    setup.request = pUDP->UDP_FDR[0];
     setup.value = pUDP->UDP_FDR[0] & 0xFF;
     setup.value |= (pUDP->UDP_FDR[0] << 8);
     setup.index = pUDP->UDP_FDR[0] & 0xFF;
@@ -997,7 +997,7 @@ bool udp_halt (udp_t udp, udp_ep_t endpoint, uint8_t request)
         // Clear FORCESTALL flag
         udp_ep_clr_flag (pUDP, endpoint, AT91C_UDP_FORCESTALL);
 
-        // Reset Endpoint Fifos, beware this is a 2 steps operation
+        // Reset endpoint FIFOs, beware this is a 2 step operation
         SET (pUDP->UDP_RSTEP, 1 << endpoint);
         CLEAR (pUDP->UDP_RSTEP, 1 << endpoint);
     }
@@ -1022,11 +1022,7 @@ bool udp_halt (udp_t udp, udp_ep_t endpoint, uint8_t request)
     }
     
     // Return the endpoint halt status
-    if (pEndpoint[endpoint]->dState == endpointStateHalted)
-        return true;
-    else
-        return false;
-
+    return pEndpoint[endpoint]->dState == endpointStateHalted;
 }
 
 
@@ -1288,6 +1284,7 @@ udp_write (udp_t udp, const void *buffer, udp_size_t length)
 }
 
 
+#if 0
 static void
 udp_enumerate (udp_t udp)
 {
@@ -1319,8 +1316,18 @@ udp_enumerate (udp_t udp)
         || !udp->request_handler (udp->request_handler_arg, &setup))
         udp_control_stall (udp);
 }
+#endif
 
 
+bool
+udp_configured_p (udp_t udp)
+{
+    // Wait for the device to be configured
+    return ! ISCLEARED (udp->device_state, UDP_STATE_CONFIGURED);
+}
+
+
+#if 0
 bool
 udp_configured_p (udp_t udp)
 {
@@ -1353,7 +1360,7 @@ udp_configured_p (udp_t udp)
 
     return udp->configuration != 0;
 }
-
+#endif
 
 
 void
@@ -1420,9 +1427,7 @@ void udp_enable_device (udp_t udp __unused__)
 
     // Init data banks
     for (i = 0; i < UDP_EP_NUM; i++)
-    {
         pEndpoint[i]->dFlag = AT91C_UDP_RX_DATA_BK0;
-    }
 
     // We are in attached state now
     SET (udp->device_state, UDP_STATE_ATTACHED);
@@ -1443,9 +1448,12 @@ void udp_disable_device (udp_t udp)
     AT91PS_UDP pUDP = udp->pUDP;
     AT91PS_AIC pAIC = AT91C_BASE_AIC;
 
-#ifdef USB_PIO_PULLUP
-    // FIXME
-    pPIO->PIO_SODR  = PIN_USB_PULLUP;   // enable pull-up for USBP to signal host a device disconnection
+#ifdef UDP_PIO_PULLUP
+    // Enable UDP PullUp (UDP_DP_PUP) : enable and clear of the
+    // corresponding PIO.  Set in PIO mode and configure as output.
+    pio_config (UDP_PIO_PULLUP, PIO_OUTPUT);
+    /* Set high to disable pullup.  */
+    pio_output_high (UDP_PIO_PULLUP);
 #endif
 
     // Disables the 48MHz USB clock UDPCK and System Peripheral USB Clock
@@ -1454,10 +1462,9 @@ void udp_disable_device (udp_t udp)
 
     // Disable the interrupt on the interrupt controller
     pAIC->AIC_IDCR |= 1 << AT91C_ID_UDP;
-    pUDP->UDP_IDR = 0;  // disable all UDP interrupts
-    pUDP->UDP_TXVC |= AT91C_UDP_TXVDIS;  // disable UDP tranceiver
+    pUDP->UDP_IDR = 0;                   // Disable all UDP interrupts
+    pUDP->UDP_TXVC |= AT91C_UDP_TXVDIS;  // Disable UDP tranceiver
 
-    // we are in detached state now
     udp->device_state = 0;
     SET (udp->device_state, UDP_STATE_DETACHED);
 
@@ -1530,6 +1537,13 @@ udp_check_bus_status (udp_t udp)
 {
     AT91PS_UDP pUDP = udp->pUDP;
 
+    // Check udp_init called
+    if (!udp->pUDP)
+    {
+        TRACE_ERROR (UDP, "UDP:udp_init not called\n");
+        return 0;
+    }
+
     if (udp_detect_p (udp))
     {
         // Check if UDP is deactivated
@@ -1591,23 +1605,12 @@ udp_awake_p (udp_t udp)
 }
 
 
-
 udp_t udp_init (udp_request_handler_t request_handler, void *arg)
 {
     udp_t udp = &udp_dev;
 
     udp->request_handler = request_handler;
     udp->request_handler_arg = arg;
-
-    /* Set the PLL USB Divider (PLLCK / 2).  This assumes that the PLL
-       clock is 96 MHz since the USB clock must be 48 MHz.  */
-    AT91C_BASE_CKGR->CKGR_PLLR |= AT91C_CKGR_USBDIV_1 ;
-
-    /* Enable the 48 MHz USB clock UDPCK.  */
-    AT91C_BASE_PMC->PMC_SCER = AT91C_PMC_UDP;
-
-    /* Enable System Peripheral USB Clock.  */
-    AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_UDP);
 
     /* Signal the host by pulling D+ high.  This might be pulled high
        with an external 1k5 resistor.  */
