@@ -11,9 +11,9 @@ typedef void *(*sys_open_t) (void *fs, const char *pathname, int flags);
 
 typedef int (*sys_close_t) (void *file);
 
-typedef off_t (*sys_lseek_t) (void *file, off_t offset, int dir);
+typedef off_t (*sys_lseek_t) (void *file, off_t offset, int whence);
 
-typedef int (*sys_unlink_t) (const char *pathname);
+typedef int (*sys_unlink_t) (void *fs, const char *pathname);
 
 /* Device operations.  */
 typedef struct sys_dev_struct

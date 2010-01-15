@@ -135,7 +135,7 @@ _read (int fd, char *buffer, size_t size)
 
 
 off_t
-_lseek (int fd, off_t offset, int dir)
+_lseek (int fd, off_t offset, int whence)
 {
     if ((fd >= SYS_FD_NUM) || !sys_files[fd].dev->lseek)
     {
@@ -143,7 +143,7 @@ _lseek (int fd, off_t offset, int dir)
         return -1;
     }
 
-    return sys_files[fd].dev->lseek (sys_files[fd].file, offset, dir);
+    return sys_files[fd].dev->lseek (sys_files[fd].file, offset, whence);
 }
 
 
@@ -282,7 +282,7 @@ _unlink (const char *path)
         errno = EACCES;
         return -1;
     }
-    return sys_fs->unlink (path);
+    return sys_fs->unlink (sys_fs_arg, path);
 }
 
 
