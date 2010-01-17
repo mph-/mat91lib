@@ -988,7 +988,6 @@ bool udp_halt (udp_t udp, udp_ep_t endpoint, uint8_t request)
     // Clear the Halt feature of the endpoint if it is enabled
     if (request == USB_CLEAR_FEATURE)
     {
-
         TRACE_INFO (UDP, "UDP:Unhalt%d\n", endpoint);
 
         // Return endpoint to Idle state
@@ -1546,7 +1545,7 @@ udp_check_bus_status (udp_t udp)
 
     if (udp_detect_p (udp))
     {
-        // Check if UDP is deactivated
+        //  If UDP is deactivated enable it
         if (ISCLEARED (udp->device_state, UDP_STATE_ATTACHED))
         {
             udp_enable_device (udp);
@@ -1554,7 +1553,7 @@ udp_check_bus_status (udp_t udp)
            
         if (ISSET (udp->device_state, UDP_STATE_ATTACHED))
         {
-            AT91PS_AIC pAIC = AT91C_BASE_AIC;      //!< Interrupt controller
+            AT91PS_AIC pAIC = AT91C_BASE_AIC;
 
             // Clear all interrupts
             pUDP->UDP_ICR = 0;
@@ -1579,7 +1578,8 @@ udp_check_bus_status (udp_t udp)
 #endif
 
             // Enable UDP peripheral interrupts
-            pUDP->UDP_IER = AT91C_UDP_ENDBUSRES | AT91C_UDP_RMWUPE | AT91C_UDP_RXSUSP;
+            pUDP->UDP_IER = AT91C_UDP_ENDBUSRES | AT91C_UDP_RMWUPE
+                | AT91C_UDP_RXSUSP;
             // We are in powered state now
             SET (udp->device_state, UDP_STATE_POWERED);
         }   

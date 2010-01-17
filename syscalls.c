@@ -8,49 +8,58 @@
 #include "config.h"
 #include <errno.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "sys.h"
 
 
+/* Maximum number of open files.  */
 #ifndef SYS_FILE_NUM
 #define SYS_FILE_NUM 4
 #endif
 
+
+/* Maximum number of file descriptors, including stdin, stdout, stderr.  */
 #define SYS_FD_NUM (SYS_FILE_NUM + 3)
+
+
+/* Maximum number of file systems.  */
+#ifndef SYS_FS_NUM
+#define SYS_FS_NUM 1
+#endif
 
 
 typedef struct sys_file_struct
 {
-    sys_dev_t *dev;
+    sys_devops_t *devops;
     void *file;
 } sys_file_t;
 
-static sys_dev_t stdin_dev;
-static sys_dev_t stdout_dev;
-static sys_dev_t stderr_dev;
+static sys_devops_t stdin_devops;
+static sys_devops_t stdout_devops;
+static sys_devops_t stderr_devops;
 
 static sys_file_t sys_files[SYS_FD_NUM] =
 {
-    {.dev = &stdin_dev, .file = 0},
-    {.dev = &stdout_dev, .file = 0},
-    {.dev = &stderr_dev, .file = 0}
+    {.devops = &stdin_devops, .file = 0},
+    {.devops = &stdout_devops, .file = 0},
+    {.devops = &stderr_devops, .file = 0}
 };
 
-static sys_fs_t *sys_fs;
-static void *sys_fs_arg;
+static sys_fs_t *sys_fs[SYS_FS_NUM];
 static void (*stdio_putc) (void *stream, int ch) = 0;
 static int (*stdio_getc) (void *stream) = 0;
 
+/** Start of heap.  */
+extern char _heap_start__;
 
 
-extern char _heap_start__;    /** Start of heap.  */
-
-
-/* Helper write routine if no block write exists.  */
+/* Helper write routine for old style stdio redirection.  */
 static ssize_t
-stdio_write_block (void *stream, const char *buffer, size_t size)
+stdio_write_block (void *stream, const void *buffer, size_t size)
 {
     size_t i;
+    const char *src = buffer;
     
     if (!stdio_putc)
     {
@@ -59,17 +68,18 @@ stdio_write_block (void *stream, const char *buffer, size_t size)
     }
 
     for (i = 0; i < size; i++)
-        stdio_putc (stream, *buffer++);
+        stdio_putc (stream, *src++);
 
     return size;
 }
 
 
-/* Helper read routine if no block read exists.  */
+/* Helper read routine for old style stdio redirection.  */
 static ssize_t
-stdio_read_block (void *stream, char *buffer, size_t size)
+stdio_read_block (void *stream, void *buffer, size_t size)
 {
     size_t i;
+    char *dst = buffer;
     
     if (!stdio_getc)
     {
@@ -78,7 +88,7 @@ stdio_read_block (void *stream, char *buffer, size_t size)
     }
 
     for (i = 0; i < size; i++)
-        *buffer++ = stdio_getc (stream);
+        *dst++ = stdio_getc (stream);
 
     return size;
 }
@@ -100,7 +110,7 @@ stdio_redirect (void (*putc1) (void *stream, int ch),
 void
 sys_redirect_stdin (sys_read_t read1, void *file)
 {
-    sys_files[0].dev->read = read1;
+    sys_files[0].devops->read = read1;
     sys_files[0].file = file;
 }
 
@@ -108,7 +118,7 @@ sys_redirect_stdin (sys_read_t read1, void *file)
 void
 sys_redirect_stdout (sys_write_t write1, void *file)
 {
-    sys_files[1].dev->write = write1;
+    sys_files[1].devops->write = write1;
     sys_files[1].file = file;
 }
 
@@ -116,61 +126,77 @@ sys_redirect_stdout (sys_write_t write1, void *file)
 void
 sys_redirect_stderr (sys_write_t write1, void *file)
 {
-    sys_files[2].dev->write = write1;
+    sys_files[2].devops->write = write1;
     sys_files[2].file = file;
+}
+
+
+static const char *
+sys_fs_find (const char *pathname, sys_fs_t **pfs)
+{
+    /* TODO, map pathname to a fs.  For now assume that first file
+       system is mounted as /.  */
+
+    *pfs = sys_fs[0];
+
+    if (*pathname == '/')
+        return pathname + 1;
+    
+    return pathname;
 }
 
 
 ssize_t
 _read (int fd, char *buffer, size_t size)
 {
-    if ((fd >= SYS_FD_NUM) || !sys_files[fd].dev->read)
+    if ((fd >= SYS_FD_NUM) || !sys_files[fd].devops->read)
     {
         errno = ENODEV;
         return -1;
     }
 
-    return sys_files[fd].dev->read (sys_files[fd].file, buffer, size);
+    return sys_files[fd].devops->read (sys_files[fd].file, buffer, size);
 }
 
 
 off_t
 _lseek (int fd, off_t offset, int whence)
 {
-    if ((fd >= SYS_FD_NUM) || !sys_files[fd].dev->lseek)
+    if ((fd >= SYS_FD_NUM) || !sys_files[fd].devops->lseek)
     {
         errno = ENODEV;
         return -1;
     }
 
-    return sys_files[fd].dev->lseek (sys_files[fd].file, offset, whence);
+    return sys_files[fd].devops->lseek (sys_files[fd].file, offset, whence);
 }
 
 
 ssize_t
 _write (int fd, char *buffer, size_t size)
 {
-    if ((fd >= SYS_FD_NUM) || !sys_files[fd].dev->write)
+    if ((fd >= SYS_FD_NUM) || !sys_files[fd].devops->write)
     {
         errno = ENODEV;
         return -1;
     }
 
-    return sys_files[fd].dev->write (sys_files[fd].file, buffer, size);
+    return sys_files[fd].devops->write (sys_files[fd].file, buffer, size);
 }
 
 
 int
-_open (const char *path, int flags, ...)
+_open (const char *pathname, int flags, ...)
 {
     void *arg;
     int fd;
+    sys_fs_t *fs;
 
     /* This is not called for stdin, stdout, stderr.  */
 
     for (fd = 3; fd < SYS_FD_NUM; fd++)
     {
-        if (!sys_files[fd].dev)
+        if (!sys_files[fd].devops)
             break;
     }
     if (fd == SYS_FD_NUM)
@@ -179,19 +205,21 @@ _open (const char *path, int flags, ...)
         return -1;
     }
 
-    if (!sys_fs || !sys_fs->dev || !sys_fs->dev->open)
+    pathname = sys_fs_find (pathname, &fs);
+
+    if (!fs || !fs->devops || !fs->devops->open)
     {
         errno = EACCES;
         return -1;
     }
 
-    arg = sys_fs->dev->open (sys_fs_arg, path, flags);
+    arg = fs->devops->open (fs->private, pathname, flags);
     if (!arg)
     {
         errno = EACCES;
         return -1;
     }
-    sys_files[fd].dev = sys_fs->dev;
+    sys_files[fd].devops = (sys_devops_t *)fs->devops;
     sys_files[fd].file = arg;
 
     return fd;
@@ -199,9 +227,21 @@ _open (const char *path, int flags, ...)
 
 
 int
-_close (int fd __UNUSED__)
+_close (int fd)
 {
-    return 0;
+    int ret;
+
+    if ((fd >= SYS_FD_NUM) || !sys_files[fd].devops->close)
+    {
+        errno = ENODEV;
+        return -1;
+    }
+
+    ret = sys_files[fd].devops->close (sys_files[fd].file);
+
+    sys_files[fd].devops = 0;
+    sys_files[fd].file = 0;
+    return ret;
 }
 
 
@@ -275,14 +315,19 @@ _link (void)
 
 
 int
-_unlink (const char *path)
+_unlink (const char *pathname)
 {
-    if (!sys_fs || !sys_fs->dev || !sys_fs->unlink)
+    sys_fs_t *fs;
+
+    pathname = sys_fs_find (pathname, &fs);
+
+    /* TODO: select fs based on pathname.  */
+    if (!fs || !fs->fsops || !fs->fsops->unlink)
     {
         errno = EACCES;
         return -1;
     }
-    return sys_fs->unlink (sys_fs_arg, path);
+    return fs->fsops->unlink (fs->private, pathname);
 }
 
 
@@ -324,16 +369,31 @@ _system (const char *s __UNUSED__)
 int
 _rename (const char *oldpath __UNUSED__, const char *newpath __UNUSED__)
 {
+    /* TODO: Vector to fs op.  Note, both pathnames must be on the
+       same file system otherwise need to return EXDEV.  */
+
     errno = ENOSYS;
     return -1;
 }
 
 
-/* Register a file system for file I/O.  Currently only a single
-   file system is supported.  */
-void
-sys_fs_register (sys_fs_t *fs, void *arg)
+/* Mount a file system for file I/O.  */
+bool
+sys_mount (sys_fs_t *fs, const char *mountname, int flags)
 {
-    sys_fs = fs;
-    sys_fs_arg = arg;
+    int i;
+
+    for (i = 0; i < SYS_FS_NUM; i++)
+    {
+        if (!sys_fs[i])
+            break;
+    }
+
+    if (i == SYS_FS_NUM)
+        return 0;
+
+    sys_fs[i] = fs;
+    sys_fs[i]->flags = flags;
+    strncpy (sys_fs[i]->mountname, mountname, sizeof (sys_fs[i]->mountname));
+    return 1;
 }
