@@ -1,5 +1,7 @@
-#include "udp.h"
+#include "irq.h"
 #include "trace.h"
+#include "udp.h"
+
 
 /* 
    UDP USB device port.
@@ -1553,29 +1555,13 @@ udp_check_bus_status (udp_t udp)
            
         if (ISSET (udp->device_state, UDP_STATE_ATTACHED))
         {
-            AT91PS_AIC pAIC = AT91C_BASE_AIC;
-
             // Clear all interrupts
             pUDP->UDP_ICR = 0;
 
-#if 0
             irq_config (AT91C_ID_UDP, 7, 
                         AT91C_AIC_SRCTYPE_INT_LEVEL_SENSITIVE, udp_irq_service);
             
             irq_enable (AT91C_ID_UDP);
-#else
-
-            // Disable the interrupt on the interrupt controller
-            SET (pAIC->AIC_IDCR, 1 << AT91C_ID_UDP);
-            // Save the interrupt handler routine pointer
-            pAIC->AIC_SVR[AT91C_ID_UDP] = (unsigned int) udp_irq_service;
-            // Store the Source Mode Register
-            pAIC->AIC_SMR[AT91C_ID_UDP] = AT91C_AIC_PRIOR_HIGHEST;
-            // Clear the interrupt on the interrupt controller
-            SET (pAIC->AIC_ICCR, 1 << AT91C_ID_UDP);
-            // enable UDP interrupt on the interrupt controller        
-            SET (pAIC->AIC_IECR, 1 << AT91C_ID_UDP);
-#endif
 
             // Enable UDP peripheral interrupts
             pUDP->UDP_IER = AT91C_UDP_ENDBUSRES | AT91C_UDP_RMWUPE
