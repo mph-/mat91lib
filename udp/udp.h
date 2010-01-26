@@ -64,19 +64,7 @@ typedef bool (*udp_request_handler_t) (void *arg, udp_setup_t *setup);
 typedef void (*udp_callback_t) (unsigned int, unsigned int,
                                 unsigned int, unsigned int);
 
-typedef struct udp_dev_struct
-{
-    AT91PS_UDP pUDP;
-    uint32_t rx_bank;
-    uint16_t rx_bytes;
-    uint8_t connection;
-    /* Chosen configuration, 0 if not configured.  */
-    uint8_t configuration;
-    udp_request_handler_t request_handler;
-    void *request_handler_arg;
-    volatile uint8_t device_state;
-} udp_dev_t;
-
+typedef struct udp_dev_struct udp_dev_t;
 
 typedef udp_dev_t *udp_t;
 
