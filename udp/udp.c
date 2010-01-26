@@ -398,7 +398,7 @@ udp_irq_service (void)
                  | AT91C_UDP_RXSUSP);
             SET (pUDP->UDP_IDR, AT91C_UDP_WAKEUP | AT91C_UDP_RXRSM);
         }        
-        // End of bus reset
+        // End of bus reset (non maskable)
         else if (ISSET (status, AT91C_UDP_ENDBUSRES))
         {
             TRACE_INFO (UDP, "UDP:EoBres\n");
@@ -552,6 +552,7 @@ udp_set_address (udp_t udp, udp_setup_t *setup)
 
     if (address == 0) 
     {
+        // Inform UDP that out of address state
         SET (pUDP->UDP_GLBSTATE, 0);
 
         // Device enters the Default state
@@ -559,6 +560,7 @@ udp_set_address (udp_t udp, udp_setup_t *setup)
     }
     else
     {
+        // Inform UDP that in address state
         SET (pUDP->UDP_GLBSTATE, AT91C_UDP_FADDEN);
 
         // The device enters the Address state
@@ -648,13 +650,14 @@ udp_write_payload (udp_t udp, udp_ep_t endpoint)
  * 
  */
 udp_status_t
-udp_write_async (udp_t udp __unused__, const void *pData, 
+udp_write_async (udp_t udp __unused__,
+                 udp_ep_t endpoint,
+                 const void *pData, 
                  unsigned int len, 
                  udp_callback_t fCallback, 
                  void *pArgument)
 {
     AT91PS_UDP pUDP = udp->pUDP;
-    udp_ep_t endpoint = UDP_EP_IN;
 
     // Check that the endpoint is in Idle state
     if (pEndpoint[endpoint]->dState != UDP_EP_STATE_IDLE) 
@@ -737,13 +740,14 @@ udp_read_payload (udp_t udp, udp_ep_t endpoint, unsigned int packetsize)
  * 
  */
 udp_status_t
-udp_read_async (udp_t udp __unused__, void *pData, 
+udp_read_async (udp_t udp __unused__, 
+                udp_ep_t endpoint,
+                void *pData, 
                 unsigned int len, 
                 udp_callback_t fCallback, 
                 void *pArgument)
 {
     AT91PS_UDP pUDP = udp->pUDP;
-    udp_ep_t endpoint = UDP_EP_OUT;
 
     // Check that the endpoint is in Idle state
     if (pEndpoint[endpoint]->dState != UDP_EP_STATE_IDLE)
@@ -795,7 +799,7 @@ udp_setup (udp_t udp, udp_ep_t endpoint)
     
     if (!udp->request_handler
         || !udp->request_handler (udp->request_handler_arg, &setup))
-        udp_control_stall (udp);
+        udp_stall (udp, UDP_EP_CONTROL);
 }
 
     
@@ -1049,6 +1053,13 @@ udp_halt (udp_t udp, udp_ep_t endpoint, uint8_t request)
 }
 
 
+bool
+udp_idle_p (udp_t udp, udp_ep_t endpoint)
+{
+    return pEndpoint[endpoint]->dState == UDP_EP_STATE_IDLE;
+}
+
+
 /**
  * Changes the device state from Address to Configured, or from
  * Configured to Address.
@@ -1151,36 +1162,6 @@ udp_control_gobble (udp_t udp)
     while (! (pUDP->UDP_CSR[0] & AT91C_UDP_RX_DATA_BK0));
 
     pUDP->UDP_CSR[0] &= ~AT91C_UDP_RX_DATA_BK0;
-}
-
-
-void
-udp_control_write_zlp (udp_t udp)
-{
-    AT91PS_UDP pUDP = udp->pUDP;
-
-    pUDP->UDP_CSR[0] |= AT91C_UDP_TXPKTRDY;
-    while (! (pUDP->UDP_CSR[0] & AT91C_UDP_TXCOMP))
-        continue;
-
-    pUDP->UDP_CSR[0] &= ~AT91C_UDP_TXCOMP;
-    while (pUDP->UDP_CSR[0] & AT91C_UDP_TXCOMP)
-        continue;
-}
-
-
-void
-udp_control_stall (udp_t udp)
-{
-    AT91PS_UDP pUDP = udp->pUDP;
-
-    pUDP->UDP_CSR[0] |= AT91C_UDP_FORCESTALL;
-    while (! (pUDP->UDP_CSR[0] & AT91C_UDP_ISOERROR))
-        continue;
-
-    pUDP->UDP_CSR[0] &= ~(AT91C_UDP_FORCESTALL | AT91C_UDP_ISOERROR);
-    while (pUDP->UDP_CSR[0] & (AT91C_UDP_FORCESTALL | AT91C_UDP_ISOERROR))
-        continue;
 }
 
 

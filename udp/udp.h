@@ -14,6 +14,9 @@ typedef enum
 
 #define UDP_EP_NUM 3
 
+enum {UDP_EP_DIR_OUT = 0, UDP_EP_DIR_IN = 0x80};
+
+
 
 //! Detached state
 #define UDP_STATE_DETACHED                          (1 << 0)
@@ -79,15 +82,13 @@ typedef udp_dev_t *udp_t;
 
 typedef uint16_t udp_size_t;
 
-void udp_control_write (udp_t udp, const void *data, udp_size_t length);
-
 void udp_control_gobble (udp_t udp);
 
-void udp_control_write_zlp (udp_t udp);
-
-void udp_control_stall (udp_t udp);
-
 bool udp_halt (udp_t udp, udp_ep_t endpoint, uint8_t request);
+
+void udp_stall (udp_t udp, udp_ep_t endpoint);
+
+bool udp_idle_p (udp_t udp, udp_ep_t endpoint);
 
 bool udp_read_ready_p (udp_t udp);
 
@@ -95,12 +96,16 @@ udp_size_t udp_read (udp_t udp, void *buffer, udp_size_t length);
 
 udp_size_t udp_write (udp_t udp, const void *buffer, udp_size_t length);
 
-udp_status_t udp_write_async (udp_t udp, const void *buffer, 
+udp_status_t udp_write_async (udp_t udp, 
+                              udp_ep_t endpoint,
+                              const void *buffer, 
                               unsigned int length, 
                               udp_callback_t callback, 
                               void *arg);
 
-udp_status_t udp_read_async (udp_t udp, void *buffer, 
+udp_status_t udp_read_async (udp_t udp, 
+                             udp_ep_t endpoint,
+                             void *buffer, 
                              unsigned int length, 
                              udp_callback_t callback, 
                              void *arg);
