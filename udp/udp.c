@@ -75,6 +75,10 @@
    product ID is 0x6124.  With these lsusb gives
    ``Atmel Corp. at91sam SAMBA bootloader''
 
+   
+   FIXME, FIXME, FIXME.  This implementation does far too much
+   processing in the context of interrupt handlers.  The callbacks
+   are all called from interrupts.
 */
 
 
@@ -249,6 +253,7 @@ struct udp_dev_struct
     udp_request_handler_t request_handler;
     void *request_handler_arg;
     volatile uint8_t device_state;
+    udp_setup_t setup;
     udp_ep_info_t ep_info[UDP_EP_NUM];
 };
 
@@ -675,7 +680,7 @@ udp_write_async (udp_t udp __unused__,
     TRACE_INFO (UDP, "UDP:Write%d %d\n", endpoint, len);
 
     // Setup the transfer descriptor
-    pep->pData = (char *) pData;
+    pep->pData = (char *)pData;
     pep->dBytesRemaining = len;
     pep->dBytesBuffered = 0;
     pep->dBytesTransferred = 0;
@@ -685,12 +690,14 @@ udp_write_async (udp_t udp __unused__,
     // Send one packet
     pep->dState = UDP_EP_STATE_WRITE;
     udp_write_payload (udp, endpoint);
+
+    // Say that there is data ready.  If writing a zero length packet
+    // then udp_write_payload is a nop.
     udp_ep_set_flag (pUDP, endpoint, AT91C_UDP_TXPKTRDY);
 
     // If double buffering is enabled and there is data remaining, 
     // prepare another packet
-    if ((pep->dNumFIFO > 1) 
-         && (pep->dBytesRemaining > 0))
+    if ((pep->dNumFIFO > 1) && (pep->dBytesRemaining > 0))
         udp_write_payload (udp, endpoint);
 
     // Enable interrupt on endpoint
@@ -770,7 +777,7 @@ udp_read_async (udp_t udp __unused__,
     pep->dState = UDP_EP_STATE_READ;
 
     // Set the transfer descriptor
-    pep->pData = (char *) pData;
+    pep->pData = pData;
     pep->dBytesRemaining = len;
     pep->dBytesBuffered = 0;
     pep->dBytesTransferred = 0;
@@ -786,31 +793,27 @@ udp_read_async (udp_t udp __unused__,
 
 
 static void
-udp_setup (udp_t udp, udp_ep_t endpoint)
+udp_setup_read (udp_t udp, udp_ep_t endpoint)
 {
     AT91PS_UDP pUDP = udp->pUDP;
-    udp_setup_t setup;
+    udp_setup_t *setup = &udp->setup;
 
     // Get request parameters
-    setup.type = pUDP->UDP_FDR[0];
-    setup.request = pUDP->UDP_FDR[0];
-    setup.value = pUDP->UDP_FDR[0] & 0xFF;
-    setup.value |= (pUDP->UDP_FDR[0] << 8);
-    setup.index = pUDP->UDP_FDR[0] & 0xFF;
-    setup.index |= (pUDP->UDP_FDR[0] << 8);
-    setup.length = pUDP->UDP_FDR[0] & 0xFF;
-    setup.length |= (pUDP->UDP_FDR[0] << 8);
+    setup->type = pUDP->UDP_FDR[0];
+    setup->request = pUDP->UDP_FDR[0];
+    setup->value = pUDP->UDP_FDR[0] & 0xFF;
+    setup->value |= (pUDP->UDP_FDR[0] << 8);
+    setup->index = pUDP->UDP_FDR[0] & 0xFF;
+    setup->index |= (pUDP->UDP_FDR[0] << 8);
+    setup->length = pUDP->UDP_FDR[0] & 0xFF;
+    setup->length |= (pUDP->UDP_FDR[0] << 8);
     
     // Set the DIR bit before clearing RXSETUP in Control IN sequence
-    if (setup.type & 0x80)
+    if (setup->type & 0x80)
         udp_ep_set_flag (pUDP, endpoint, AT91C_UDP_DIR);
     
-    // Acknowledge interrupt
+    // Acknowledge that setup data packet has been read from FIFO
     udp_ep_clr_flag (pUDP, endpoint, AT91C_UDP_RXSETUP);
-    
-    if (!udp->request_handler
-        || !udp->request_handler (udp->request_handler_arg, &setup))
-        udp_stall (udp, UDP_EP_CONTROL);
 }
 
     
@@ -965,7 +968,7 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
             udp_end_of_transfer (udp, endpoint, UDP_STATUS_SUCCESS);
         }
 
-        udp_setup (udp, endpoint);
+        udp_setup_read (udp, endpoint);
     }
 
     // STALL sent
@@ -1311,10 +1314,24 @@ udp_write (udp_t udp, const void *buffer, udp_size_t length)
 }
 
 
+static void
+udp_poll (udp_t udp)
+{
+    if (!udp->setup.request)
+        return;
+
+    if (!udp->request_handler
+        || !udp->request_handler (udp->request_handler_arg, &udp->setup))
+        udp_stall (udp, UDP_EP_CONTROL);
+    udp->setup.request = 0;
+}
+
+
 bool
 udp_configured_p (udp_t udp)
 {
     // Could poll interrupts here...
+    udp_poll (udp);
 
     // Check if device configured
     return ! ISCLEARED (udp->device_state, UDP_STATE_CONFIGURED);
@@ -1545,6 +1562,7 @@ bool
 udp_awake_p (udp_t udp)
 {
     // Could poll interrupts here...
+    udp_poll (udp);
 
     return udp_check_bus_status (udp)
         && ISCLEARED (udp->device_state, UDP_STATE_SUSPENDED);
@@ -1557,6 +1575,7 @@ udp_t udp_init (udp_request_handler_t request_handler, void *arg)
 
     udp->request_handler = request_handler;
     udp->request_handler_arg = arg;
+    udp->setup.request = 0;
 
     /* Signal the host by pulling D+ high.  This might be pulled high
        with an external 1k5 resistor.  */
