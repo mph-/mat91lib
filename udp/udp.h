@@ -5,6 +5,9 @@
 
 enum {UDP_EP_CONTROL_SIZE = 8, UDP_EP_OUT_SIZE = 64, UDP_EP_IN_SIZE = 64};
 
+
+/* IN and OUT are referred to the host so we transmit on the IN endpoint
+   and receive on the OUT endpoint.  */
 typedef enum 
 {
     UDP_EP_CONTROL = 0,
@@ -17,22 +20,6 @@ typedef enum
 enum {UDP_EP_DIR_OUT = 0, UDP_EP_DIR_IN = 0x80};
 
 
-
-//! Detached state
-#define UDP_STATE_DETACHED                          (1 << 0)
-//! Attached state
-#define UDP_STATE_ATTACHED                          (1 << 1)
-//! Powered state
-#define UDP_STATE_POWERED                           (1 << 2)
-//! Default state
-#define UDP_STATE_DEFAULT                           (1 << 3)
-//! Address state
-#define UDP_STATE_ADDRESS                           (1 << 4)
-//! Configured state
-#define UDP_STATE_CONFIGURED                        (1 << 5)
-//! Suspended state
-#define UDP_STATE_SUSPENDED                         (1 << 6)
-
 typedef enum
 {
 //! Last method has completed successfully
@@ -43,10 +30,20 @@ typedef enum
     UDP_STATUS_ABORTED = 2,
 //! Method was aborted because the endpoint or the device has been reset
     UDP_STATUS_RESET = 3,
-//! Method status unknow
-    UDP_STATUS_UNKOWN = 4
+//! Waiting completion of transfer
+    UDP_STATUS_PENDING = 4,
+//! Method status unknown
+    UDP_STATUS_UNKOWN = 5
 } udp_status_t;
 
+
+typedef struct udp_transfer_struct
+{
+    udp_status_t status;
+    unsigned int remaining;
+    unsigned int buffered;
+    unsigned int transferred;
+} udp_transfer_t;
 
 
 typedef struct usb_setup_struct
@@ -59,14 +56,13 @@ typedef struct usb_setup_struct
 } udp_setup_t;
 
 
-typedef bool (*udp_request_handler_t) (void *arg, udp_setup_t *setup);
-
-typedef void (*udp_callback_t) (unsigned int, unsigned int,
-                                unsigned int, unsigned int);
-
 typedef struct udp_dev_struct udp_dev_t;
 
 typedef udp_dev_t *udp_t;
+
+typedef bool (*udp_request_handler_t) (void *arg, udp_setup_t *setup);
+
+typedef void (*udp_callback_t) (void *arg, udp_transfer_t *udp_transfer);
 
 typedef uint16_t udp_size_t;
 
@@ -104,11 +100,9 @@ void udp_connect (udp_t udp);
 
 bool udp_awake_p (udp_t udp);
 
-void udp_set_configuration (udp_t udp, udp_setup_t *setup);
+void udp_configuration_set (void *arg, udp_transfer_t *ptransfer);
 
-void udp_configure_endpoint (udp_t udp, udp_ep_t endpoint);
-
-void udp_set_address (udp_t udp, udp_setup_t *setup);
+void udp_address_set (void *arg, udp_transfer_t *ptransfer);
 
 void udp_shutdown (void);
 
