@@ -680,7 +680,6 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pData,
 
     TRACE_INFO (UDP, "UDP:Write%d %d\n", endpoint, len);
 
-    // Setup the transfer descriptor
     pep->pData = (char *)pData;
     pep->transfer.status = UDP_STATUS_PENDING;
     pep->transfer.remaining = len;
@@ -688,9 +687,9 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pData,
     pep->transfer.transferred = 0;
     pep->callback = callback;
     pep->arg = arg;
+    pep->state = UDP_EP_STATE_WRITE;
 
     // Send one packet
-    pep->state = UDP_EP_STATE_WRITE;
     udp_write_payload (udp, endpoint);
 
     // Say that there is data ready.  If writing a zero length packet
@@ -759,7 +758,7 @@ udp_read_payload (udp_t udp, udp_ep_t endpoint, unsigned int packetsize)
  * 
  */
 udp_status_t
-udp_read_async (udp_t udp, udp_ep_t endpoint, void *pData,  unsigned int len, 
+udp_read_async (udp_t udp, udp_ep_t endpoint, void *pData, unsigned int len, 
                 udp_callback_t callback, void *arg)
 {
     AT91PS_UDP pUDP = udp->pUDP;
@@ -771,10 +770,6 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pData,  unsigned int len,
 
     TRACE_INFO (UDP, "UDP:Read%d %d\n", endpoint, len);
 
-    // Endpoint enters Read state
-    pep->state = UDP_EP_STATE_READ;
-
-    // Set the transfer descriptor
     pep->pData = pData;
     pep->transfer.status = UDP_STATUS_PENDING;
     pep->transfer.remaining = len;
@@ -782,6 +777,7 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pData,  unsigned int len,
     pep->transfer.transferred = 0;
     pep->callback = callback;
     pep->arg = arg;
+    pep->state = UDP_EP_STATE_READ;
     
     // Enable interrupt on endpoint
     SET (pUDP->UDP_IER, 1 << endpoint);
