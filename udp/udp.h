@@ -68,11 +68,13 @@ typedef uint16_t udp_size_t;
 
 void udp_control_gobble (udp_t udp);
 
-bool udp_halt (udp_t udp, udp_ep_t endpoint, uint8_t request);
+bool udp_halt (udp_t udp, udp_ep_t endpoint, bool halt);
 
 void udp_stall (udp_t udp, udp_ep_t endpoint);
 
 bool udp_idle_p (udp_t udp, udp_ep_t endpoint);
+
+bool udp_halt_p (udp_t udp, udp_ep_t endpoint);
 
 bool udp_read_ready_p (udp_t udp);
 

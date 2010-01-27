@@ -112,6 +112,12 @@
    called are udp_address_set and udp_configuration_set.  Another
    solution is to add some states and have the interrupt handler
    call these functions as required.
+
+   If there is a protocol error an endpoint can be halted.  The host
+   can use the standard control messages get-status, set-feature and
+   clear-feature to examine and manipulate the halted status of a
+   given endpoint.  The the halted condition can be cleared.
+
 */
 
 
@@ -240,10 +246,6 @@ static const char devDescriptor[] =
 };
 
 
-#define USB_CLEAR_FEATURE              0x01
-#define USB_SET_FEATURE                0x03
-
-
 static udp_dev_t udp_dev;
 
 /**
@@ -286,7 +288,7 @@ struct udp_dev_struct
     udp_state_t state;
     udp_state_t prev_state;
     udp_setup_t setup;
-    udp_ep_info_t ep_info[UDP_EP_NUM];
+    udp_ep_info_t eps[UDP_EP_NUM];
 };
 
 
@@ -367,9 +369,11 @@ udp_irq_handler (void)
     AT91PS_UDP pUDP = udp->pUDP;
     uint32_t status;
 
+#if 0
     // End interrupt if we are not attached to UDP bus
     if (udp->state == UDP_STATE_NOT_POWERED)
         return;
+#endif
 
     status = pUDP->UDP_ISR & pUDP->UDP_IMR & ISR_MASK;
 
@@ -502,7 +506,7 @@ udp_irq_handler (void)
 static __inline__
 void udp_end_of_transfer (udp_t udp, udp_ep_t endpoint, udp_status_t status)
 {
-    udp_ep_info_t *pep = &udp->ep_info[endpoint];
+    udp_ep_info_t *pep = &udp->eps[endpoint];
 
     if ((pep->state == UDP_EP_STATE_WRITE)
         || (pep->state == UDP_EP_STATE_READ)) 
@@ -531,7 +535,7 @@ static void
 udp_configure_endpoint (udp_t udp, udp_ep_t endpoint)
 {
     AT91PS_UDP pUDP = udp->pUDP;
-    udp_ep_info_t *pep = &udp->ep_info[endpoint];
+    udp_ep_info_t *pep = &udp->eps[endpoint];
 
     // Abort the current transfer if the endpoint was configured and in
     // Write or Read state
@@ -559,20 +563,20 @@ udp_configure_endpoint (udp_t udp, udp_ep_t endpoint)
     switch (endpoint)
     {
     case UDP_EP_CONTROL:
-        udp->ep_info[0].max_packet_size = UDP_EP_CONTROL_SIZE;
-        udp->ep_info[0].num_fifo = 1;
+        udp->eps[0].max_packet_size = UDP_EP_CONTROL_SIZE;
+        udp->eps[0].num_fifo = 1;
         pUDP->UDP_CSR[0] = AT91C_UDP_EPTYPE_CTRL | AT91C_UDP_EPEDS;
         break;
     
     case UDP_EP_OUT:
-        udp->ep_info[1].max_packet_size = UDP_EP_OUT_SIZE;
-        udp->ep_info[1].num_fifo = 2;
+        udp->eps[1].max_packet_size = UDP_EP_OUT_SIZE;
+        udp->eps[1].num_fifo = 2;
         pUDP->UDP_CSR[1] = AT91C_UDP_EPTYPE_BULK_OUT | AT91C_UDP_EPEDS;
         break;
 
     case UDP_EP_IN:
-        udp->ep_info[2].max_packet_size = UDP_EP_IN_SIZE;
-        udp->ep_info[2].num_fifo = 2;
+        udp->eps[2].max_packet_size = UDP_EP_IN_SIZE;
+        udp->eps[2].num_fifo = 2;
         pUDP->UDP_CSR[2] = AT91C_UDP_EPTYPE_BULK_IN | AT91C_UDP_EPEDS;         
         break;
     }
@@ -594,7 +598,7 @@ static void
 udp_clear_rx_flag (udp_t udp, udp_ep_t endpoint)
 {
     AT91PS_UDP pUDP = udp->pUDP;
-    udp_ep_info_t *pep = &udp->ep_info[endpoint];
+    udp_ep_info_t *pep = &udp->eps[endpoint];
 
     // Clear flag
     udp_ep_clr_flag (pUDP, endpoint, pep->flag);
@@ -628,7 +632,7 @@ static unsigned int
 udp_write_payload (udp_t udp, udp_ep_t endpoint)
 {
     AT91PS_UDP pUDP = udp->pUDP;
-    udp_ep_info_t *pep = &udp->ep_info[endpoint];
+    udp_ep_info_t *pep = &udp->eps[endpoint];
     unsigned int bytes;
     unsigned int ctr;
 
@@ -668,7 +672,7 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pData,
                  unsigned int len, udp_callback_t callback, void *arg)
 {
     AT91PS_UDP pUDP = udp->pUDP;
-    udp_ep_info_t *pep = &udp->ep_info[endpoint];
+    udp_ep_info_t *pep = &udp->eps[endpoint];
 
     // Check that the endpoint is in Idle state
     if (pep->state != UDP_EP_STATE_IDLE) 
@@ -719,7 +723,7 @@ static unsigned int
 udp_read_payload (udp_t udp, udp_ep_t endpoint, unsigned int packetsize)
 {
     AT91PS_UDP pUDP = udp->pUDP;
-    udp_ep_info_t *pep = &udp->ep_info[endpoint];
+    udp_ep_info_t *pep = &udp->eps[endpoint];
     unsigned int bytes;
     unsigned int ctr;
 
@@ -759,7 +763,7 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pData,  unsigned int len,
                 udp_callback_t callback, void *arg)
 {
     AT91PS_UDP pUDP = udp->pUDP;
-    udp_ep_info_t *pep = &udp->ep_info[endpoint];
+    udp_ep_info_t *pep = &udp->eps[endpoint];
 
     // Check that the endpoint is in Idle state
     if (pep->state != UDP_EP_STATE_IDLE)
@@ -827,7 +831,7 @@ static void
 udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
 {
     AT91PS_UDP pUDP = udp->pUDP;    
-    udp_ep_info_t *pep = &udp->ep_info[endpoint];
+    udp_ep_info_t *pep = &udp->eps[endpoint];
     unsigned int status = pUDP->UDP_CSR[endpoint];
     
     // Handle interrupts
@@ -998,7 +1002,7 @@ void
 udp_stall (udp_t udp, udp_ep_t endpoint)
 {
     AT91PS_UDP pUDP = udp->pUDP;
-    udp_ep_info_t *pep = &udp->ep_info[endpoint];
+    udp_ep_info_t *pep = &udp->eps[endpoint];
 
     // Check that endpoint is in Idle state
     if (pep->state != UDP_EP_STATE_IDLE) 
@@ -1016,22 +1020,24 @@ udp_stall (udp_t udp, udp_ep_t endpoint)
  * Set or clear a halt feature request for given endpoint.
  * 
  * \param   endpoint    Endpoint to handle
- * \param   request     Set/Clear feature flag
+ * \param   halt        Non zero to halt, zero to unhalt
  * \return  Current endpoint halt status
  * 
  */
 bool
-udp_halt (udp_t udp, udp_ep_t endpoint, uint8_t request)
+udp_halt (udp_t udp, udp_ep_t endpoint, bool halt)
 {
     AT91PS_UDP pUDP = udp->pUDP;
-    udp_ep_info_t *pep = &udp->ep_info[endpoint];
+    udp_ep_info_t *pep;
 
     // Mask endpoint number, direction bit is not used
     // see UDP v2.0 chapter 9.3.4
-    endpoint &= 0x0F;    
+    endpoint &= 0x0F;  
+
+    pep = &udp->eps[endpoint];  
     
     // Clear the Halt feature of the endpoint if it is enabled
-    if (request == USB_CLEAR_FEATURE)
+    if (!halt)
     {
         TRACE_INFO (UDP, "UDP:Unhalt%d\n", endpoint);
 
@@ -1047,8 +1053,7 @@ udp_halt (udp_t udp, udp_ep_t endpoint, uint8_t request)
     }
     // Set the Halt feature on the endpoint if it is not already enabled
     // and the endpoint is not disabled
-    else if ((request == USB_SET_FEATURE)
-             && (pep->state != UDP_EP_STATE_HALTED)
+    else if ((pep->state != UDP_EP_STATE_HALTED)
              && (pep->state != UDP_EP_STATE_DISABLED))
     {
 
@@ -1073,9 +1078,18 @@ udp_halt (udp_t udp, udp_ep_t endpoint, uint8_t request)
 bool
 udp_idle_p (udp_t udp, udp_ep_t endpoint)
 {
-    udp_ep_info_t *pep = &udp->ep_info[endpoint];
+    udp_ep_info_t *pep = &udp->eps[endpoint];
 
     return pep->state == UDP_EP_STATE_IDLE;
+}
+
+
+bool
+udp_halt_p (udp_t udp, udp_ep_t endpoint)
+{
+    udp_ep_info_t *pep = &udp->eps[endpoint];
+
+    return pep->state == UDP_EP_STATE_HALTED;
 }
 
 
@@ -1159,7 +1173,7 @@ udp_configuration_set (void *arg, udp_transfer_t *ptransfer __unused__)
         for (ep = 1; ep < UDP_EP_NUM; ep++)
         {
             udp_end_of_transfer (udp, ep, UDP_STATUS_RESET);
-            udp->ep_info[ep].state = UDP_EP_STATE_DISABLED;
+            udp->eps[ep].state = UDP_EP_STATE_DISABLED;
         }
     }
 }
@@ -1428,7 +1442,7 @@ udp_enable (udp_t udp)
 
     // Init data banks
     for (i = 0; i < UDP_EP_NUM; i++)
-        udp->ep_info[i].flag = AT91C_UDP_RX_DATA_BK0;
+        udp->eps[i].flag = AT91C_UDP_RX_DATA_BK0;
 
     TRACE_INFO (UDP, "UDP:UDP enabled\n");
 }
