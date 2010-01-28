@@ -136,11 +136,6 @@
 #endif
 
 
-#ifndef USB_CURRENT_MA
-#define USB_CURRENT_MA 100
-#endif
-
-
 #ifndef TRACE_UDP_ERROR
 #define TRACE_UDP_ERROR(...)
 #endif
