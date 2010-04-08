@@ -36,14 +36,22 @@ cpu_power_mode_low (void)
     /* Switch main clock (MCK) from PLLCLK to SLCK.  Note the prescale
        (PRES) and clock source (CSS) fields cannot be changed at the
        same time.  */
+#if 0
     AT91C_BASE_PMC->PMC_MCKR = (AT91C_BASE_PMC->PMC_MCKR & ~AT91C_PMC_PRES)
         | AT91C_PMC_CSS_SLOW_CLK;
+#else
+    AT91C_BASE_PMC->PMC_MCKR = AT91C_PMC_PRES_CLK_2;
+#endif
     while (!(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY))
         continue;
     
+#if 0
     /* Set prescaler to divide by 64.  */
     AT91C_BASE_PMC->PMC_MCKR = (AT91C_BASE_PMC->PMC_MCKR & ~AT91C_PMC_CSS)
         | AT91C_PMC_PRES_CLK_64;
+#else
+    AT91C_BASE_PMC->PMC_MCKR = AT91C_PMC_CSS_SLOW_CLK;
+#endif
     while (!( AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY))
         continue;
 

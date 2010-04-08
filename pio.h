@@ -83,16 +83,6 @@ bool pio_config_set (pio_t pio, pio_config_t config)
 }
 
 
-/** Configure selected pins of port for alternative use such as for
-    an internal peripheral.
-    @param pio  */
-static inline
-void pio_config_peripheral (pio_t pio)
-{
-    pio.port->PIO_PDR = pio.bitmask;
-}
-
-
 /** Set PIO high.
     @param pio  */
 static inline
