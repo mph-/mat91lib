@@ -469,4 +469,12 @@ void
 cpu_watchdog_enable (void);
 
 
+void
+cpu_udp_disable (void);
+
+
+void
+cpu_udp_enable (void);
+
+
 #endif /* CPU_H  */

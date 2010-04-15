@@ -100,3 +100,18 @@ cpu_watchdog_enable (void)
         | AT91C_WDTC_WDDBGHLT | 0x200;
     cpu_watchdog_reset ();
 }
+
+
+void
+cpu_udp_disable (void)
+{
+    /* The UDP is enabled by default.  */
+    AT91C_BASE_UDP->UDP_TXVC |= AT91C_UDP_TXVDIS;
+}
+
+
+void
+cpu_udp_enable (void)
+{
+    AT91C_BASE_UDP->UDP_TXVC &= ~AT91C_UDP_TXVDIS;
+}
