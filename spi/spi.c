@@ -557,8 +557,8 @@ spi_init (const spi_cfg_t *cfg)
 
     spi_cs_assert_delay_set (spi, 0);
     spi_cs_negate_delay_set (spi, 0);
-    spi_mode_set (spi, SPI_MODE_0);
-    spi_bits_set (spi, 8);
+    spi_mode_set (spi, cfg->mode);
+    spi_bits_set (spi, cfg->bits ? cfg->bits : 8);
     /* If clock divisor not specified, default to something slow.  */
     spi_divisor_set (spi, cfg->clock_divisor ? cfg->clock_divisor : 128);
 

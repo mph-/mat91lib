@@ -113,13 +113,11 @@ typedef struct
     uint16_t clock_divisor;
     /* GPIO port to use for chip select.  */
     pio_t cs;
+    /* SPI mode.  */
+    spi_mode_t mode;
+    /* Bits per frame.  */
+    uint8_t bits;
 } spi_cfg_t;
-
-
-/** Macro to initialise configuration structure.  */
-#define SPI_CFG(CHANNEL, DIVISOR, CS) \
-{(CHANNEL), (DIVISOR), CS}
-
 
 
 /* Function Prototypes.  */
