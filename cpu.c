@@ -9,7 +9,7 @@
 #include "irq.h"
 
 
-cpu_idle (void)
+void cpu_idle (void)
 {
     /* Turn off CPU clock after current instruction.  It will be
        re-enabled when an interrupt occurs.  */
