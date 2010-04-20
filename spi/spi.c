@@ -912,12 +912,3 @@ spi_putc (spi_t spi, char ch)
 {
     spi_xferc (spi, ch);
 }
-
-
-/** Force CS high.  */
-void
-spi_abort (spi_t spi)
-{
-
-
-}
