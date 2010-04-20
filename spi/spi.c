@@ -497,7 +497,8 @@ spi_cs_assert (spi_t spi)
     /* This does nothing if the CS is automatically driven by the SPI
        controller since the port in is not configured as a GPIO.  */
     pio_output_low (spi->cs);
-    spi->cs_active = 1; }
+    spi->cs_active = 1; 
+}
 
 
 static inline void
@@ -910,4 +911,13 @@ void
 spi_putc (spi_t spi, char ch)
 {
     spi_xferc (spi, ch);
+}
+
+
+/** Force CS high.  */
+void
+spi_abort (spi_t spi)
+{
+
+
 }

@@ -200,6 +200,11 @@ spi_transfer (spi_t spi, const void *txbuffer, void *rxbuffer,
               spi_size_t len, bool terminate);
 
 
+/** Force CS high.  */
+extern void
+spi_abort (spi_t spi);
+
+
 /** Return non-zero if there is a character ready to be read.  */
 extern bool
 spi_read_ready_p (spi_t spi); 
