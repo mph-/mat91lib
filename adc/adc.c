@@ -183,7 +183,10 @@ adc_conversion_start (adc_channel_t channel)
 bool
 adc_ready_p (void)
 {
-    return (AT91C_BASE_ADC->ADC_SR & AT91C_ADC_DRDY) != 0;
+    AT91_REG reg;
+
+    reg = AT91C_BASE_ADC->ADC_SR;
+    return (reg & AT91C_ADC_DRDY) != 0;
 }
 
 
