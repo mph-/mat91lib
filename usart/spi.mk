@@ -1,4 +1,4 @@
-SPI_DIR = $(PERIPHERAL_DIR)/spi
+SPI_DIR = $(MAT91LIB_DIR)/spi
 
 VPATH += $(SPI_DIR)
 

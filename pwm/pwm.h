@@ -49,7 +49,7 @@ void
 pwm_shutdown (void);
 
 
-/* Initialises pwm on specified pins */
+/* Initialises PWM on specified pins.  */
 uint8_t
 pwm_init (void);
 
@@ -65,12 +65,22 @@ pwm_config (pwm_channel_t channel, uint16_t period, uint16_t duty,
 
 /* Start selected channels simultaneously.  */
 void
-pwm_start (pwm_channel_mask_t channel_mask);
+pwm_channels_start (pwm_channel_mask_t channel_mask);
 
 
 /* Stop selected channels simultaneously.  */
 void
-pwm_stop (pwm_channel_mask_t channel_mask);
+pwm_channels_stop (pwm_channel_mask_t channel_mask);
+
+
+/* Start selected channel.  */
+void
+pwm_start (pwm_channel_t channel);
+
+
+/* Stop selected channel.  */
+void
+pwm_stop (pwm_channel_t channel);
 
 
 void

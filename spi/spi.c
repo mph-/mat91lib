@@ -356,36 +356,15 @@ spi_channel_cs_enable (spi_channel_t channel, pio_t *cs)
             && cs->port == spi_cs[i].pio.port
             && cs->bitmask == spi_cs[i].pio.bitmask)
         {
-            *AT91C_PIOA_PDR = cs->bitmask;
+            /* If the CS can be driven automatically switch
+               it into peripheral mode.  */
+            
+            pio_config_set (*cs, PIO_PERIPH);
+
             if (spi_cs[i].periph == PERIPH_A)
                 *AT91C_PIOA_ASR = cs->bitmask;
             else
                 *AT91C_PIOA_BSR = cs->bitmask;
-            return 1;
-        }
-    }
-    return 0;
-}
-
-
-static bool
-spi_channel_cs_disable (spi_channel_t channel, pio_t *cs)
-{
-    /* Disable the NPCSx signals from being asserted by reassigning them
-       as GPIO.  This function is used when we want to shutdown for sleep
-       so the pins need to be configured as outputs and set low.  */
-
-    unsigned int i;
-
-    for (i = 0; i < SPI_CS_NUM; i++)
-    {
-        if (channel == spi_cs[i].channel
-            && cs->port == spi_cs[i].pio.port
-            && cs->bitmask == spi_cs[i].pio.bitmask)
-        {
-            /* Switch to PIO mode and configure as output.  */
-            pio_config_set (*cs, PIO_OUTPUT);
-            pio_output_low (*cs);
             return 1;
         }
     }
@@ -486,8 +465,10 @@ spi_cs_enable (spi_t spi)
 bool
 spi_cs_disable (spi_t spi)
 {
-    spi->cs_auto = 0;
-    return spi_channel_cs_disable (spi->channel, &spi->cs);
+    /* Switch to PIO mode and configure as output.  */
+    pio_config_set (spi->cs, PIO_OUTPUT);
+    pio_output_high (spi->cs);
+    return 1;
 }
 
 
@@ -679,7 +660,10 @@ spi_shutdown (spi_t spi)
 
     /* Set all the chip select pins low.  */
     for (i = 0; i < spi_devices_num; i++)
+    {
         spi_cs_disable (spi_devices + i);
+        pio_output_low (spi->cs);
+    }
 }
 
 

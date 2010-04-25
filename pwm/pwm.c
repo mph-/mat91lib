@@ -88,7 +88,7 @@ pwm_config (pwm_channel_t channel, uint16_t period, uint16_t duty,
 
 /* Start selected channels simultaneously.  */
 void
-pwm_start (pwm_channel_mask_t channel_mask)
+pwm_channels_start (pwm_channel_mask_t channel_mask)
 {
     AT91C_BASE_PWMC->PWMC_ENA = channel_mask;
 }
@@ -96,9 +96,25 @@ pwm_start (pwm_channel_mask_t channel_mask)
 
 /* Stop selected channels simultaneously.  */
 void
-pwm_stop (pwm_channel_mask_t channel_mask)
+pwm_channels_stop (pwm_channel_mask_t channel_mask)
 {
     AT91C_BASE_PWMC->PWMC_DIS = channel_mask;
+}
+
+
+/* Start selected channel.  */
+void
+pwm_start (pwm_channel_t channel)
+{
+    pwm_channels_start (BIT (channel));
+}
+
+
+/* Stop selected channel.  */
+void
+pwm_stop (pwm_channel_t channel)
+{
+    pwm_channels_stop (BIT (channel));
 }
 
 
