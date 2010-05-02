@@ -59,6 +59,8 @@ typedef uint8_t spi_channel_t;
 
 typedef uint16_t spi_clock_divisor_t;
 
+typedef uint32_t spi_clock_speed_t;
+
 
 /* The AT91SAM7S has a single SPI controller with 4 channels;
    the AT91SAM7S has two SPI controllers each with 4 channels.
@@ -163,7 +165,13 @@ spi_cs_negate_delay_set (spi_t spi, uint16_t delay);
 /** Set the clock divisor.  This does not take affect until spi_config
     or one of the I/O routines is called.  */
 extern void
-spi_divisor_set (spi_t spi, spi_clock_divisor_t clock_divisor);
+spi_clock_divisor_set (spi_t spi, spi_clock_divisor_t clock_divisor);
+
+
+/** Set the clock speed.  This does not take affect until spi_config
+    or one of the I/O routines is called.  */
+spi_clock_speed_t
+spi_clock_speed_set (spi_t spi, spi_clock_speed_t clock_speed);
 
 
 /** Configure SPI with previously specified parameters.  */

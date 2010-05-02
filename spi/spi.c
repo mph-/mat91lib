@@ -356,8 +356,9 @@ spi_channel_cs_enable (spi_channel_t channel, pio_t *cs)
             && cs->port == spi_cs[i].pio.port
             && cs->bitmask == spi_cs[i].pio.bitmask)
         {
-            /* If the CS can be driven automatically switch
-               it into peripheral mode.  */
+            /* If the CS can be driven automatically, switch it into
+               peripheral mode.  Note that this might make the CS go
+               low if a spi transfer has not fully completed.  */
             
             pio_config_set (*cs, PIO_PERIPH);
 
@@ -373,9 +374,18 @@ spi_channel_cs_enable (spi_channel_t channel, pio_t *cs)
 
 
 void
-spi_divisor_set (spi_t spi, spi_clock_divisor_t clock_divisor)
+spi_clock_divisor_set (spi_t spi, spi_clock_divisor_t clock_divisor)
 {
     spi->clock_divisor = clock_divisor;
+}
+
+
+spi_clock_speed_t
+spi_clock_speed_set (spi_t spi, spi_clock_speed_t clock_speed)
+{
+    spi->clock_divisor = (F_CPU + clock_speed - 1) / clock_speed;
+    clock_speed = F_CPU / spi->clock_divisor;
+    return clock_speed;
 }
 
 
@@ -400,31 +410,41 @@ spi_bits_set (spi_t spi, uint8_t bits)
 }
 
 
-/* This performs a software reset.  It puts the peripheral in slave mode.  */
-void
-spi_reset (spi_t spi)
+/* This performs a software reset for the specified controller (not an
+   individual channel).  It puts the peripheral in slave mode.  */
+static void
+spi_reset (AT91S_SPI *pSPI)
 {
-    AT91S_SPI *pSPI = SPI_BASE_GET (spi->channel);
-
     pSPI->SPI_CR = AT91C_SPI_SWRST;
 }
 
 
-void
-spi_enable (spi_t spi)
+/* This enables the specified controller (not an individual
+   channel).  */
+static void
+spi_enable (AT91S_SPI *pSPI)
 {
-    AT91S_SPI *pSPI = SPI_BASE_GET (spi->channel);
-
     pSPI->SPI_CR = AT91C_SPI_SPIEN;
 }
 
 
-void 
-spi_disable (spi_t spi)
+static void 
+spi_disable (AT91S_SPI *pSPI)
 {
-    AT91S_SPI *pSPI = SPI_BASE_GET (spi->channel);
-
     pSPI->SPI_CR = AT91C_SPI_SPIDIS;
+}
+
+
+static void 
+spi_setup (AT91S_SPI *pSPI)
+{
+    /* Desire PS = 0 (fixed peripheral select)
+       PCSDEC = 0 (no decoding of chip selects)
+       MSTR = 1 (master mode)
+       MODFDIS = 1 (mode fault detection disabled)
+       CSAAT = 0 (chip select rises after transmission)
+    */
+    pSPI->SPI_MR = AT91C_SPI_MSTR + AT91C_SPI_MODFDIS;
 }
 
 
@@ -495,6 +515,10 @@ spi_cs_negate (spi_t spi)
 void
 spi_config (spi_t spi)
 {
+    /* There are 4 sets of SPI registers, one for each channel.  We
+       could check which SPI instance is currently using a channel and
+       thus avoid reprogramming the registers unnecessarily.  */
+
     if (spi == spi_config_last)
         return;
     spi_config_last = spi;
@@ -542,7 +566,7 @@ spi_init (const spi_cfg_t *cfg)
     spi_mode_set (spi, cfg->mode);
     spi_bits_set (spi, cfg->bits ? cfg->bits : 8);
     /* If clock divisor not specified, default to something slow.  */
-    spi_divisor_set (spi, cfg->clock_divisor ? cfg->clock_divisor : 128);
+    spi_clock_divisor_set (spi, cfg->clock_divisor ? cfg->clock_divisor : 128);
 
     spi_wakeup (spi);
     return spi;
@@ -554,7 +578,6 @@ spi_wakeup (spi_t spi)
 {
     uint8_t dev_num;
     bool wakeup;
-    AT91S_SPI *pSPI = SPI_BASE_GET (spi->channel);
 
     dev_num = spi - spi_devices;
 
@@ -569,21 +592,6 @@ spi_wakeup (spi_t spi)
         return;
 
     /* Configure PIO for MISO, MOSI, SPCK.    */
-#if SPI_CONTROLLERS_NUM == 2
-    *AT91C_PIOA_ASR = SPI0_PINS;
-    *AT91C_PIOB_ASR = SPI1_PINS;
-
-    /* Disable pins as GPIO.  */
-    *AT91C_PIOA_PDR = SPI0_PINS;
-    *AT91C_PIOB_PDR = SPI1_PINS;
-
-    /* Disable pullups.  */
-    *AT91C_PIOA_PPUDR = SPI0_PINS;
-    *AT91C_PIOB_PPUDR = SPI1_PINS;
-
-    /* Enable SPI peripheral clocks.  */
-    AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_SPI0) | BIT (AT91C_ID_SPI1);
-#else
     *AT91C_PIOA_ASR = SPI0_PINS;
 
     /* Disable pins as GPIO.  */
@@ -594,21 +602,28 @@ spi_wakeup (spi_t spi)
 
     /* Enable SPI peripheral clock.  */
     AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_SPI);
-#endif
    
-    /* Reset the SPI (it is possible to reset the SPI even if disabled).  */
-    spi_reset (spi);
+    spi_reset (AT91C_BASE_SPI0);
+    spi_setup (AT91C_BASE_SPI0);
+    spi_enable (AT91C_BASE_SPI0);
 
-    /* Desire PS = 0 (fixed peripheral select)
-       PCSDEC = 0 (no decoding of chip selects)
-       MSTR = 1 (master mode)
-       MODFDIS = 1 (mode fault detection disabled)
-       CSAAT = 0 (chip select rises after transmission)
-    */
+#if SPI_CONTROLLERS_NUM == 2
+    /* Configure PIO for MISO, MOSI, SPCK.    */
+    *AT91C_PIOB_ASR = SPI1_PINS;
 
-    pSPI->SPI_MR = AT91C_SPI_MSTR + AT91C_SPI_MODFDIS;
+    /* Disable pins as GPIO.  */
+    *AT91C_PIOB_PDR = SPI1_PINS;
 
-    spi_enable (spi);
+    /* Disable pullups.  */
+    *AT91C_PIOB_PPUDR = SPI1_PINS;
+
+    /* Enable SPI peripheral clock.  */
+    AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_SPI1);
+
+    spi_reset (AT91C_BASE_SPI1);
+    spi_setup (AT91C_BASE_SPI1);
+    spi_enable (AT91C_BASE_SPI1);
+#endif
 }
 
 
@@ -629,11 +644,12 @@ spi_shutdown (spi_t spi)
 
     if (spi_devices_enabled)
         return;
-            
-    spi_disable (spi);
-
+           
+    spi_disable (AT91C_BASE_SPI0); 
 
 #if SPI_CONTROLLERS_NUM == 2
+    spi_disable (AT91C_BASE_SPI1); 
+
     /* Enable pins as GPIO.  */
     *AT91C_PIOA_PER = SPI0_PINS;
     *AT91C_PIOB_PER = SPI1_PINS;
