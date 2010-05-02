@@ -249,6 +249,10 @@ _irq_spurious_handler (void)
 }
 
 
+extern void reset (void)
+    __attribute__ ((alias ("_reset_handler")));
+
+
 extern void _reset_handler (void)
     __attribute__ ((section (".vectors")))
     __attribute__ ((naked));
