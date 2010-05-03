@@ -83,7 +83,7 @@
    FIXME, FIXME, FIXME.  This implementation does far too much
    processing in the context of interrupt handlers.  The callbacks are
    all called from interrupts.  The dilemma is that we need to process
-   setup transations rapidly.  These transations only used the control
+   setup transations rapidly.  These transations only use the control
    endpoint and are only a few bytes so fancy buffering should not be
    needed.
 
@@ -781,7 +781,6 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pData, unsigned int len,
 }
 
 
-
 static void
 udp_setup_read (udp_t udp, udp_ep_t endpoint)
 {
@@ -1395,7 +1394,7 @@ udp_connect (udp_t udp __unused__)
     // Enable UDP PullUp (UDP_DP_PUP) : enable and clear of the
     // corresponding PIO.  Set in PIO mode and configure as output.
     pio_config (UDP_PIO_PULLUP, PIO_OUTPUT);
-    /* Set low to enable pullup.  */
+    /* Set low to enable pullup (driven by p-channel MOSFET).  */
     pio_output_low (UDP_PIO_PULLUP);
 #endif
 }
