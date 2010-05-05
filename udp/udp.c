@@ -25,11 +25,14 @@
    GND by 15 K pull-down resistors integrated in the hub downstream
    ports.   The USB device is in the not powered state.
 
-   When a device is attached to a hub downstream port, the device
-   connects a 1.5 K pull-up resistor on D+. The USB bus line goes into
-   IDLE state, D+ is pulled up by the device 1.5 K resistor to 3.3 V
-   and D- is pulled down by the 15 K resistor of the host.  The USB
-   device is in the attached state.
+   When a device is connected to a hub downstream port, VBUS goes to 5V
+   and the device is in the powered state.
+
+   The device then connects a 1.5 K pull-up resistor on D+ (this might
+   be switched using a MOSFET or connected to VBUS).  The USB bus line
+   goes into IDLE state, D+ is pulled up by the device 1.5 K resistor
+   to 3.3 V and D- is pulled down by the 15 K resistor of the host.
+   The USB device is in the attached state.
 
    The device then waits for an end of bus reset from the host (both
    D+ and D- pulled low for at least 10 ms) and then enters the
@@ -1342,51 +1345,26 @@ udp_write (udp_t udp, const void *buffer, udp_size_t length)
 }
 
 
+/* Signal the host by pulling D+ high (drive a K state).  */
 static void
-udp_poll (udp_t udp __unused__)
+udp_signal (udp_t udp __unused__)
 {
-#if 0
-    if (!udp->setup.request)
-        return;
-
-    if (!udp->request_handler
-        || !udp->request_handler (udp->request_handler_arg, &udp->setup))
-        udp_stall (udp, UDP_EP_CONTROL);
-
-    udp->setup.request = 0;
-#endif
-}
-
-
-bool
-udp_configured_p (udp_t udp)
-{
-    // Could poll interrupts here...
-    udp_poll (udp);
-
-    // Check if device configured
-    return udp->state == UDP_STATE_CONFIGURED;
-}
-
-
-void
-udp_connect (udp_t udp __unused__)
-{
-   /* Connect pull-up, wait for configuration.  This does nothing if the
-       pull-up is always connected.  */
-
 #ifdef UDP_PIO_PULLUP
-    // Enable UDP PullUp (UDP_DP_PUP) : enable and clear of the
-    // corresponding PIO.  Set in PIO mode and configure as output.
+    /* Enable UDP PullUp (UDP_DP_PUP) : enable and clear of the
+       corresponding PIO.  Set in PIO mode and configure as
+       output.  */
     pio_config (UDP_PIO_PULLUP, PIO_OUTPUT);
-    /* Set low to enable pullup (driven by p-channel MOSFET).  */
+
+    /* Set low to enable pullup (driven by p-channel MOSFET connected
+       to 3V3).  */
     pio_output_low (UDP_PIO_PULLUP);
 #endif
 }
 
 
+/* Check if VBUS connected.  */
 static bool
-udp_detect_p (udp_t udp __unused__)
+udp_attached_p (udp_t udp __unused__)
 {
 #ifdef USB_PIO_DETECT
     return pio_input_get (USB_PIO_DETECT) != 0;
@@ -1457,6 +1435,84 @@ udp_disable (udp_t udp)
 }
 
 
+/**
+ * UDP check bus status
+ * 
+ * This routine enables/disables the UDP module by monitoring
+ * the USB power signal.
+ * 
+ */
+static void
+udp_bus_status_check (udp_t udp)
+{
+    AT91PS_UDP pUDP = udp->pUDP;
+
+    if (udp_attached_p (udp))
+    {
+        //  If UDP is deactivated enable it
+        if (udp->state == UDP_STATE_NOT_POWERED)
+        {
+            udp->state = UDP_STATE_ATTACHED;
+
+            udp_enable (udp);
+
+            /* Signal the host by pulling D+ high.  This might be pulled high
+               with an external 1k5 resistor.  */
+            udp_signal (udp);            
+
+            // Clear all UDP interrupts
+            pUDP->UDP_ICR = 0;
+
+            irq_config (AT91C_ID_UDP, 7, 
+                        AT91C_AIC_SRCTYPE_INT_LEVEL_SENSITIVE, udp_irq_handler);
+            
+            irq_enable (AT91C_ID_UDP);
+
+            // Enable UDP peripheral interrupts
+            pUDP->UDP_IER = AT91C_UDP_ENDBUSRES | AT91C_UDP_RMWUPE
+                | AT91C_UDP_RXSUSP;
+
+            // We are in powered state now
+            udp->state = UDP_STATE_POWERED;
+        }   
+    }
+    else
+    {
+        if (udp->state != UDP_STATE_NOT_POWERED)
+        {
+            udp_disable (udp);
+            udp->state = UDP_STATE_NOT_POWERED;
+        }         
+    }
+}
+
+
+void
+udp_poll (udp_t udp __unused__)
+{
+    udp_bus_status_check (udp);
+
+#if 0
+    if (!udp->setup.request)
+        return;
+
+    if (!udp->request_handler
+        || !udp->request_handler (udp->request_handler_arg, &udp->setup))
+        udp_stall (udp, UDP_EP_CONTROL);
+
+    udp->setup.request = 0;
+#endif
+}
+
+
+bool
+udp_configured_p (udp_t udp)
+{
+    // Check if device configured
+    return udp->state == UDP_STATE_CONFIGURED;
+}
+
+
 void
 udp_shutdown (void)
 {
@@ -1501,69 +1557,10 @@ udp_bus_reset_handler (udp_t udp)
 }
 
 
-/**
- * UDP check bus status
- * 
- * This routine enables/disables the UDP module by monitoring
- * the USB power signal.
- * 
- */
-static bool
-udp_check_bus_status (udp_t udp)
-{
-    AT91PS_UDP pUDP = udp->pUDP;
-
-    if (udp_detect_p (udp))
-    {
-        //  If UDP is deactivated enable it
-        if (udp->state == UDP_STATE_NOT_POWERED)
-        {
-            udp->state = UDP_STATE_ATTACHED;
-
-            udp_enable (udp);
-
-            /* Signal the host by pulling D+ high.  This might be pulled high
-               with an external 1k5 resistor.  */
-            udp_connect (udp);            
-
-            // Clear all interrupts
-            pUDP->UDP_ICR = 0;
-
-            irq_config (AT91C_ID_UDP, 7, 
-                        AT91C_AIC_SRCTYPE_INT_LEVEL_SENSITIVE, udp_irq_handler);
-            
-            irq_enable (AT91C_ID_UDP);
-
-            // Enable UDP peripheral interrupts
-            pUDP->UDP_IER = AT91C_UDP_ENDBUSRES | AT91C_UDP_RMWUPE
-                | AT91C_UDP_RXSUSP;
-
-            // We are in powered state now
-            udp->state = UDP_STATE_POWERED;
-        }   
-    }
-    else
-    {
-        if (udp->state != UDP_STATE_NOT_POWERED)
-        {
-            udp_disable (udp);
-            udp->state = UDP_STATE_NOT_POWERED;
-        }         
-    }
-    
-    return udp->state == UDP_STATE_POWERED;
-}
-
-
 bool
 udp_awake_p (udp_t udp)
 {
-    // Could poll interrupts here...
-    udp_poll (udp);
-
-    // What if not attached?
-
-    return udp_check_bus_status (udp) && udp->state != UDP_STATE_SUSPENDED;
+    return udp->state == UDP_STATE_POWERED;
 }
 
 
@@ -1582,9 +1579,6 @@ udp_t udp_init (udp_request_handler_t request_handler, void *arg)
     udp->rx_bank = AT91C_UDP_RX_DATA_BK0;
     udp->prev_state = UDP_STATE_NOT_POWERED;
     udp->state = UDP_STATE_NOT_POWERED;
-
-    // Check if we are connected to USB bus
-    udp_check_bus_status (udp);
 
     return udp;
 }
