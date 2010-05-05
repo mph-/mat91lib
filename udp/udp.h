@@ -98,7 +98,7 @@ udp_status_t udp_read_async (udp_t udp,
 
 bool udp_configured_p (udp_t udp);
 
-void udp_connect (udp_t udp);
+//void udp_connect (udp_t udp);
 
 bool udp_awake_p (udp_t udp);
 
