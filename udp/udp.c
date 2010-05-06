@@ -182,13 +182,13 @@
 #endif
 
 /** Clear flags of UDP UDP_CSR register and waits for synchronization */
-#define udp_ep_clr_flag(pInterface, endpoint, flags) { \
+#define udp_ep_flag_clear(pInterface, endpoint, flags) { \
 while (pInterface->UDP_CSR[endpoint] & (flags)) \
     pInterface->UDP_CSR[endpoint] &= ~ (flags); \
 }
 
 /** Set flags of UDP UDP_CSR register and waits for synchronization */
-#define udp_ep_set_flag(pInterface, endpoint, flags) { \
+#define udp_ep_flag_set(pInterface, endpoint, flags) { \
 while ((pInterface->UDP_CSR[endpoint] & (flags)) != (flags) ) \
     pInterface->UDP_CSR[endpoint] |= (flags); \
 }
@@ -253,7 +253,7 @@ static udp_dev_t udp_dev;
 typedef struct
 {
     /* Pointer to where data is stored.  */
-    char *pData;
+    uint8_t *pData;
     udp_transfer_t transfer;
     udp_callback_t callback;
     /* Callback argument.  */
@@ -261,8 +261,7 @@ typedef struct
     uint16_t max_packet_size;
     uint8_t num_fifo;
     udp_ep_state_t state;
-    /* Cleared on data reception.  */
-    uint8_t flag;
+    uint8_t bank;
 } udp_ep_info_t;
 
 
@@ -515,12 +514,11 @@ void udp_completed (udp_t udp, udp_ep_t endpoint, udp_status_t status)
 
 /**
  * Configure specific endpoint
- * 
  * \param   endpoint Endpoint to configure
  * 
  */
 static void
-udp_configure_endpoint (udp_t udp, udp_ep_t endpoint)
+udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
 {
     AT91PS_UDP pUDP = udp->pUDP;
     udp_ep_info_t *pep = &udp->eps[endpoint];
@@ -573,44 +571,36 @@ udp_configure_endpoint (udp_t udp, udp_ep_t endpoint)
 
 
 /**
- * Clear transmission status flag
- * 
- * This routine clears the transmission status flag and
- * swaps banks for dual FIFO endpoints.
- * 
+ * Clear transmission status flag and swap banks for dual FIFO endpoints.
  * \param   endpoint    Endpoint where to clear flag
- * 
  */
 static void 
-udp_clear_rx_flag (udp_t udp, udp_ep_t endpoint)
+udp_rx_flag_clear (udp_t udp, udp_ep_t endpoint)
 {
     AT91PS_UDP pUDP = udp->pUDP;
     udp_ep_info_t *pep = &udp->eps[endpoint];
 
     // Clear flag
-    udp_ep_clr_flag (pUDP, endpoint, pep->flag);
+    udp_ep_flag_clear (pUDP, endpoint, pep->bank);
 
     // Swap banks
-    if (pep->flag == AT91C_UDP_RX_DATA_BK0) 
+    if (pep->bank == AT91C_UDP_RX_DATA_BK0) 
     {
         if (pep->num_fifo > 1)
         {
             // Swap bank if in dual-fifo mode
-            pep->flag = AT91C_UDP_RX_DATA_BK1;
+            pep->bank = AT91C_UDP_RX_DATA_BK1;
         }
     }
     else 
     {
-        pep->flag = AT91C_UDP_RX_DATA_BK0;
+        pep->bank = AT91C_UDP_RX_DATA_BK0;
     }    
 }
 
 
 /**
  * Writes data to UDP FIFO
- * 
- * This routine writes data from specific buffer to given endpoint FIFO.
- * 
  * \param   endpoint    Endpoint to write data
  * \return  Number of bytes write
  * 
@@ -633,7 +623,7 @@ udp_write_payload (udp_t udp, udp_ep_t endpoint)
         pUDP->UDP_FDR[endpoint] = * (pep->pData);
         pep->pData++;
     }
-    // Track status of byte transmission
+
     pep->transfer.buffered += bytes;
     pep->transfer.remaining -= bytes;
 
@@ -643,9 +633,6 @@ udp_write_payload (udp_t udp, udp_ep_t endpoint)
 
 /**
  * Send data packet via given endpoint
- * 
- * Send a data packet with specific size via given endpoint.
- * 
  * \param   endpoint    Endpoint to send data through
  * \param   pData       Pointer to data buffer
  * \param   len         Packet size
@@ -666,7 +653,7 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pData,
 
     TRACE_INFO (UDP, "UDP:Write%d %d\n", endpoint, len);
 
-    pep->pData = (char *)pData;
+    pep->pData = (uint8_t *)pData;
     pep->transfer.status = UDP_STATUS_PENDING;
     pep->transfer.remaining = len;
     pep->transfer.buffered = 0;
@@ -680,7 +667,7 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pData,
 
     // Say that there is data ready.  If writing a zero length packet
     // then udp_write_payload is a nop.
-    udp_ep_set_flag (pUDP, endpoint, AT91C_UDP_TXPKTRDY);
+    udp_ep_flag_set (pUDP, endpoint, AT91C_UDP_TXPKTRDY);
 
     // If double buffering is enabled and there is data remaining, 
     // prepare another packet
@@ -696,9 +683,6 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pData,
 
 /**
  * Read data from UDP FIFO
- * 
- * This routine reads data from given endpoint FIFO with given size to specific buffer.
- * 
  * \param   endpoint    Endpoint to read data from
  * \param   packetsize  Maximum size of packet to receive
  * \return  Number of bytes read.
@@ -718,10 +702,10 @@ udp_read_payload (udp_t udp, udp_ep_t endpoint, unsigned int packetsize)
     // Retrieve packet
     for (ctr = 0; ctr < bytes; ctr++) 
     {
-        *pep->pData = (char) pUDP->UDP_FDR[endpoint];
+        *pep->pData = pUDP->UDP_FDR[endpoint];
         pep->pData++;
     }
-    // Track bytes transmission status
+
     pep->transfer.remaining -= bytes;
     pep->transfer.transferred += bytes;
     pep->transfer.buffered += packetsize - bytes;
@@ -789,19 +773,16 @@ udp_setup_read (udp_t udp, udp_ep_t endpoint)
     
     // Set the DIR bit before clearing RXSETUP in Control IN sequence
     if (setup->type & 0x80)
-        udp_ep_set_flag (pUDP, endpoint, AT91C_UDP_DIR);
+        udp_ep_flag_set (pUDP, endpoint, AT91C_UDP_DIR);
     
     // Acknowledge that setup data packet has been read from FIFO
-    udp_ep_clr_flag (pUDP, endpoint, AT91C_UDP_RXSETUP);
+    udp_ep_flag_clear (pUDP, endpoint, AT91C_UDP_RXSETUP);
 }
 
     
 /**
  * UDP endpoint handler
- *
- * Service routine for all endpoint communication
- *  
- * \param   endpoint    Endpoint for which to handle communication
+ * \param   endpoint    Endpoint to use
  * 
  * Called from UDP interrupt service routine in case of
  * endpoint interrupt.
@@ -814,7 +795,6 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
     udp_ep_info_t *pep = &udp->eps[endpoint];
     unsigned int status = pUDP->UDP_CSR[endpoint];
     
-    // Handle interrupts
     // IN packet sent
     if (ISSET (status, AT91C_UDP_TXCOMP))
     {
@@ -856,19 +836,19 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
                 {
                     // No double buffering
                     udp_write_payload (udp, endpoint);
-                    udp_ep_set_flag (pUDP, endpoint, AT91C_UDP_TXPKTRDY);
+                    udp_ep_flag_set (pUDP, endpoint, AT91C_UDP_TXPKTRDY);
                 }
                 else
                 {
                     // Double buffering
-                    udp_ep_set_flag (pUDP, endpoint, AT91C_UDP_TXPKTRDY);
+                    udp_ep_flag_set (pUDP, endpoint, AT91C_UDP_TXPKTRDY);
                     udp_write_payload (udp, endpoint);
                 }
             }
         }
                 
         // Acknowledge interrupt
-        udp_ep_clr_flag (pUDP, endpoint, AT91C_UDP_TXCOMP);
+        udp_ep_flag_clear (pUDP, endpoint, AT91C_UDP_TXCOMP);
     }
 
     // OUT packet received
@@ -878,45 +858,44 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
         // Check that the endpoint is in Read state
         if (pep->state != UDP_EP_STATE_READ)
         {
-            // Endpoint is NOT in Read state so check the endpoint
-            // type to see if it is a control endpoint
+            /* Endpoint is NOT in Read state so check the endpoint
+               type to see if it is a control endpoint.  */
             if (ISCLEARED (status, AT91C_UDP_EPTYPE)
                 && ISCLEARED (status, 0xFFFF0000))
             {
-                // Control endpoint, 0 bytes received.  This is the host
-                // sending an Ack in response to us sending a zlp.
-                // Acknowledge the data and finish the current transfer
+                /* Control endpoint, 0 bytes received.  This is the
+                   host sending an Ack in response to us sending a
+                   zlp.  Acknowledge the data and finish the current
+                   transfer.  */
                 TRACE_INFO (UDP, "UDP:Ack\n");
-                udp_clear_rx_flag (udp, endpoint);
+                udp_rx_flag_clear (udp, endpoint);
 
                 udp_completed (udp, endpoint, UDP_STATUS_SUCCESS);
             }
             else if (ISSET (status, AT91C_UDP_FORCESTALL))
             {
-                // Non-control endpoint
-                // Discard stalled data
+                /* Non-control endpoint so discard stalled data.  */
                 TRACE_INFO (UDP, "UDP:Disc\n");
-                udp_clear_rx_flag (udp, endpoint);
+                udp_rx_flag_clear (udp, endpoint);
             }
             else
             {
-                // Non-control endpoint
-                // Nak data
+                /* Non-control endpoint so Nak data.  */
                 TRACE_INFO (UDP, "UDP:Nak\n");
                 SET (pUDP->UDP_IDR, 1 << endpoint);
             }
         }
         else
         {
-            // Endpoint is in Read state
-            // Retrieve data and store it into the current transfer buffer
+            /* Endpoint is in Read state so retrieve data and store it
+               into the current transfer buffer.  */
             unsigned short packetsize = (unsigned short) (status >> 16);
 
             TRACE_DEBUG (UDP, "UDP:Rd E%d %d\n", endpoint, packetsize);
 
             udp_read_payload (udp, endpoint, packetsize);
 
-            udp_clear_rx_flag (udp, endpoint);
+            udp_rx_flag_clear (udp, endpoint);
 
             if ((pep->transfer.remaining == 0)
                 || (packetsize < pep->max_packet_size))
@@ -930,7 +909,7 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
         }
     }
 
-    // SETUP packet received
+    // Setup packet received
     if (ISSET (status, AT91C_UDP_RXSETUP))
     {
         // This interrupt occurs as a result of receiving a setup packet
@@ -961,20 +940,17 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
         TRACE_INFO (UDP, "UDP:Stallsent\n");
         
         // Acknowledge interrupt
-        udp_ep_clr_flag (pUDP, endpoint, AT91C_UDP_STALLSENT);
+        udp_ep_flag_clear (pUDP, endpoint, AT91C_UDP_STALLSENT);
         
         // If the endpoint is not halted, clear the stall condition
         if (pep->state != UDP_EP_STATE_HALTED)
-            udp_ep_clr_flag (pUDP, endpoint, AT91C_UDP_FORCESTALL);
+            udp_ep_flag_clear (pUDP, endpoint, AT91C_UDP_FORCESTALL);
     }
 }
 
 
 /**
  * Send stall condition
- * 
- * Send stall condition to given endpoint
- * 
  * \param   endpoint    Endpoint where to send stall condition
  * 
  */
@@ -989,7 +965,7 @@ udp_stall (udp_t udp, udp_ep_t endpoint)
 
     TRACE_INFO (UDP, "UDP:Stall%d\n", endpoint);
 
-    udp_ep_set_flag (pUDP, endpoint, AT91C_UDP_FORCESTALL);
+    udp_ep_flag_set (pUDP, endpoint, AT91C_UDP_FORCESTALL);
 }
 
 
@@ -1023,7 +999,7 @@ udp_halt (udp_t udp, udp_ep_t endpoint, bool halt)
         pep->state = UDP_EP_STATE_IDLE;
 
         // Clear FORCESTALL flag
-        udp_ep_clr_flag (pUDP, endpoint, AT91C_UDP_FORCESTALL);
+        udp_ep_flag_clear (pUDP, endpoint, AT91C_UDP_FORCESTALL);
 
         // Reset endpoint FIFOs, beware this is a 2 step operation
         SET (pUDP->UDP_RSTEP, 1 << endpoint);
@@ -1041,7 +1017,7 @@ udp_halt (udp_t udp, udp_ep_t endpoint, bool halt)
         udp_completed (udp, endpoint, UDP_STATUS_ABORTED);
 
         // Put endpoint into halt state
-        udp_ep_set_flag (pUDP, endpoint, AT91C_UDP_FORCESTALL);
+        udp_ep_flag_set (pUDP, endpoint, AT91C_UDP_FORCESTALL);
         pep->state = UDP_EP_STATE_HALTED;
 
         // Enable the endpoint interrupt
@@ -1114,7 +1090,7 @@ udp_address_set (void *arg, udp_transfer_t *ptransfer __unused__)
  * Changes the device state from Address to Configured, or from
  * Configured to Address.
  * 
- * This method directly accesses the last received SETUP packet to
+ * This method directly accesses the last received setup packet to
  * decide what to do.
  * 
  */
@@ -1139,7 +1115,7 @@ udp_configuration_set (void *arg, udp_transfer_t *ptransfer __unused__)
 
         // Configure endpoints
         for (ep = 1; ep < UDP_EP_NUM; ep++)
-            udp_configure_endpoint (udp, ep);
+            udp_endpoint_configure (udp, ep);
     }
     else
     {
@@ -1377,10 +1353,6 @@ udp_attached_p (udp_t udp __unused__)
 
 /**
  * Enable UDP device
- * 
- * This routine enables the UDP peripheral device.
- * Function should never called be manually!
- * 
  */
 static void
 udp_enable (udp_t udp)
@@ -1395,7 +1367,7 @@ udp_enable (udp_t udp)
 
     // Init data banks
     for (i = 0; i < UDP_EP_NUM; i++)
-        udp->eps[i].flag = AT91C_UDP_RX_DATA_BK0;
+        udp->eps[i].bank = AT91C_UDP_RX_DATA_BK0;
 
     TRACE_INFO (UDP, "UDP:UDP enabled\n");
 }
@@ -1403,10 +1375,6 @@ udp_enable (udp_t udp)
 
 /**
  * Disable UDP device
- *
- * This routine disables the UDP peripheral device.
- * Function should never be called manually!
- * 
  */
 static void
 udp_disable (udp_t udp)
@@ -1421,15 +1389,18 @@ udp_disable (udp_t udp)
     pio_output_high (UDP_PIO_PULLUP);
 #endif
 
-    // Disables the 48MHz USB clock UDPCK and System Peripheral USB Clock
+    // Disable the 48MHz USB clock UDPCK and System Peripheral USB Clock
     AT91C_BASE_PMC->PMC_SCDR |= AT91C_PMC_UDP;
     AT91C_BASE_PMC->PMC_PCDR |= (1 << AT91C_ID_UDP);
 
     // Disable the interrupt on the interrupt controller
     pAIC->AIC_IDCR |= 1 << AT91C_ID_UDP;
-    pUDP->UDP_IDR = 0;                   // Disable all UDP interrupts
 
-    pUDP->UDP_TXVC |= AT91C_UDP_TXVDIS;  // Disable UDP transceiver
+    // Disable all UDP interrupts
+    pUDP->UDP_IDR = 0;
+
+    // Disable UDP transceiver
+    pUDP->UDP_TXVC |= AT91C_UDP_TXVDIS;
 
     TRACE_INFO (UDP, "UDP:UDP disabled\n");
 }
@@ -1472,7 +1443,6 @@ udp_bus_status_check (udp_t udp)
             pUDP->UDP_IER = AT91C_UDP_ENDBUSRES | AT91C_UDP_RMWUPE
                 | AT91C_UDP_RXSUSP;
 
-            // We are in powered state now
             udp->state = UDP_STATE_POWERED;
         }   
     }
@@ -1493,6 +1463,8 @@ udp_poll (udp_t udp __unused__)
     udp_bus_status_check (udp);
 
 #if 0
+    /* Perhaps could poll interrupts here.  */
+
     if (!udp->setup.request)
         return;
 
@@ -1508,8 +1480,14 @@ udp_poll (udp_t udp __unused__)
 bool
 udp_configured_p (udp_t udp)
 {
-    // Check if device configured
     return udp->state == UDP_STATE_CONFIGURED;
+}
+
+
+bool
+udp_awake_p (udp_t udp)
+{
+    return udp->state == UDP_STATE_POWERED;
 }
 
 
@@ -1524,7 +1502,7 @@ udp_shutdown (void)
 /**
  * UDP Protocol reset handler
  *
- * A USB bus reset is received from the host.
+ * Called when a USB bus reset is received from the host.
  * 
  */
 static void 
@@ -1544,7 +1522,7 @@ udp_bus_reset_handler (udp_t udp)
     // Enable the UDP
     pUDP->UDP_FADDR = AT91C_UDP_FEN;
     
-    udp_configure_endpoint (udp, 0);
+    udp_endpoint_configure (udp, 0);
 
     // Configure UDP peripheral interrupts, here only EP0 and bus reset
     pUDP->UDP_IER = AT91C_UDP_EPINT0 | AT91C_UDP_ENDBUSRES | AT91C_UDP_RXSUSP;
@@ -1554,13 +1532,6 @@ udp_bus_reset_handler (udp_t udp)
     
     // Enable UDP transceiver 
     pUDP->UDP_TXVC &= ~AT91C_UDP_TXVDIS;
-}
-
-
-bool
-udp_awake_p (udp_t udp)
-{
-    return udp->state == UDP_STATE_POWERED;
 }
 
 
