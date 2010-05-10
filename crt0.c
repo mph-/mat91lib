@@ -25,6 +25,13 @@
 #define IRQ_STACK_SIZE  (3 * 8 * 4)
 #endif
 
+
+#ifndef ABT_STACK_SIZE
+/* Store 2 registers  LR and SPSR during ABORT.  */
+#define ABT_STACK_SIZE  (2 * 4 * 2)
+#endif
+
+
 #define AIC_FVR_OFFSET 0x104
 #define AIC_IVR_OFFSET 0x100
 //#define AIC_FVR_OFFSET ((char *)&AT91C_BASE_AIC->AIC_FVR - (char *)AT91C_BASE_AIC)
@@ -74,11 +81,11 @@ void start (void)
     /* Fetched instruction from invalid address (Prefetch Abort) 0x0c.
        LR - 8 points to the instruction that caused the abort.  SP is
        for abort mode.  */
-    __asm__ ("\tb ."); 
+    __asm__ ("\tb _abort_handler"); 
     /* Invalid address (or alignment) (Data Abort) 0x10.  LR - 8
        points to the instruction that caused the abort.  SP is for
        abort mode.  */ 
-    __asm__ ("\tb ."); 
+    __asm__ ("\tb _abort_handler"); 
     /* Reserved  0x14.  */
     __asm__ ("\tb .");
     /* IRQ 0x18.  */
@@ -295,11 +302,19 @@ void _reset_handler (void)
     /* Set up IRQ Mode stack.  */
     cpu_sp_set ((uint32_t) p);
 
+
+    /* Select Abort Mode and disable interrupts.  */
+    cpu_cpsr_c_set_const (CPU_I_BIT | CPU_F_BIT | CPU_MODE_ABT);
+
+    /* Set up Abort Mode stack.  */
+    cpu_sp_set ((uint32_t) p - IRQ_STACK_SIZE);
+
+
     /* Select Supervisor Mode and enable interrupts.  */
     cpu_cpsr_c_set_const (CPU_MODE_SVC);    
 
     /* Set up Supervisor Mode stack.  */
-    cpu_sp_set ((uint32_t) (p - IRQ_STACK_SIZE));
+    cpu_sp_set ((uint32_t) (p - IRQ_STACK_SIZE - ABT_STACK_SIZE));
 
     {
         char *src;
@@ -325,4 +340,46 @@ void _reset_handler (void)
     __asm__ ("\tldr lr, =exit");
     __asm__ ("\tldr r0, =main");
     __asm__ ("\tbx  r0");
+}
+
+
+/* For a detailed description of data aborts see
+   http://www.embedded.com/192202641
+
+   When an abort occurs, the CPU switches to Abort Mode and the PC + 8
+   of the offending instruction is saved in LR_ABT.  The PC_ABT is
+   then loaded with the address of the Abort Exception vector.
+*/
+
+extern void _abort_handler (void)
+    __attribute__ ((section (".vectors")))
+    __attribute__ ((naked));
+
+void _abort_handler (void)
+{
+    /* In abort mode we have banked registers R13--R14.  R13 is reserved
+       for the stack pointer (SP) and R14 is reserved for the link
+       register (LR).  */
+
+#if 1
+    /* Save LR_ABT in r0 (we could save r0 on abort stack).  */
+    __asm__ ("\tmov r0, lr");
+
+    /* Switch back to Supervisor Mode.  */
+    cpu_cpsr_c_set_const (CPU_I_BIT | CPU_MODE_SVC);
+
+    /* Save r0.  */
+    __asm__ ("\tstmfd sp!, {r0}");
+#endif
+
+    /* Jump to _hang so that debugger not confused.  Currently, the
+       debugger cannot reconcile the PC with the address of a known function
+       since the PC is currently pointing into the first block of memory.  */
+    __asm__ ("\tldr pc, =_hang"); }
+
+
+void _hang (void)
+{
+    while (1)
+        continue;
 }
