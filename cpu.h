@@ -79,7 +79,7 @@ void cpu_sp_set (uint32_t val)
 
 
 /** Set the control bits, I, F, T, and M[4:0].  This only works for a
-    constant argument and  ARM mode.
+    constant argument and ARM mode.
     @param CPSR control bit mask.  */
 #define cpu_cpsr_c_set_const(cpsr) \
  __asm__ ("\tmsr CPSR_c, %0" : : "i" (cpsr))
