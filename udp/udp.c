@@ -607,7 +607,7 @@ udp_rx_flag_clear (udp_t udp, udp_ep_t endpoint)
  * 
  */
 static unsigned int
-udp_write_payload (udp_t udp, udp_ep_t endpoint)
+udp_payload_write (udp_t udp, udp_ep_t endpoint)
 {
     AT91PS_UDP pUDP = udp->pUDP;
     udp_ep_info_t *pep = &udp->eps[endpoint];
@@ -663,16 +663,16 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pData,
     pep->state = UDP_EP_STATE_WRITE;
 
     // Send one packet
-    udp_write_payload (udp, endpoint);
+    udp_payload_write (udp, endpoint);
 
     // Say that there is data ready.  If writing a zero length packet
-    // then udp_write_payload is a nop.
+    // then udp_payload_write is a nop.
     udp_ep_flag_set (pUDP, endpoint, AT91C_UDP_TXPKTRDY);
 
     // If double buffering is enabled and there is data remaining, 
-    // prepare another packet
+    // Prepare another packet
     if ((pep->num_fifo > 1) && (pep->transfer.remaining > 0))
-        udp_write_payload (udp, endpoint);
+        udp_payload_write (udp, endpoint);
 
     // Enable interrupt on endpoint
     SET (pUDP->UDP_IER, 1 << endpoint);
@@ -689,7 +689,7 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pData,
  * 
  */
 static unsigned int 
-udp_read_payload (udp_t udp, udp_ep_t endpoint, unsigned int packetsize)
+udp_payload_read (udp_t udp, udp_ep_t endpoint, unsigned int packetsize)
 {
     AT91PS_UDP pUDP = udp->pUDP;
     udp_ep_info_t *pep = &udp->eps[endpoint];
@@ -830,14 +830,14 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
                 if (pep->num_fifo == 1)
                 {
                     // No double buffering
-                    udp_write_payload (udp, endpoint);
+                    udp_payload_write (udp, endpoint);
                     udp_ep_flag_set (pUDP, endpoint, AT91C_UDP_TXPKTRDY);
                 }
                 else
                 {
                     // Double buffering
                     udp_ep_flag_set (pUDP, endpoint, AT91C_UDP_TXPKTRDY);
-                    udp_write_payload (udp, endpoint);
+                    udp_payload_write (udp, endpoint);
                 }
             }
         }
@@ -888,7 +888,7 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
 
             TRACE_DEBUG (UDP, "UDP:Read%d %d\n", endpoint, packetsize);
 
-            udp_read_payload (udp, endpoint, packetsize);
+            udp_payload_read (udp, endpoint, packetsize);
 
             udp_rx_flag_clear (udp, endpoint);
 
