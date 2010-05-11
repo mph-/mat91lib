@@ -619,10 +619,13 @@ udp_payload_write (udp_t udp, udp_ep_t endpoint)
     bytes = MIN (pep->max_packet_size, 
                  pep->transfer.remaining);
 
+    TRACE_DEBUG (UDP, "UDP:Write%d %d\n", endpoint, bytes);
+
     // Transfer one packet to the FIFO buffer
     src = pep->pData;
     for (i = 0; i < bytes; i++)
         pUDP->UDP_FDR[endpoint] = *src++;
+    pep->pData = src;
 
     pep->transfer.buffered += bytes;
     pep->transfer.remaining -= bytes;
@@ -651,7 +654,7 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pData,
     if (pep->state != UDP_EP_STATE_IDLE) 
         return UDP_STATUS_LOCKED;
 
-    TRACE_INFO (UDP, "UDP:Write%d %d\n", endpoint, len);
+    TRACE_INFO (UDP, "UDP:AWrite%d %d\n", endpoint, len);
 
     pep->pData = (uint8_t *)pData;
     pep->transfer.status = UDP_STATUS_PENDING;
@@ -700,10 +703,13 @@ udp_payload_read (udp_t udp, udp_ep_t endpoint, unsigned int packetsize)
     // Get number of bytes to retrieve
     bytes = MIN (pep->transfer.remaining, packetsize);
 
+    TRACE_DEBUG (UDP, "UDP:Read%d %d\n", endpoint, bytes);
+
     // Read packet from FIFO
     dst = pep->pData;
     for (i = 0; i < bytes; i++) 
         *dst++ = pUDP->UDP_FDR[endpoint];
+    pep->pData = dst;
 
     pep->transfer.remaining -= bytes;
     pep->transfer.transferred += bytes;
@@ -736,7 +742,7 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pData, unsigned int len,
     if (pep->state != UDP_EP_STATE_IDLE)
         return UDP_STATUS_LOCKED;
 
-    TRACE_INFO (UDP, "UDP:Read%d %d\n", endpoint, len);
+    TRACE_INFO (UDP, "UDP:ARead%d %d\n", endpoint, len);
 
     pep->pData = pData;
     pep->transfer.status = UDP_STATUS_PENDING;
@@ -798,16 +804,12 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
         // Check that endpoint is in Write state
         if (pep->state == UDP_EP_STATE_WRITE)
         {
-
-            // End of transfer ?
             if ((pep->transfer.buffered < pep->max_packet_size)
                 || (!ISCLEARED (status, AT91C_UDP_EPTYPE)
                     && (pep->transfer.remaining == 0)
                     && (pep->transfer.buffered == pep->max_packet_size)))
             {
-                TRACE_DEBUG (UDP, "UDP:Write%d %d\n", endpoint,
-                             pep->transfer.buffered);
-
+                /* Transfer completed.  */
                 pep->transfer.transferred += pep->transfer.buffered;
                 pep->transfer.buffered = 0;
 
@@ -819,14 +821,10 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
             }
             else
             {
-                // Transfer remaining data
-                TRACE_DEBUG (UDP, "UDP:Write%d +%d\n", endpoint,
-                            pep->transfer.buffered);
-
                 pep->transfer.transferred += pep->max_packet_size;
                 pep->transfer.buffered -= pep->max_packet_size;
 
-                // Send next packet
+                /* Transfer next block of data.  */
                 if (pep->num_fifo == 1)
                 {
                     // No double buffering
@@ -885,8 +883,6 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
             /* Endpoint is in Read state so retrieve data and store it
                into the current transfer buffer.  */
             unsigned short packetsize = (unsigned short) (status >> 16);
-
-            TRACE_DEBUG (UDP, "UDP:Read%d %d\n", endpoint, packetsize);
 
             udp_payload_read (udp, endpoint, packetsize);
 
