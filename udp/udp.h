@@ -40,9 +40,9 @@ typedef enum
 typedef struct udp_transfer_struct
 {
     udp_status_t status;
-    unsigned int remaining;
-    unsigned int buffered;
-    unsigned int transferred;
+    volatile unsigned int remaining;
+    volatile unsigned int buffered;
+    volatile unsigned int transferred;
 } udp_transfer_t;
 
 
@@ -105,6 +105,8 @@ void udp_configuration_set (void *arg, udp_transfer_t *ptransfer);
 void udp_address_set (void *arg, udp_transfer_t *ptransfer);
 
 void udp_shutdown (void);
+
+void udp_poll (udp_t udp);
 
 udp_t udp_init (udp_request_handler_t handler, void *arg);
 

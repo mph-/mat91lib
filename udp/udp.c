@@ -275,8 +275,8 @@ struct udp_dev_struct
     uint8_t configuration;
     udp_request_handler_t request_handler;
     void *request_handler_arg;
-    udp_state_t state;
-    udp_state_t prev_state;
+    volatile udp_state_t state;
+    volatile udp_state_t prev_state;
     udp_setup_t setup;
     udp_ep_info_t eps[UDP_EP_NUM];
 };
@@ -370,7 +370,7 @@ udp_irq_handler (void)
         // Start of frame (SOF)
         if (ISSET (status, AT91C_UDP_SOFINT))
         {
-            TRACE_INFO (UDP, "UDP:SOF\n");
+            // TRACE_INFO (UDP, "UDP:SOF\n");
             // Acknowledge interrupt
             SET (pUDP->UDP_ICR, AT91C_UDP_SOFINT);
             CLEAR (status, AT91C_UDP_SOFINT);
@@ -379,7 +379,7 @@ udp_irq_handler (void)
         // Suspend
         if (ISSET (status, AT91C_UDP_RXSUSP))
         {
-            TRACE_INFO (UDP, "UDP:Susp\n");
+            // TRACE_INFO (UDP, "UDP:Susp\n");
            
             if (udp->state != UDP_STATE_SUSPENDED)
             {
@@ -414,7 +414,7 @@ udp_irq_handler (void)
         else if (ISSET (status, AT91C_UDP_WAKEUP) 
                  || ISSET (status, AT91C_UDP_RXRSM))
         {
-            TRACE_INFO (UDP, "UDP:Resm\n");
+            // TRACE_INFO (UDP, "UDP:Resm\n");
 
             // The device enters configured state
             //      MCK + UDPCK must be on
@@ -441,7 +441,7 @@ udp_irq_handler (void)
         // End of bus reset (non maskable)
         else if (ISSET (status, AT91C_UDP_ENDBUSRES))
         {
-            TRACE_INFO (UDP, "UDP:EoBres\n");
+            // TRACE_INFO (UDP, "UDP:EoBres\n");
 
             // Initialize UDP peripheral device
             udp_bus_reset_handler (udp);
@@ -499,7 +499,8 @@ void udp_completed (udp_t udp, udp_ep_t endpoint, udp_status_t status)
     if ((pep->state == UDP_EP_STATE_WRITE)
         || (pep->state == UDP_EP_STATE_READ)) 
     {
-        TRACE_DEBUG (UDP, "UDP:EoT %d\n", pep->transfer.transferred);
+        TRACE_DEBUG (UDP, "UDP:EoT%d %d\n",
+                     endpoint, pep->transfer.transferred);
 
         pep->state = UDP_EP_STATE_IDLE;
 
@@ -566,7 +567,7 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
         break;
     }
 
-    TRACE_DEBUG (UDP, "UDP:CfgEp%d\n", endpoint);
+    TRACE_DEBUG (UDP, "UDP:Cfg%d\n", endpoint);
 }
 
 
@@ -602,7 +603,7 @@ udp_rx_flag_clear (udp_t udp, udp_ep_t endpoint)
 /**
  * Writes data to UDP FIFO
  * \param   endpoint    Endpoint to write data
- * \return  Number of bytes write
+ * \return  Number of bytes written
  * 
  */
 static unsigned int
@@ -611,18 +612,17 @@ udp_write_payload (udp_t udp, udp_ep_t endpoint)
     AT91PS_UDP pUDP = udp->pUDP;
     udp_ep_info_t *pep = &udp->eps[endpoint];
     unsigned int bytes;
-    unsigned int ctr;
+    unsigned int i;
+    uint8_t *src;
 
     // Get the number of bytes to send
     bytes = MIN (pep->max_packet_size, 
                  pep->transfer.remaining);
 
-    // Transfer one packet in the FIFO buffer
-    for (ctr = 0; ctr < bytes; ctr++)
-    {
-        pUDP->UDP_FDR[endpoint] = * (pep->pData);
-        pep->pData++;
-    }
+    // Transfer one packet to the FIFO buffer
+    src = pep->pData;
+    for (i = 0; i < bytes; i++)
+        pUDP->UDP_FDR[endpoint] = *src++;
 
     pep->transfer.buffered += bytes;
     pep->transfer.remaining -= bytes;
@@ -694,17 +694,16 @@ udp_read_payload (udp_t udp, udp_ep_t endpoint, unsigned int packetsize)
     AT91PS_UDP pUDP = udp->pUDP;
     udp_ep_info_t *pep = &udp->eps[endpoint];
     unsigned int bytes;
-    unsigned int ctr;
+    unsigned int i;
+    uint8_t *dst;
 
     // Get number of bytes to retrieve
     bytes = MIN (pep->transfer.remaining, packetsize);
 
-    // Retrieve packet
-    for (ctr = 0; ctr < bytes; ctr++) 
-    {
-        *pep->pData = pUDP->UDP_FDR[endpoint];
-        pep->pData++;
-    }
+    // Read packet from FIFO
+    dst = pep->pData;
+    for (i = 0; i < bytes; i++) 
+        *dst++ = pUDP->UDP_FDR[endpoint];
 
     pep->transfer.remaining -= bytes;
     pep->transfer.transferred += bytes;
@@ -722,8 +721,8 @@ udp_read_payload (udp_t udp, udp_ep_t endpoint, unsigned int packetsize)
  * \param   endpoint    Endpoint to send data through
  * \param   pData       Pointer to data buffer
  * \param   len         Packet size
- * \param   callback   Optional callback to invoke when the read finishes
- * \param   arg   Optional callback argument 
+ * \param   callback    Optional callback to invoke when the read finishes
+ * \param   arg         Optional callback argument 
  * \return  Operation result code
  * 
  */
@@ -784,9 +783,7 @@ udp_setup_read (udp_t udp, udp_ep_t endpoint)
  * UDP endpoint handler
  * \param   endpoint    Endpoint to use
  * 
- * Called from UDP interrupt service routine in case of
- * endpoint interrupt.
- * 
+ * Called from UDP interrupt handler in response to endpoint interrupt.
  */
 static void 
 udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
@@ -798,20 +795,18 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
     // IN packet sent
     if (ISSET (status, AT91C_UDP_TXCOMP))
     {
-        // Check that endpoint was in Write state
+        // Check that endpoint is in Write state
         if (pep->state == UDP_EP_STATE_WRITE)
         {
 
             // End of transfer ?
-            if ((pep->transfer.buffered 
-                 < pep->max_packet_size)
+            if ((pep->transfer.buffered < pep->max_packet_size)
                 || (!ISCLEARED (status, AT91C_UDP_EPTYPE)
                     && (pep->transfer.remaining == 0)
-                    && (pep->transfer.buffered
-                        == pep->max_packet_size)))
+                    && (pep->transfer.buffered == pep->max_packet_size)))
             {
-                TRACE_DEBUG (UDP, "UDP:Wr E%d %d\n", endpoint,
-                            pep->transfer.buffered);
+                TRACE_DEBUG (UDP, "UDP:Write%d %d\n", endpoint,
+                             pep->transfer.buffered);
 
                 pep->transfer.transferred += pep->transfer.buffered;
                 pep->transfer.buffered = 0;
@@ -825,7 +820,7 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
             else
             {
                 // Transfer remaining data
-                TRACE_DEBUG (UDP, "UDP:Wr E%d +%d\n", endpoint,
+                TRACE_DEBUG (UDP, "UDP:Write%d +%d\n", endpoint,
                             pep->transfer.buffered);
 
                 pep->transfer.transferred += pep->max_packet_size;
@@ -867,7 +862,7 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
                    host sending an Ack in response to us sending a
                    zlp.  Acknowledge the data and finish the current
                    transfer.  */
-                TRACE_INFO (UDP, "UDP:Ack\n");
+                TRACE_INFO (UDP, "UDP:Ack%d\n", endpoint);
                 udp_rx_flag_clear (udp, endpoint);
 
                 udp_completed (udp, endpoint, UDP_STATUS_SUCCESS);
@@ -875,13 +870,13 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
             else if (ISSET (status, AT91C_UDP_FORCESTALL))
             {
                 /* Non-control endpoint so discard stalled data.  */
-                TRACE_INFO (UDP, "UDP:Disc\n");
+                TRACE_INFO (UDP, "UDP:Disc%d\n", endpoint);
                 udp_rx_flag_clear (udp, endpoint);
             }
             else
             {
                 /* Non-control endpoint so Nak data.  */
-                TRACE_INFO (UDP, "UDP:Nak\n");
+                TRACE_INFO (UDP, "UDP:Nak%d\n", endpoint);
                 SET (pUDP->UDP_IDR, 1 << endpoint);
             }
         }
@@ -891,7 +886,7 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
                into the current transfer buffer.  */
             unsigned short packetsize = (unsigned short) (status >> 16);
 
-            TRACE_DEBUG (UDP, "UDP:Rd E%d %d\n", endpoint, packetsize);
+            TRACE_DEBUG (UDP, "UDP:Read%d %d\n", endpoint, packetsize);
 
             udp_read_payload (udp, endpoint, packetsize);
 
@@ -937,7 +932,7 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
     {
         // This interrupt occurs as a result of setting FORCESTALL
 
-        TRACE_INFO (UDP, "UDP:Stallsent\n");
+        TRACE_INFO (UDP, "UDP:Stallsent%d\n", endpoint);
         
         // Acknowledge interrupt
         udp_ep_flag_clear (pUDP, endpoint, AT91C_UDP_STALLSENT);
@@ -1011,7 +1006,7 @@ udp_halt (udp_t udp, udp_ep_t endpoint, bool halt)
              && (pep->state != UDP_EP_STATE_DISABLED))
     {
 
-        TRACE_INFO (UDP, "UDP:halt%d\n", endpoint);
+        TRACE_INFO (UDP, "UDP:Halt%d\n", endpoint);
 
         // Abort the current transfer if necessary
         udp_completed (udp, endpoint, UDP_STATUS_ABORTED);
@@ -1058,7 +1053,7 @@ udp_address_set (void *arg, udp_transfer_t *ptransfer __unused__)
     AT91PS_UDP pUDP = udp->pUDP;
     unsigned int address = udp->setup.value;
 
-    TRACE_DEBUG (UDP, "UDP:SetAddr %d\n", address);
+    TRACE_DEBUG (UDP, "UDP:SetAddr 0x%2x\n", address);
 
     // Set address
     SET (pUDP->UDP_FADDR, AT91C_UDP_FEN | address);
@@ -1369,7 +1364,7 @@ udp_enable (udp_t udp)
     for (i = 0; i < UDP_EP_NUM; i++)
         udp->eps[i].bank = AT91C_UDP_RX_DATA_BK0;
 
-    TRACE_INFO (UDP, "UDP:UDP enabled\n");
+    TRACE_INFO (UDP, "UDP:Enabled\n");
 }
 
 
@@ -1402,7 +1397,7 @@ udp_disable (udp_t udp)
     // Disable UDP transceiver
     pUDP->UDP_TXVC |= AT91C_UDP_TXVDIS;
 
-    TRACE_INFO (UDP, "UDP:UDP disabled\n");
+    TRACE_INFO (UDP, "UDP:Disabled\n");
 }
 
 
@@ -1510,7 +1505,7 @@ udp_bus_reset_handler (udp_t udp)
 {
     AT91PS_UDP pUDP = udp->pUDP;
 
-    TRACE_DEBUG (UDP, "UDP:Rst\n");
+    TRACE_DEBUG (UDP, "UDP:Reset\n");
 
     // Clear UDP peripheral interrupt
     pUDP->UDP_ICR |= AT91C_UDP_ENDBUSRES;
