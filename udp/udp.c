@@ -654,7 +654,7 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pData,
     if (pep->state != UDP_EP_STATE_IDLE) 
         return UDP_STATUS_LOCKED;
 
-    TRACE_INFO (UDP, "UDP:AWrite%d %d\n", endpoint, len);
+    TRACE_DEBUG (UDP, "UDP:AWrite%d %d\n", endpoint, len);
 
     pep->pData = (uint8_t *)pData;
     pep->transfer.status = UDP_STATUS_PENDING;
@@ -742,7 +742,7 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pData, unsigned int len,
     if (pep->state != UDP_EP_STATE_IDLE)
         return UDP_STATUS_LOCKED;
 
-    TRACE_INFO (UDP, "UDP:ARead%d %d\n", endpoint, len);
+    TRACE_DEBUG (UDP, "UDP:ARead%d %d\n", endpoint, len);
 
     pep->pData = pData;
     pep->transfer.status = UDP_STATUS_PENDING;
