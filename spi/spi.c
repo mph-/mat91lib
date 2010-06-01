@@ -8,11 +8,11 @@
 #include "spi.h"
 #include "bits.h"
 
-/* The AT91 SPI peripheral can transmit either 8 or 16 bit data.  It
-   has 4 separate chip select registers and can control 4 different
-   types of SPI peripheral using the separate chip select registers.
-   Each peripheral can have its own chip select that is automatically
-   driven for each transfer.
+/* The AT91 SPI peripheral can transmit either 8 or 16 bit data with
+   MSB first.  It has 4 separate chip select registers and can control
+   4 different types of SPI peripheral using the separate chip select
+   registers.  Each peripheral can have its own chip select that is
+   automatically driven for each transfer.
 
    The AT91 SPI peripheral has been designed so that blocks of a data
    can be streamed using DMA to multiple devices on the bus (Variable
