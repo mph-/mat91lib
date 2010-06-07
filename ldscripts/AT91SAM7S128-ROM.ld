@@ -1,3 +1,4 @@
+
 MEMORY
 {
   FLASH (rx) : ORIGIN = 0x00100000, LENGTH = 128K
@@ -28,6 +29,12 @@ SECTIONS
     *(.rodata .rodata.*)
   } >FLASH
   . = ALIGN(4);
+
+  /* Exception unwinding tables needed for EABI.  */
+  __exidx_start = .;
+  .ARM.exidx : { *(.ARM.exidx* .gnu.linkonce.armexidx.*) }
+  __exidx_end = .;
+
   __text_end__ = . ;
 
   /* Initialized data stored in FLASH that gets relocated into SRAM

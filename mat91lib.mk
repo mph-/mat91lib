@@ -22,13 +22,17 @@ ifndef OPT
 OPT = -Os
 endif
 
+ifndef TOOLCHAIN
+TOOLCHAIN = arm-eabi
+endif
+
 SCRIPTS = $(MAT91LIB_DIR)/scripts
 LDSCRIPTS = $(MAT91LIB_DIR)/ldscripts
 
 
-CC = arm-elf-gcc
-OBJCOPY = arm-elf-objcopy
-SIZE = arm-elf-size
+CC = $(TOOLCHAIN)-gcc
+OBJCOPY = $(TOOLCHAIN)-objcopy
+SIZE = $(TOOLCHAIN)-size
 DEL = rm
 
 
@@ -57,13 +61,13 @@ include $(MAT91LIB_DIR)/peripherals.mk
 
 # Program the device.
 program: $(TARGET_OUT)
-	arm-elf-gdb -batch -x $(SCRIPTS)/program.gdb $^
+	$(TOOLCHAIN)-gdb -batch -x $(SCRIPTS)/program.gdb $^
 
 # Reset the device.
 reset: $(TARGET_OUT)
-	arm-elf-gdb -batch -x $(SCRIPTS)/reset.gdb $^
+	$(TOOLCHAIN)-gdb -batch -x $(SCRIPTS)/reset.gdb $^
 
 # Attach debugger.
 debug:
-	arm-elf-gdb  -x $(SCRIPTS)/debug.gdb $(TARGET_OUT)
+	$(TOOLCHAIN)-gdb  -x $(SCRIPTS)/debug.gdb $(TARGET_OUT)
 

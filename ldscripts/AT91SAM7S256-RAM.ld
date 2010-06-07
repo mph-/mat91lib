@@ -31,6 +31,12 @@ SECTIONS
     *(.rodata .rodata.*)
   } >SRAM
   . = ALIGN(4);
+
+  /* Exception unwinding tables needed for EABI.  */
+  __exidx_start = .;
+  .ARM.exidx : { *(.ARM.exidx* .gnu.linkonce.armexidx.*) }
+  __exidx_end = .;
+
   __text_end__ = . ;
 
   /* Initialized data.  */
@@ -93,5 +99,4 @@ SECTIONS
   .debug_funcnames 0 : { *(.debug_funcnames) }
   .debug_typenames 0 : { *(.debug_typenames) }
   .debug_varnames  0 : { *(.debug_varnames) }
-
 }
