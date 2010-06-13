@@ -1,17 +1,12 @@
 # Need to define:
-# ROOT toplevel directory of project
 # OPT optimisation level, e.g. -O2
 # MCU name of microcontroller
 # RUN_MODE either ROM_RUN or RAM_RUN
 # MAT91LIB_DIR path to mat91lib
 # PERIPHERALS list of peripherals to build
 
-ifndef ROOT
-ROOT = .
-endif
-
 ifndef MCU
-MCU = AT91SAM7S256
+$(error MCU undefined, this needs to be defined in the Makefile)
 endif
 
 ifndef RUN_MODE
@@ -26,6 +21,8 @@ ifndef TOOLCHAIN
 TOOLCHAIN = arm-eabi
 endif
 
+TARGET_MAP = $(addsuffix .map, $(basename $(TARGET)))
+
 SCRIPTS = $(MAT91LIB_DIR)/scripts
 LDSCRIPTS = $(MAT91LIB_DIR)/ldscripts
 
@@ -35,6 +32,7 @@ OBJCOPY = $(TOOLCHAIN)-objcopy
 SIZE = $(TOOLCHAIN)-size
 DEL = rm
 
+INCLUDES += -I.
 
 CFLAGS += -mcpu=arm7tdmi -Wall -Wstrict-prototypes -W -gdwarf-2 -D$(RUN_MODE) $(INCLUDES) $(OPT) -mthumb-interwork -D$(MCU) 
 
@@ -48,6 +46,16 @@ LDFLAGS +=-T$(LDSCRIPTS)/$(MCU)-ROM.ld
 endif
 
 
+# Create list of object and dependency files.  Note, sort removes duplicates.
+OBJ = $(addprefix objs/, $(sort $(SRC:.c=.o)))
+DEPS = $(addprefix deps/, $(sort $(SRC:.c=.d)))
+
+include $(MAT91LIB_DIR)/peripherals.mk
+
+
+all: $(TARGET)
+
+
 # This cannot be compiled in thumb mode.
 objs/crt0.o: crt0.c config.h target.h
 	mkdir -p objs
@@ -56,18 +64,59 @@ objs/crt0.o: crt0.c config.h target.h
 EXTRA_OBJ = objs/crt0.o objs/cpu.o
 
 
-include $(MAT91LIB_DIR)/peripherals.mk
+objs:
+	mkdir -p objs
+
+deps:
+	mkdir -p deps
+
+objs/%.o: %.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
+
+# Automatically generate C source code dependencies.
+deps/%.d: %.c deps
+	set -e; $(CC) -MM $(CFLAGS) $< \
+	| sed 's,\(.*\)\.o[ :]*,objs/\1.o deps/\1.d : ,g' > $@; \
+	[ -s $@ ] || rm -f $@
+
+
+# Link object files to form output file.
+$(TARGET): objs $(OBJ) $(EXTRA_OBJ)
+	$(CC) $(OBJ) $(EXTRA_OBJ) $(LDFLAGS) -o $@ -lm -Wl,-Map=$(TARGET_MAP),--cref
+	$(SIZE) $@
+
+# Include the dependency files.
+-include $(DEPS)
+
+
+# Remove the objs directory
+clean-objs:
+	-$(DEL) -fr objs
+
+# Rebuild the code, don't delete dependencies.
+rebuild: clean-objs $(TARGET_OUT)
+
+# Generate cscope tags file
+.PHONY: cscope
+cscope:
+	cscope -Rb $(INCLUDES)
+
+# Remove non-source files.
+.PHONY: clean
+clean: 
+	-$(DEL) -f *.o *.out *.hex *.bin *.elf *.d *.lst *.map *.sym *.lss *.cfg *.ocd *~
+	-$(DEL) -fr objs deps
 
 
 # Program the device.
-program: $(TARGET_OUT)
+program: $(TARGET)
 	$(TOOLCHAIN)-gdb -batch -x $(SCRIPTS)/program.gdb $^
 
 # Reset the device.
-reset: $(TARGET_OUT)
+reset: $(TARGET)
 	$(TOOLCHAIN)-gdb -batch -x $(SCRIPTS)/reset.gdb $^
 
 # Attach debugger.
 debug:
-	$(TOOLCHAIN)-gdb  -x $(SCRIPTS)/debug.gdb $(TARGET_OUT)
+	$(TOOLCHAIN)-gdb  -x $(SCRIPTS)/debug.gdb $(TARGET)
 

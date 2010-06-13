@@ -254,6 +254,7 @@ cpu_flash_init (void)
 }
 
 
+/* Internal slow clock frequency.  */
 #define F_SLCK 32768
 
 #define CPU_OS_DELAY 1.5e-3
@@ -264,6 +265,8 @@ cpu_flash_init (void)
 
 #define CPU_USB_LOG2_DIV 0
 
+/* The PLL frequency is given by (F_XTAL * CPU_PLL_MUL) / CPU_PLL_DIV.
+   This is then divided by the prescaler (assumed 2) for MCK.  */
 
 /** Set up the main clock (MAINCK), PLL clock, and master clock (MCK).   */
 static inline void
@@ -280,7 +283,7 @@ cpu_clock_init (void)
        divisors 2^0 ... 2^6) to drive MCK (master clock).
        
        The main oscillator (external crystal) can range from 3--20 MHz.
-       The PLL frequency can range from 80--220 MHz. 
+       The PLL frequency can range from 80--220 MHz.
     */
 
     /* Enable the MAINCK oscillator and wait for it to start up.  The
