@@ -18,7 +18,7 @@ OPT = -Os
 endif
 
 ifndef TOOLCHAIN
-TOOLCHAIN = arm-eabi
+TOOLCHAIN = arm-none-eabi
 endif
 
 TARGET_MAP = $(addsuffix .map, $(basename $(TARGET)))
