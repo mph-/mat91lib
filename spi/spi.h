@@ -126,45 +126,45 @@ typedef struct
 
 
 /** Create new SPI device instance.  */
-extern spi_t
+spi_t
 spi_init (const spi_cfg_t *cfg);
 
 
 /** Set number of bits in transfer.  This does not take affect until
     spi_config or one of the I/O routines is called.  */
-extern void
+void
 spi_bits_set (spi_t spi, uint8_t bits);
 
 
 /** Set SPI mode.  This does not take affect until
     spi_config or one of the I/O routines is called.  */
-extern void
+void
 spi_mode_set (spi_t spi, spi_mode_t spi_mode);
 
 
 /** Set chip select framing mode.  This does not take affect until
     spi_config or one of the I/O routines is called.  */
-extern void
+void
 spi_cs_mode_set (spi_t spi, spi_cs_mode_t mode);
 
 
 /** Set the delay (in clocks) after CS asserted before the clock
     starts.  The default is zero.  This does not take affect until
     spi_config or one of the I/O routines is called.  */
-extern void
+void
 spi_cs_assert_delay_set (spi_t spi, uint16_t delay);
 
 
 /** Set the delay (in clocks) at end of transmission before CS is
     negated.  The default is 0.  This does not take affect until
     spi_config or one of the I/O routines is called.  */
-extern void
+void
 spi_cs_negate_delay_set (spi_t spi, uint16_t delay);
 
 
 /** Set the clock divisor.  This does not take affect until spi_config
     or one of the I/O routines is called.  */
-extern void
+void
 spi_clock_divisor_set (spi_t spi, spi_clock_divisor_t clock_divisor);
 
 
@@ -175,7 +175,7 @@ spi_clock_speed_set (spi_t spi, spi_clock_speed_t clock_speed);
 
 
 /** Configure SPI with previously specified parameters.  */
-extern void
+void
 spi_config (spi_t spi);
 
 
@@ -184,7 +184,7 @@ spi_config (spi_t spi);
     @param buffer Data buffer to write from.
     @param len Number of bytes to transfer.
     @param terminate True to negate CS when last byte transferred.  */
-extern spi_ret_t
+spi_ret_t
 spi_write (spi_t spi, const void *buffer, spi_size_t len, bool terminate);
 
 
@@ -193,7 +193,7 @@ spi_write (spi_t spi, const void *buffer, spi_size_t len, bool terminate);
     @param buffer Data buffer to read to.
     @param len Number of bytes to transfer.
     @param terminate True to negate CS when last byte transferred.  */
-extern spi_ret_t
+spi_ret_t
 spi_read (spi_t spi, void *buffer, spi_size_t len, bool terminate);
 
 
@@ -203,50 +203,50 @@ spi_read (spi_t spi, void *buffer, spi_size_t len, bool terminate);
     @param rxbuffer Data buffer to read into.
     @param len Number of bytes to transfer.
     @param terminate True to negate CS when last byte transferred.  */
-extern spi_ret_t
+spi_ret_t
 spi_transfer (spi_t spi, const void *txbuffer, void *rxbuffer, 
               spi_size_t len, bool terminate);
 
 
 /** Return non-zero if there is a character ready to be read.  */
-extern bool
+bool
 spi_read_ready_p (spi_t spi); 
 
 
 /** Return non-zero if a character can be written without blocking.  */
-extern bool
+bool
 spi_write_ready_p (spi_t spi); 
 
 
 /** Read character from SPI.  This blocks if nothing
     is available to read.  It sends a dummy word 0.  */
-extern uint8_t
+uint8_t
 spi_getc (spi_t spi); 
 
 
 /** Write character to SPI.  Ignore received character.  */
-extern void 
+void 
 spi_putc (spi_t spi, char ch);
 
 
 /** Write character to SPI.  This returns the character just read.  */
-extern uint8_t
+uint8_t
 spi_xferc (spi_t spi, char ch);
 
 
-extern bool
+bool
 spi_cs_enable (spi_t spi);
 
 
-extern bool
+bool
 spi_cs_disable (spi_t spi);
 
 
-extern void
+void
 spi_shutdown (spi_t spi);
 
 
-extern void
+void
 spi_wakeup (spi_t spi);
 
 #endif
