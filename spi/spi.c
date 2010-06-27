@@ -373,17 +373,29 @@ spi_channel_cs_enable (spi_channel_t channel, pio_t *cs)
 }
 
 
+static void
+spi_update (spi_t spi)
+{
+    /* Need to force an update of the config.  */
+    if (spi == spi_config_last)
+        spi_config_last = 0;
+}
+
+
 void
 spi_clock_divisor_set (spi_t spi, spi_clock_divisor_t clock_divisor)
 {
+    if (clock_divisor == 0)
+        clock_divisor = 1;
     spi->clock_divisor = clock_divisor;
+    spi_update (spi);
 }
 
 
 spi_clock_speed_t
 spi_clock_speed_set (spi_t spi, spi_clock_speed_t clock_speed)
 {
-    spi->clock_divisor = (F_CPU + clock_speed - 1) / clock_speed;
+    spi_clock_divisor_set (spi, (F_CPU + clock_speed - 1) / clock_speed);
     clock_speed = F_CPU / spi->clock_divisor;
     return clock_speed;
 }
@@ -393,6 +405,7 @@ void
 spi_cs_negate_delay_set (spi_t spi, uint16_t delay)
 {
     spi->cs_negate_delay = delay;
+    spi_update (spi);
 }
 
 
@@ -400,6 +413,7 @@ void
 spi_cs_assert_delay_set (spi_t spi, uint16_t delay)
 {
     spi->cs_assert_delay = delay;
+    spi_update (spi);
 }
 
 
@@ -407,6 +421,7 @@ void
 spi_bits_set (spi_t spi, uint8_t bits)
 {
     spi->bits = bits;
+    spi_update (spi);
 }
 
 
@@ -452,6 +467,7 @@ void
 spi_mode_set (spi_t spi, spi_mode_t mode)
 {
     spi->mode = mode;
+    spi_update (spi);
 }
 
 
@@ -459,6 +475,7 @@ void
 spi_cs_mode_set (spi_t spi, spi_cs_mode_t mode)
 {
     spi->cs_mode = mode;
+    spi_update (spi);
 }
 
 
