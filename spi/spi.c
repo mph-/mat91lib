@@ -35,12 +35,15 @@
    With this driver we can share the 4 channels among multiple SPI
    devices.  However, automatic CS driving can only be performed for
    the few NPCS signals associated with a channel, otherwise the CS
-   signals are bit-bashed.  There are two chip select modes: FRAME
-   where the CS is asserted for multiple SPI tranmissions; and TOGGLE
-   where the CS is only asserted for each SPI transmission.  The
-   functions that configure the SPI peripheral (such as spi_bits_set)
-   only take effect when spi_config is called (usually when some I/O
-   is to be performed).
+   signals are bit-bashed.
+
+   There are two chip select modes: FRAME where the CS is asserted for
+   multiple SPI tranmissions; and TOGGLE where the CS is only asserted
+   for each SPI transmission.
+
+   Note, functions that configure the SPI peripheral (such as
+   spi_bits_set) only take effect when spi_config is called (usually
+   when some I/O is to be performed).
 */
 
 
@@ -300,7 +303,7 @@ typedef struct spi_cs_struct
 
 
 #define SPI_CS(CHANNEL, PIO, PERIPH) \
-    {(CHANNEL), (PIO), (PERIPH)}
+    {.channel = (CHANNEL), .pio = (PIO), .periph = (PERIPH)}
 
 
 /* NB, if you get `error: initializer element is not constant' then
@@ -339,7 +342,6 @@ static const spi_cs_t spi_cs[] =
 #define SPI0_PINS (AT91C_PA13_MOSI | AT91C_PA12_MISO | AT91C_PA14_SPCK)
 
 #endif
-
 
 
 #define SPI_CS_NUM ARRAY_SIZE (spi_cs)
