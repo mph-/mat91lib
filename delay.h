@@ -29,6 +29,20 @@ _delay_loop (unsigned int loops)
 }
 
 
+static inline unsigned int 
+_delay_us_loops (double delay)
+{
+    double __tmp1 = ((double)F_CPU * (delay)) / (DELAY_LOOP_CYCLES * 1e6);
+    unsigned int __ticks1;
+    
+    if (__tmp1 < 1.0)
+        __ticks1 = 1;
+    else
+        __ticks1 = (unsigned int)__tmp1;
+    
+    return __ticks1;
+}
+
 
 #define DELAY_US(us)                            \
 do                                              \
