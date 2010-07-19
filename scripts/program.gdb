@@ -7,6 +7,8 @@ target remote tcp:localhost:3333
 # Enable fast memory access (may be less stable, comment out if issues arise)
 #monitor arm7_9 fast_memory_access enable
 
+monitor halt
+
 # Load the program
 monitor reset
 monitor sleep 500
