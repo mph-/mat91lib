@@ -8,10 +8,6 @@
 #ifndef PIO_H
 #define PIO_H
 
-
-/* Note, perhaps add piobus and piogroup support.
-   #define DATABUS PIOBUS_DEFINE (PORT, pin1, bits)  */
-
 #include "config.h"
 
 #define PIO_AT91
@@ -45,7 +41,12 @@ typedef struct
 
 typedef enum pio_config_enum 
 {
-    PIO_INPUT = 1, PIO_OUTPUT, PIO_PULLUP, PIO_PERIPH
+    PIO_INPUT = 1,          /* Configure as input pin.  */
+    PIO_PULLUP,             /* Configure as input pin with pullup.  */
+    PIO_PULLDOWN,           /* Configure as input pin with pulldown.  */
+    PIO_OUTPUT_LOW,         /* Configure as output, initially low.  */
+    PIO_OUTPUT_HIGH,        /* Configure as output, initially high.  */
+    PIO_PERIPH
 } pio_config_t;
 
 
@@ -56,7 +57,14 @@ bool pio_config_set (pio_t pio, pio_config_t config)
 {
     switch (config)
     {
-    case PIO_OUTPUT:
+    case PIO_OUTPUT_HIGH:
+        pio.port->PIO_SODR = pio.bitmask;
+        pio.port->PIO_PER = pio.bitmask;
+        pio.port->PIO_OER = pio.bitmask;
+        return 1;
+
+    case PIO_OUTPUT_LOW:
+        pio.port->PIO_CODR = pio.bitmask;
         pio.port->PIO_PER = pio.bitmask;
         pio.port->PIO_OER = pio.bitmask;
         return 1;

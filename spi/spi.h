@@ -234,18 +234,22 @@ uint8_t
 spi_xferc (spi_t spi, char ch);
 
 
+/* Enable chip select.  */
 bool
 spi_cs_enable (spi_t spi);
 
 
+/* Disable chip select.  */
 bool
 spi_cs_disable (spi_t spi);
 
 
+/* Shutdown SPI peripheral.  */
 void
 spi_shutdown (spi_t spi);
 
 
+/* Wkae up SPI peripheral.  */
 void
 spi_wakeup (spi_t spi);
 
