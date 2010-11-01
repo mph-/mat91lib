@@ -505,7 +505,7 @@ bool
 spi_cs_disable (spi_t spi)
 {
     /* Switch to PIO mode and configure as output.  */
-    pio_config_set (spi->cs, PIO_OUTPUT);
+    pio_config_set (spi->cs, PIO_OUTPUT_HIGH);
     pio_output_high (spi->cs);
     return 1;
 }
@@ -576,7 +576,7 @@ spi_init (const spi_cfg_t *cfg)
 
     if (spi->cs.bitmask && !spi->cs_auto)
     {
-        pio_config_set (spi->cs, PIO_OUTPUT);
+        pio_config_set (spi->cs, PIO_OUTPUT_HIGH);
         spi_cs_negate (spi);
     }
 
