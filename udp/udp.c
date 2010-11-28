@@ -1,4 +1,5 @@
 #include "irq.h"
+#include "pio.h"
 #include "trace.h"
 #include "udp.h"
 
@@ -1316,15 +1317,10 @@ udp_write (udp_t udp, const void *buffer, udp_size_t length)
 static void
 udp_signal (udp_t udp __unused__)
 {
-#ifdef UDP_PIO_PULLUP
-    /* Enable UDP PullUp (UDP_DP_PUP) : enable and clear of the
-       corresponding PIO.  Set in PIO mode and configure as
-       output.  */
-    pio_config (UDP_PIO_PULLUP, PIO_OUTPUT);
+#ifdef UDP_PULLUP_PIO
+    /* Enable UDP pull up by driving gate of p-channel MOSFET low.  */
 
-    /* Set low to enable pullup (driven by p-channel MOSFET connected
-       to 3V3).  */
-    pio_output_low (UDP_PIO_PULLUP);
+    pio_config_set (UDP_PULLUP_PIO, PIO_OUTPUT_LOW);
 #endif
 }
 
@@ -1373,11 +1369,9 @@ udp_disable (udp_t udp)
     AT91PS_UDP pUDP = udp->pUDP;
     AT91PS_AIC pAIC = AT91C_BASE_AIC;
 
-#ifdef UDP_PIO_PULLUP
-    // Configure UDP pullup.
-    pio_config (UDP_PIO_PULLUP, PIO_OUTPUT);
-    /* Set high to disable pullup.  */
-    pio_output_high (UDP_PIO_PULLUP);
+#ifdef UDP_PULLUP_PIO
+    /* Configure UDP pullup pio and drive high to disable pullup.  */
+    pio_config_set (UDP_PULLUP_PIO, PIO_OUTPUT_HIGH);
 #endif
 
     // Disable the 48MHz USB clock UDPCK and System Peripheral USB Clock
