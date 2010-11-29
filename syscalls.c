@@ -355,7 +355,7 @@ _times (void *tp __UNUSED__)
 int
 _isatty (int fd)
 {
-    return (fd <= 2) ? 1 : 0;  /* one of stdin, stdout, stderr */
+    return (fd <= 2) ? 1 : 0;  /* One of stdin, stdout, stderr.  */
 }
 
 
