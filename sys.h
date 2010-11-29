@@ -19,33 +19,33 @@ typedef int (*sys_rename_t) (void *fs, const char *oldpathname,
                              const char *newpathname);
 
 /* Device operations.  */
-typedef struct sys_devops_struct
+typedef struct sys_file_ops_struct
 {
     sys_write_t write;
     sys_read_t read;
     sys_open_t open;
     sys_close_t close;
     sys_lseek_t lseek;
-} sys_devops_t;
+} sys_file_ops_t;
 
 
-typedef struct sys_fsops_struct
+typedef struct sys_fs_ops_struct
 {
     /* Function to unlink (delete) a file.  */
     sys_unlink_t unlink;
     /* Function to rename a file.  */
     sys_rename_t rename;
     /* readdir ?  */
-} sys_fsops_t;
+} sys_fs_ops_t;
 
 
 /* Filesystem operations.  */
 typedef struct sys_fs_struct
 {
     /* Device operations.  */
-    const sys_devops_t *devops;
+    const sys_file_ops_t *file_ops;
     /* File system operations.  */
-    const sys_fsops_t *fsops;
+    const sys_fs_ops_t *fs_ops;
     /* Name of mount point.  */
     char mountname[8];
     /* The flags could be used for read-only.  */

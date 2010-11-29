@@ -31,19 +31,19 @@
 
 typedef struct sys_file_struct
 {
-    sys_devops_t *devops;
+    sys_file_ops_t *file_ops;
     void *file;
 } sys_file_t;
 
-static sys_devops_t stdin_devops;
-static sys_devops_t stdout_devops;
-static sys_devops_t stderr_devops;
+static sys_file_ops_t stdin_file_ops;
+static sys_file_ops_t stdout_file_ops;
+static sys_file_ops_t stderr_file_ops;
 
 static sys_file_t sys_files[SYS_FD_NUM] =
 {
-    {.devops = &stdin_devops, .file = 0},
-    {.devops = &stdout_devops, .file = 0},
-    {.devops = &stderr_devops, .file = 0}
+    {.file_ops = &stdin_file_ops, .file = 0},
+    {.file_ops = &stdout_file_ops, .file = 0},
+    {.file_ops = &stderr_file_ops, .file = 0}
 };
 
 static sys_fs_t *sys_fs[SYS_FS_NUM];
@@ -110,7 +110,7 @@ stdio_redirect (void (*putc1) (void *stream, int ch),
 void
 sys_redirect_stdin (sys_read_t read1, void *file)
 {
-    sys_files[0].devops->read = read1;
+    sys_files[0].file_ops->read = read1;
     sys_files[0].file = file;
 }
 
@@ -118,7 +118,7 @@ sys_redirect_stdin (sys_read_t read1, void *file)
 void
 sys_redirect_stdout (sys_write_t write1, void *file)
 {
-    sys_files[1].devops->write = write1;
+    sys_files[1].file_ops->write = write1;
     sys_files[1].file = file;
 }
 
@@ -126,7 +126,7 @@ sys_redirect_stdout (sys_write_t write1, void *file)
 void
 sys_redirect_stderr (sys_write_t write1, void *file)
 {
-    sys_files[2].devops->write = write1;
+    sys_files[2].file_ops->write = write1;
     sys_files[2].file = file;
 }
 
@@ -149,39 +149,39 @@ sys_fs_find (const char *pathname, sys_fs_t **pfs)
 ssize_t
 _read (int fd, char *buffer, size_t size)
 {
-    if ((fd >= SYS_FD_NUM) || !sys_files[fd].devops->read)
+    if ((fd >= SYS_FD_NUM) || !sys_files[fd].file_ops->read)
     {
         errno = ENODEV;
         return -1;
     }
 
-    return sys_files[fd].devops->read (sys_files[fd].file, buffer, size);
+    return sys_files[fd].file_ops->read (sys_files[fd].file, buffer, size);
 }
 
 
 off_t
 _lseek (int fd, off_t offset, int whence)
 {
-    if ((fd >= SYS_FD_NUM) || !sys_files[fd].devops->lseek)
+    if ((fd >= SYS_FD_NUM) || !sys_files[fd].file_ops->lseek)
     {
         errno = ENODEV;
         return -1;
     }
 
-    return sys_files[fd].devops->lseek (sys_files[fd].file, offset, whence);
+    return sys_files[fd].file_ops->lseek (sys_files[fd].file, offset, whence);
 }
 
 
 ssize_t
 _write (int fd, char *buffer, size_t size)
 {
-    if ((fd >= SYS_FD_NUM) || !sys_files[fd].devops->write)
+    if ((fd >= SYS_FD_NUM) || !sys_files[fd].file_ops->write)
     {
         errno = ENODEV;
         return -1;
     }
 
-    return sys_files[fd].devops->write (sys_files[fd].file, buffer, size);
+    return sys_files[fd].file_ops->write (sys_files[fd].file, buffer, size);
 }
 
 
@@ -196,7 +196,7 @@ _open (const char *pathname, int flags, ...)
 
     for (fd = 3; fd < SYS_FD_NUM; fd++)
     {
-        if (!sys_files[fd].devops)
+        if (!sys_files[fd].file_ops)
             break;
     }
     if (fd == SYS_FD_NUM)
@@ -207,19 +207,19 @@ _open (const char *pathname, int flags, ...)
 
     pathname = sys_fs_find (pathname, &fs);
 
-    if (!fs || !fs->devops || !fs->devops->open)
+    if (!fs || !fs->file_ops || !fs->file_ops->open)
     {
         errno = EACCES;
         return -1;
     }
 
-    arg = fs->devops->open (fs->private, pathname, flags);
+    arg = fs->file_ops->open (fs->private, pathname, flags);
     if (!arg)
     {
         errno = EACCES;
         return -1;
     }
-    sys_files[fd].devops = (sys_devops_t *)fs->devops;
+    sys_files[fd].file_ops = (sys_file_ops_t *)fs->file_ops;
     sys_files[fd].file = arg;
 
     return fd;
@@ -231,15 +231,15 @@ _close (int fd)
 {
     int ret;
 
-    if ((fd >= SYS_FD_NUM) || !sys_files[fd].devops->close)
+    if ((fd >= SYS_FD_NUM) || !sys_files[fd].file_ops->close)
     {
         errno = ENODEV;
         return -1;
     }
 
-    ret = sys_files[fd].devops->close (sys_files[fd].file);
+    ret = sys_files[fd].file_ops->close (sys_files[fd].file);
 
-    sys_files[fd].devops = 0;
+    sys_files[fd].file_ops = 0;
     sys_files[fd].file = 0;
     return ret;
 }
@@ -322,12 +322,12 @@ _unlink (const char *pathname)
     pathname = sys_fs_find (pathname, &fs);
 
     /* TODO: select fs based on pathname.  */
-    if (!fs || !fs->fsops || !fs->fsops->unlink)
+    if (!fs || !fs->fs_ops || !fs->fs_ops->unlink)
     {
         errno = EACCES;
         return -1;
     }
-    return fs->fsops->unlink (fs->private, pathname);
+    return fs->fs_ops->unlink (fs->private, pathname);
 }
 
 
