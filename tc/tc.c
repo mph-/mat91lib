@@ -37,34 +37,35 @@ bool tc_stop (tc_t *tc)
 bool
 tc_pulse_config (tc_t *tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period)
 {
+    /* Many timer counters can only generate a pulse with a single
+       timer clock period.  This timer counter allows the pulse width
+       to be varied.  It is specified by period - delay.  */
     switch (mode)
     {
     case TC_PULSE_MODE:
-        /* Set TIOAx when RA matches and clear TIOAx when RC matches.
-           Use MCK / 2.  */
-        tc->base->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_BURST_NONE
+        /* Set TIOAx when RA matches and clear TIOAx when RC matches.  */
+        tc->base->TC_CMR = AT91C_TC_BURST_NONE
             | AT91C_TC_WAVESEL | AT91C_TC_ACPA_SET | AT91C_TC_ACPC_CLEAR;
         break;
 
     case TC_PULSE_MODE_INVERT:
-        /* Clear TIOAx when RA matches and set TIOAx when RC matches.
-           Use MCK / 2.  */
-        tc->base->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_BURST_NONE
+        /* Clear TIOAx when RA matches and set TIOAx when RC matches.  */
+        tc->base->TC_CMR = AT91C_TC_BURST_NONE
             | AT91C_TC_WAVESEL | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET;
         break;
 
     case TC_PULSE_MODE_ONESHOT:
         /* Set TIOAx when RA matches and clear TIOAx when RC matches.
-           Stop clock when RC matches.  Use MCK / 2.  */
-        tc->base->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_BURST_NONE
+           Stop clock when RC matches.   */
+        tc->base->TC_CMR = AT91C_TC_BURST_NONE
             | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL
             | AT91C_TC_ACPA_SET | AT91C_TC_ACPC_CLEAR;
         break;
 
     case TC_PULSE_MODE_ONESHOT_INVERT:
         /* Clear TIOAx when RA matches and set TIOAx when RC matches.
-           Stop clock when RC matches.  Use MCK / 2.  */
-        tc->base->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_BURST_NONE
+           Stop clock when RC matches.  */
+        tc->base->TC_CMR = AT91C_TC_BURST_NONE
             | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL
             | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET;
         break;
@@ -73,7 +74,9 @@ tc_pulse_config (tc_t *tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period
         return 0;
     }
 
-    /* If period > 65536 then need to select a slower timer clock.  */
+    /* If period > 65536 then need to select a slower timer clock.
+       For now use MCK / 2.  */
+    tc->base->TC_CMR |= AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
 
     tc->base->TC_RA = delay >> 1;
     tc->base->TC_RC = period >> 1;
