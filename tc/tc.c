@@ -39,26 +39,28 @@ tc_pulse_config (tc_t *tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period
 {
     /* Many timer counters can only generate a pulse with a single
        timer clock period.  This timer counter allows the pulse width
-       to be varied.  It is specified by period - delay.  */
+       to be varied.  It is specified by period - delay. 
+       With WAVESEL_UP_AUTO, the counter is incremented and is reset
+       when RC matches.  */
     switch (mode)
     {
     case TC_PULSE_MODE:
         /* Set TIOAx when RA matches and clear TIOAx when RC matches.  */
         tc->base->TC_CMR = AT91C_TC_BURST_NONE
-            | AT91C_TC_WAVESEL | AT91C_TC_ACPA_SET | AT91C_TC_ACPC_CLEAR;
+            | AT91C_TC_WAVESEL_UP_AUTO | AT91C_TC_ACPA_SET | AT91C_TC_ACPC_CLEAR;
         break;
 
     case TC_PULSE_MODE_INVERT:
         /* Clear TIOAx when RA matches and set TIOAx when RC matches.  */
         tc->base->TC_CMR = AT91C_TC_BURST_NONE
-            | AT91C_TC_WAVESEL | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET;
+            | AT91C_TC_WAVESEL_UP_AUTO | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET;
         break;
 
     case TC_PULSE_MODE_ONESHOT:
         /* Set TIOAx when RA matches and clear TIOAx when RC matches.
            Stop clock when RC matches.   */
         tc->base->TC_CMR = AT91C_TC_BURST_NONE
-            | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL
+            | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL_UP_AUTO
             | AT91C_TC_ACPA_SET | AT91C_TC_ACPC_CLEAR;
         break;
 
@@ -66,7 +68,7 @@ tc_pulse_config (tc_t *tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period
         /* Clear TIOAx when RA matches and set TIOAx when RC matches.
            Stop clock when RC matches.  */
         tc->base->TC_CMR = AT91C_TC_BURST_NONE
-            | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL
+            | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL_UP_AUTO
             | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET;
         break;
 
