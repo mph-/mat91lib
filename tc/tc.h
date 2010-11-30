@@ -19,13 +19,22 @@ typedef enum
 } tc_channel_t;
 
 
+typedef enum
+{
+    TC_PULSE_MODE,
+    TC_PULSE_MODE_INVERT,
+    TC_PULSE_MODE_ONESHOT,
+    TC_PULSE_MODE_ONESHOT_INVERT
+} tc_pulse_mode_t;
+
+
 typedef struct
 {
     AT91S_TC *base;
 } tc_t;
 
 
-bool tc_one_shot_pulse_config (tc_t *tc, uint32_t delay, uint32_t pulse_width, bool invert);
+bool tc_pulse_config (tc_t *tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t pulse_width);
 
 
 bool tc_start (tc_t *tc);

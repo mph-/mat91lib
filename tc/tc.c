@@ -35,29 +35,48 @@ bool tc_stop (tc_t *tc)
 
 
 bool
-tc_one_shot_pulse_config (tc_t *tc, uint32_t delay, uint32_t pulse_width, bool invert)
+tc_pulse_config (tc_t *tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period)
 {
-    if (invert)
+    switch (mode)
     {
-        /* Clear TIOAx when RA matches and set TIOAx when RC matches.
-           Stop clock when RC matches.  Use MCK / 2.  */
+    case TC_PULSE_MODE:
+        /* Set TIOAx when RA matches and clear TIOAx when RC matches.
+           Use MCK / 2.  */
         tc->base->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_BURST_NONE
-            | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL
-            | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET;
-    }
-    else
-    {
+            | AT91C_TC_WAVESEL | AT91C_TC_ACPA_SET | AT91C_TC_ACPC_CLEAR;
+        break;
+
+    case TC_PULSE_MODE_INVERT:
+        /* Clear TIOAx when RA matches and set TIOAx when RC matches.
+           Use MCK / 2.  */
+        tc->base->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_BURST_NONE
+            | AT91C_TC_WAVESEL | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET;
+        break;
+
+    case TC_PULSE_MODE_ONESHOT:
         /* Set TIOAx when RA matches and clear TIOAx when RC matches.
            Stop clock when RC matches.  Use MCK / 2.  */
         tc->base->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_BURST_NONE
             | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL
             | AT91C_TC_ACPA_SET | AT91C_TC_ACPC_CLEAR;
+        break;
+
+    case TC_PULSE_MODE_ONESHOT_INVERT:
+        /* Clear TIOAx when RA matches and set TIOAx when RC matches.
+           Stop clock when RC matches.  Use MCK / 2.  */
+        tc->base->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_BURST_NONE
+            | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL
+            | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET;
+        break;
+
+    default:
+        return 0;
     }
 
-    /* If delay + pulse_width > 65536 then need to select a slower timer clock.  */
+    /* If period > 65536 then need to select a slower timer clock.  */
 
     tc->base->TC_RA = delay >> 1;
-    tc->base->TC_RC = (delay + pulse_width) >> 1;
+    tc->base->TC_RC = period >> 1;
 
     /* Make timer pin TIOAx a timer output.  Perhaps we could use different logical
        timer channels to generate pulses on TIOBx pins?  */
