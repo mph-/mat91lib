@@ -8,7 +8,7 @@
 #include "bits.h"
 
 
-/* Currently no support for frequencies below 730Hz.  */
+/* Currently no support for frequencies below 730 Hz.  */
 
 static inline AT91S_PWMC_CH *pwm_base (pwm_channel_t channel)
 {
@@ -40,7 +40,7 @@ pwm_shutdown (void)
 }
 
 
-/* Initialises pwm on specified pins.  */
+/* Initialises PWM on specified pins.  */
 uint8_t
 pwm_init (void)
 {
@@ -68,7 +68,7 @@ pwm_config (pwm_channel_t channel, uint16_t period, uint16_t duty,
         return 0;
     
     /* Configure period.  */
-    pPWM ->PWMC_CPRDR = period;
+    pPWM->PWMC_CPRDR = period;
     
     /* Check and configure duty cycle.  */
     if (duty > period)

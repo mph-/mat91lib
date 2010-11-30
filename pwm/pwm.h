@@ -42,9 +42,6 @@ typedef enum
 } pwm_polarity_t;
 
 
-/* Currently no support for frequencies below 730Hz */
-
-
 void
 pwm_shutdown (void);
 
@@ -56,8 +53,8 @@ pwm_init (void);
 
 /* Configures the PWM output The period of the waveform is in number
    of MCK ticks.  The duty can be any number less than the period.
-   Support is only for fequencies above 750Hz (no prescaling used
-   here).  So for 100kHz, period would be 480 with MCK at 48MHz.  */
+   Support is only for fequencies above 750 Hz (no prescaling used
+   here).  So for 100 kHz, period would be 480 with MCK at 48 MHz.  */
 uint8_t
 pwm_config (pwm_channel_t channel, uint16_t period, uint16_t duty,
             pwm_align_t alignment, pwm_polarity_t polarity);
