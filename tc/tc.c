@@ -35,13 +35,24 @@ bool tc_stop (tc_t *tc)
 
 
 bool
-tc_one_shot_pulse_config (tc_t *tc, uint32_t delay, uint32_t pulse_width)
+tc_one_shot_pulse_config (tc_t *tc, uint32_t delay, uint32_t pulse_width, bool invert)
 {
-    /* Set TIOA when RA matches and clear TIOA when RC matches.
-       Stop clock when RC matches.  Use MCK / 2.  */
-    tc->base->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_BURST_NONE
-        | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL
-        | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET;
+    if (invert)
+    {
+        /* Clear TIOAx when RA matches and set TIOAx when RC matches.
+           Stop clock when RC matches.  Use MCK / 2.  */
+        tc->base->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_BURST_NONE
+            | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL
+            | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET;
+    }
+    else
+    {
+        /* Set TIOAx when RA matches and clear TIOAx when RC matches.
+           Stop clock when RC matches.  Use MCK / 2.  */
+        tc->base->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK | AT91C_TC_BURST_NONE
+            | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL
+            | AT91C_TC_ACPA_SET | AT91C_TC_ACPC_CLEAR;
+    }
 
     /* If delay + pulse_width > 65536 then need to select a slower timer clock.  */
 
@@ -49,7 +60,7 @@ tc_one_shot_pulse_config (tc_t *tc, uint32_t delay, uint32_t pulse_width)
     tc->base->TC_RC = (delay + pulse_width) >> 1;
 
     /* Make timer pin TIOAx a timer output.  Perhaps we could use different logical
-       timer channels to generate pulses on TIOBx pins.  */
+       timer channels to generate pulses on TIOBx pins?  */
     switch (tc - tc_info)
     {
     case TC_CHANNEL_0:
