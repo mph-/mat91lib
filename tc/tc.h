@@ -25,7 +25,7 @@ typedef struct
 } tc_t;
 
 
-bool tc_one_shot_pulse_set (tc_t *tc, uint16_t delay, uint16_t pulse_width);
+bool tc_one_shot_pulse_config (tc_t *tc, uint32_t delay, uint32_t pulse_width);
 
 
 bool tc_start (tc_t *tc);

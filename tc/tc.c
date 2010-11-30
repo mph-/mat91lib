@@ -35,7 +35,7 @@ bool tc_stop (tc_t *tc)
 
 
 bool
-tc_one_shot_pulse_set (tc_t *tc, uint16_t delay, uint16_t pulse_width)
+tc_one_shot_pulse_config (tc_t *tc, uint32_t delay, uint32_t pulse_width)
 {
     /* Set TIOA when RA matches and clear TIOA when RC matches.
        Stop clock when RC matches.  Use MCK / 2.  */
@@ -43,9 +43,13 @@ tc_one_shot_pulse_set (tc_t *tc, uint16_t delay, uint16_t pulse_width)
         | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL
         | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET;
 
-    tc->base->TC_RA = delay;
-    tc->base->TC_RC = delay + pulse_width;
+    /* If delay + pulse_width > 65536 then need to select a slower timer clock.  */
 
+    tc->base->TC_RA = delay >> 1;
+    tc->base->TC_RC = (delay + pulse_width) >> 1;
+
+    /* Make timer pin TIOAx a timer output.  Perhaps we could use different logical
+       timer channels to generate pulses on TIOBx pins.  */
     switch (tc - tc_info)
     {
     case TC_CHANNEL_0:
