@@ -54,13 +54,15 @@ tc_pulse_config (tc_t *tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period
     case TC_PULSE_MODE:
         /* Set TIOAx when RA matches and clear TIOAx when RC matches.  */
         tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
-            | AT91C_TC_WAVESEL_UP_AUTO | AT91C_TC_ACPA_SET | AT91C_TC_ACPC_CLEAR;
+            | AT91C_TC_WAVESEL_UP_AUTO | AT91C_TC_ACPA_SET | AT91C_TC_ACPC_CLEAR
+            | AT91C_TC_ASWTRG_CLEAR;
         break;
 
     case TC_PULSE_MODE_INVERT:
         /* Clear TIOAx when RA matches and set TIOAx when RC matches.  */
         tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
-            | AT91C_TC_WAVESEL_UP_AUTO | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET;
+            | AT91C_TC_WAVESEL_UP_AUTO | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET
+            | AT91C_TC_ASWTRG_SET;
         break;
 
     case TC_PULSE_MODE_ONESHOT:
@@ -68,7 +70,8 @@ tc_pulse_config (tc_t *tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period
            Stop clock when RC matches.   */
         tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
             | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL_UP_AUTO
-            | AT91C_TC_ACPA_SET | AT91C_TC_ACPC_CLEAR;
+            | AT91C_TC_ACPA_SET | AT91C_TC_ACPC_CLEAR
+            | AT91C_TC_ASWTRG_CLEAR;
         break;
 
     case TC_PULSE_MODE_ONESHOT_INVERT:
@@ -76,7 +79,8 @@ tc_pulse_config (tc_t *tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period
            Stop clock when RC matches.  */
         tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
             | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL_UP_AUTO
-            | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET;
+            | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET
+            | AT91C_TC_ASWTRG_SET;
         break;
 
     default:
@@ -91,11 +95,16 @@ tc_pulse_config (tc_t *tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period
     tc->base->TC_RA = delay >> 1;
     tc->base->TC_RC = period >> 1;
 
+    /* Generate a software trigger with the clock stopped to hopefully
+       set TIOAx to deisred state.  */
+    tc->base->TC_CCR |= (AT91C_TC_CLKDIS | AT91C_TC_SWTRG); 
+
     /* Make timer pin TIOAx a timer output.  Perhaps we could use different logical
        timer channels to generate pulses on TIOBx pins?  */
     switch (tc - tc_info)
     {
     case TC_CHANNEL_0:
+        /* Switch to peripheral B and disable pin as PIO.  */
         AT91C_BASE_PIOA->PIO_BSR = AT91C_PA0_TIOA0;
         AT91C_BASE_PIOA->PIO_PDR = AT91C_PA0_TIOA0;
         break;
@@ -113,6 +122,10 @@ tc_pulse_config (tc_t *tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period
     default:
         return 0;
     }
+
+    /* Dummy read of status register.  This helps with debugging 
+       since can determine compare status.  */
+    tc->base->TC_SR;
 
     return 1;
 }
