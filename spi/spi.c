@@ -504,9 +504,8 @@ spi_cs_enable (spi_t spi)
 bool
 spi_cs_disable (spi_t spi)
 {
-    /* Switch to PIO mode and configure as output.  */
+    /* Switch to PIO mode and configure as high output.  */
     pio_config_set (spi->cs, PIO_OUTPUT_HIGH);
-    pio_output_high (spi->cs);
     return 1;
 }
 
