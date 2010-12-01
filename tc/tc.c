@@ -22,6 +22,7 @@ static tc_t tc_info[TC_CHANNEL_NUM];
 
 bool tc_start (tc_t *tc)
 {
+    /* The TC_CCR register is write only.  */
     tc->base->TC_CCR |= (AT91C_TC_CLKEN | AT91C_TC_SWTRG); 
     return 1;
 }
@@ -31,6 +32,12 @@ bool tc_stop (tc_t *tc)
 {
     tc->base->TC_CCR |= AT91C_TC_CLKDIS; 
     return 1;
+}
+
+
+uint16_t tc_counter_get (tc_t *tc)
+{
+    return tc->base->TC_CV;
 }
 
 
@@ -46,20 +53,20 @@ tc_pulse_config (tc_t *tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period
     {
     case TC_PULSE_MODE:
         /* Set TIOAx when RA matches and clear TIOAx when RC matches.  */
-        tc->base->TC_CMR = AT91C_TC_BURST_NONE
+        tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
             | AT91C_TC_WAVESEL_UP_AUTO | AT91C_TC_ACPA_SET | AT91C_TC_ACPC_CLEAR;
         break;
 
     case TC_PULSE_MODE_INVERT:
         /* Clear TIOAx when RA matches and set TIOAx when RC matches.  */
-        tc->base->TC_CMR = AT91C_TC_BURST_NONE
+        tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
             | AT91C_TC_WAVESEL_UP_AUTO | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET;
         break;
 
     case TC_PULSE_MODE_ONESHOT:
         /* Set TIOAx when RA matches and clear TIOAx when RC matches.
            Stop clock when RC matches.   */
-        tc->base->TC_CMR = AT91C_TC_BURST_NONE
+        tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
             | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL_UP_AUTO
             | AT91C_TC_ACPA_SET | AT91C_TC_ACPC_CLEAR;
         break;
@@ -67,7 +74,7 @@ tc_pulse_config (tc_t *tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period
     case TC_PULSE_MODE_ONESHOT_INVERT:
         /* Clear TIOAx when RA matches and set TIOAx when RC matches.
            Stop clock when RC matches.  */
-        tc->base->TC_CMR = AT91C_TC_BURST_NONE
+        tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
             | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL_UP_AUTO
             | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET;
         break;
@@ -80,6 +87,7 @@ tc_pulse_config (tc_t *tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period
        For now use MCK / 2.  */
     tc->base->TC_CMR |= AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
 
+    /* These registers are read only when not in wave mode.  */
     tc->base->TC_RA = delay >> 1;
     tc->base->TC_RC = period >> 1;
 
