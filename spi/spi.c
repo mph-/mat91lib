@@ -696,7 +696,7 @@ spi_shutdown (spi_t spi)
     for (i = 0; i < spi_devices_num; i++)
     {
         spi_cs_disable (spi_devices + i);
-        pio_output_low (spi->cs);
+        pio_output_low (spi_devices[i].cs);
     }
 }
 
