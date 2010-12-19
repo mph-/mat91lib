@@ -645,6 +645,9 @@ spi_wakeup (spi_t spi)
 }
 
 
+/** This only takes effect when the last SPI device is shutdown.  Then
+    the CS lines are forced low.  This can only be done when there is
+    no more activity on the SPI bus.  */
 void
 spi_shutdown (spi_t spi)
 {
