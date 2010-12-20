@@ -283,22 +283,6 @@ spi_channel_mode_set (spi_t spi, spi_mode_t mode)
 }
 
 
-static void
-spi_channel_cs_mode_set (spi_t spi, spi_cs_mode_t mode)
-{
-    uint32_t csr;
-
-    csr = spi_channel_csr_get (spi) & ~SPI_CSAAT_MASK;
-
-    /* If framing with chip select then enable chip select active
-       after transmission (CSAAT).  */
-    if (mode == SPI_CS_MODE_FRAME)
-        csr |= SPI_CSAAT_MASK;
-
-    spi_channel_csr_set (spi, csr);
-}
-
-
 enum {PERIPH_A = 0, PERIPH_B};
 
 typedef struct spi_cs_struct
@@ -496,7 +480,7 @@ spi_channel_select (spi_t spi)
 void
 spi_cs_assert (spi_t spi)
 {
-    pio_config_set (spi->cs, PIO_OUTPUT_LOW);
+    pio_output_low (spi->cs);
     spi->cs_active = 1; 
 }
 
@@ -505,9 +489,7 @@ spi_cs_assert (spi_t spi)
 void
 spi_cs_negate (spi_t spi)
 {
-    /* The CS may have automatically been driven high, but ensure it stays high
-       in case we switch to another device using the same channel.  */
-    pio_config_set (spi->cs, PIO_OUTPUT_HIGH);
+    pio_output_high (spi->cs);
     spi->cs_active = 0;
 }
 
@@ -529,7 +511,7 @@ spi_cs_auto_enable (spi_t spi)
 void
 spi_cs_auto_disable (spi_t spi)
 {
-    spi_cs_negate (spi);
+    pio_config_set (spi->cs, PIO_OUTPUT_HIGH);
 }
 
 
@@ -545,7 +527,6 @@ spi_config (spi_t spi)
     spi_config_last = spi;
 
     spi_channel_select (spi);    
-    spi_channel_cs_mode_set (spi, spi->cs_mode);
     spi_channel_mode_set (spi, spi->mode);
     spi_channel_bits_set (spi, spi->bits);
     spi_channel_clock_divisor_set (spi, spi->clock_divisor);
@@ -576,7 +557,7 @@ spi_init (const spi_cfg_t *cfg)
     spi_cs_mode_set (spi, SPI_CS_MODE_TOGGLE);
 
     spi->cs_config = spi_channel_cs_config_get (spi, spi->cs); 
-    spi_cs_negate (spi);
+    spi_cs_auto_disable (spi);
 
     spi_cs_assert_delay_set (spi, 0);
     spi_cs_negate_delay_set (spi, 0);
@@ -718,51 +699,67 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
 
     spi_config (spi);
 
-    if (spi->cs_mode == SPI_CS_MODE_TOGGLE && spi_cs_auto_enable (spi))
+    switch (spi->cs_mode)
     {
+    case SPI_CS_MODE_TOGGLE:
+        if (spi_cs_auto_enable (spi))
+        {
+            for (i = 0; i < len; i++)
+            {
+                uint8_t rx;
+                uint8_t tx;
+                
+                tx = *txdata++;
+                
+                SPI_XFER (spi->base, tx, rx);
+                
+                if (rxdata)
+                    *rxdata++ = rx;
+            }
+            
+            spi_cs_auto_disable (spi);
+        }
+        else
+        {
+            for (i = 0; i < len; i++)
+            {
+                uint8_t rx;
+                uint8_t tx;
+                
+                tx = *txdata++;
+                
+                spi_cs_assert (spi);
+                SPI_XFER (spi->base, tx, rx);
+                spi_cs_negate (spi);
+                
+                if (rxdata)
+                    *rxdata++ = rx;
+            }
+        }
+        break;
+        
+    case SPI_CS_MODE_FRAME:
+    case SPI_CS_MODE_HIGH:
+        if (spi->cs_mode == SPI_CS_MODE_FRAME)
+            spi_cs_assert (spi);
+
         for (i = 0; i < len; i++)
         {
             uint8_t rx;
             uint8_t tx;
-
+            
             tx = *txdata++;
-
+            
             SPI_XFER (spi->base, tx, rx);
 
-            if (rxdata)
-                *rxdata++ = rx;
-        }
-
-        spi_cs_auto_disable (spi);
-
-        return i;
-    }
-
-    if (spi->cs_mode == SPI_CS_MODE_FRAME)
-        spi_cs_assert (spi);
-
-    for (i = 0; i < len; i++)
-    {
-        uint8_t rx;
-        uint8_t tx;
-
-        if (spi->cs_mode == SPI_CS_MODE_TOGGLE)
-            spi_cs_assert (spi);
-
-        tx = *txdata++;
-        
-        SPI_XFER (spi->base, tx, rx);
-
-        if (rxdata)
             *rxdata++ = rx;
-
-        if (spi->cs_mode == SPI_CS_MODE_TOGGLE)
+        }
+        
+        if (terminate && spi->cs_mode == SPI_CS_MODE_FRAME)
             spi_cs_negate (spi);
+        break;
     }
-
-    if (terminate && spi->cs_mode == SPI_CS_MODE_FRAME)
-        spi_cs_negate (spi);
-
+    
     return i;
 }
 
@@ -774,63 +771,80 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
     spi_size_t i;
     const uint16_t *txdata = txbuffer;
     uint16_t *rxdata = rxbuffer;
-        
+    
     if (!len)
         return 0;
 
     if (!txdata)
         txdata = rxdata;
-
+    
     spi_config (spi);
-
-    if (spi->cs_mode == SPI_CS_MODE_TOGGLE && spi_cs_auto_enable (spi))
+    
+    switch (spi->cs_mode)
     {
+    case SPI_CS_MODE_TOGGLE:
+        if (spi_cs_auto_enable (spi))
+        {
+            for (i = 0; i < len; i += 2)
+            {
+                uint16_t rx;
+                uint16_t tx;
+                
+                tx = *txdata++;
+                
+                SPI_XFER (spi->base, tx, rx);
+                
+                if (rxdata)
+                    *rxdata++ = rx;
+            }
+            
+            spi_cs_auto_disable (spi);
+        }
+        else
+        {
+            for (i = 0; i < len; i += 2)
+            {
+                uint16_t rx;
+                uint16_t tx;
+                
+                tx = *txdata++;
+                
+                spi_cs_assert (spi);
+                SPI_XFER (spi->base, tx, rx);
+                spi_cs_negate (spi);
+                
+                if (rxdata)
+                    *rxdata++ = rx;
+            }
+        }
+        break;
+        
+    case SPI_CS_MODE_FRAME:
+    case SPI_CS_MODE_HIGH:
+        if (spi->cs_mode == SPI_CS_MODE_FRAME)
+            spi_cs_assert (spi);
+
         for (i = 0; i < len; i += 2)
         {
             uint16_t rx;
             uint16_t tx;
-
+            
             tx = *txdata++;
-
+            
             SPI_XFER (spi->base, tx, rx);
-
+            
             if (rxdata)
                 *rxdata++ = rx;
         }
-
-        spi_cs_auto_disable (spi);
-
-        return i;
-    }
-
-    if (spi->cs_mode == SPI_CS_MODE_FRAME)
-        spi_cs_assert (spi);
-
-    for (i = 0; i < len; i += 2)
-    {
-        uint16_t rx;
-        uint16_t tx;
-
-        if (spi->cs_mode == SPI_CS_MODE_TOGGLE)
-            spi_cs_assert (spi);
-
-        tx = *txdata++;
         
-        SPI_XFER (spi->base, tx, rx);
-
-        if (rxdata)
-            *rxdata++ = rx;
-
-        if (spi->cs_mode == SPI_CS_MODE_TOGGLE)
+        if (terminate && spi->cs_mode == SPI_CS_MODE_FRAME)
             spi_cs_negate (spi);
+        break;
     }
-
-    if (terminate && spi->cs_mode == SPI_CS_MODE_FRAME)
-        spi_cs_negate (spi);
-
+    
     return i;
 }
-
+    
 
 spi_ret_t
 spi_transfer (spi_t spi, const void *txbuffer, void *rxbuffer,
