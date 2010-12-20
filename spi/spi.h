@@ -98,7 +98,9 @@ typedef enum
     /* The chip select is only active during a SPI transfer.  */
     SPI_CS_MODE_TOGGLE,
     /* The chip select is active for multiple SPI transfers.  */
-    SPI_CS_MODE_FRAME
+    SPI_CS_MODE_FRAME,
+    /* The chip select stays high during SPI transfer.  */
+    SPI_CS_MODE_HIGH
 } spi_cs_mode_t;
 
 #include "spi_private.h"
@@ -234,14 +236,14 @@ uint8_t
 spi_xferc (spi_t spi, char ch);
 
 
-/* Enable chip select.  */
-bool
-spi_cs_enable (spi_t spi);
+/* Negate chip select.  Return non-zero if deferred.  */
+void
+spi_cs_negate (spi_t spi);
 
 
-/* Disable chip select.  */
+/* Assert chip select.  */
 bool
-spi_cs_disable (spi_t spi);
+spi_cs_assert (spi_t spi);
 
 
 /* Shutdown SPI peripheral.  */

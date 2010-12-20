@@ -8,7 +8,9 @@
 #include "spi.h"
 #include "bits.h"
 
-/* The AT91 SPI peripheral can transmit either 8 or 16 bit data with
+/* This driver only configures the SPI controller as a master.
+
+   The AT91 SPI peripheral can transmit either 8 or 16 bit data with
    MSB first.  It has 4 separate chip select registers and can control
    4 different types of SPI peripheral using the separate chip select
    registers.  Each peripheral can have its own chip select that is
@@ -23,8 +25,8 @@
    There are 4 control status registers (CSRs); one associated with
    each of the four SPI chip select (CS) signals.  These configure the
    number of bits per transfer and the CS timing for each of the 4
-   channels.  The SPI controller choses one of these 4 CSRs on the
-   basis of the channel select mask in the master register (fixed
+   channels.  The SPI controller chooses one of these 4 CSRs on the
+   basis of the channel select mask in the mode register (fixed
    peripheral mode) or in the data (variable peripheral mode).  Now
    this is all fine and dandy if we have 4 SPI devices.  What if we
    want more?  Well one option is to decode the 4 CS signals to
@@ -35,7 +37,10 @@
    With this driver we can share the 4 channels among multiple SPI
    devices.  However, automatic CS driving can only be performed for
    the few NPCS signals associated with a channel, otherwise the CS
-   signals are bit-bashed.
+   signals are bit-bashed.  If an NPCS pin is configured as an SPI
+   peripheral it will be driven whenever its channel is used.  Thus if
+   we want to have other CS signals driven by PIO lines, we need to
+   switch the NPCS signals at the start and end of a transfer.
 
    There are two chip select modes: FRAME where the CS is asserted for
    multiple SPI tranmissions; and TOGGLE where the CS is only asserted
@@ -347,31 +352,21 @@ static const spi_cs_t spi_cs[] =
 #define SPI_CS_NUM ARRAY_SIZE (spi_cs)
 
 
-static bool
-spi_channel_cs_enable (spi_channel_t channel, pio_t *cs)
+static pio_config_t
+spi_channel_cs_config_get (spi_channel_t channel, pio_t cs)
 {
     unsigned int i;
 
     for (i = 0; i < SPI_CS_NUM; i++)
     {
         if (channel == spi_cs[i].channel
-            && cs->port == spi_cs[i].pio.port
-            && cs->bitmask == spi_cs[i].pio.bitmask)
+            && cs.port == spi_cs[i].pio.port
+            && cs.bitmask == spi_cs[i].pio.bitmask)
         {
-            /* If the CS can be driven automatically, switch it into
-               peripheral mode.  Note that this might make the CS go
-               low if a spi transfer has not fully completed.  */
-            
-            pio_config_set (*cs, PIO_PERIPH);
-
-            if (spi_cs[i].periph == PERIPH_A)
-                *AT91C_PIOA_ASR = cs->bitmask;
-            else
-                *AT91C_PIOA_BSR = cs->bitmask;
-            return 1;
+            return spi_cs[i].periph == PERIPH_A ? PIO_PERIPH_A : PIO_PERIPH_B;
         }
     }
-    return 0;
+    return PIO_OUTPUT_HIGH;
 }
 
 
@@ -461,7 +456,7 @@ spi_setup (AT91S_SPI *pSPI)
        MODFDIS = 1 (mode fault detection disabled)
        CSAAT = 0 (chip select rises after transmission)
     */
-    pSPI->SPI_MR = AT91C_SPI_MSTR + AT91C_SPI_MODFDIS;
+    pSPI->SPI_MR = AT91C_SPI_MSTR | AT91C_SPI_MODFDIS;
 }
 
 
@@ -481,7 +476,9 @@ spi_cs_mode_set (spi_t spi, spi_cs_mode_t mode)
 }
 
 
-/** Enable fixed peripheral select and use specified channel.  */
+/** Enable fixed peripheral select and use specified channel.  When an
+    SPI transfer takes place, the channel is used to look up the
+    correct CSR.  */
 static void
 spi_channel_select (spi_channel_t channel)
 {
@@ -489,43 +486,43 @@ spi_channel_select (spi_channel_t channel)
 
     pSPI->SPI_MR &= ~AT91C_SPI_PS_VARIABLE;
 
+    /* Insert bit pattern to specify which CSR to use and which NPCS
+       to drive.  Note, if a value of 0xf is used then the SPI controller
+       will hang.  */
     BITS_INSERT (pSPI->SPI_MR, SPI_CHANNEL_MASK (channel), 16, 19);
 }
 
 
+/** Force CS to go low.  Return non-zero if deferred.  */
 bool
-spi_cs_enable (spi_t spi)
-{
-    spi->cs_auto = spi_channel_cs_enable (spi->channel, &spi->cs);
-    return spi->cs_auto;
-}
-
-
-bool
-spi_cs_disable (spi_t spi)
-{
-    /* Switch to PIO mode and configure as high output.  */
-    pio_config_set (spi->cs, PIO_OUTPUT_HIGH);
-    return 1;
-}
-
-
-static inline void
 spi_cs_assert (spi_t spi)
 {
-    /* This does nothing if the CS is automatically driven by the SPI
-       controller since the port in is not configured as a GPIO.  */
-    pio_output_low (spi->cs);
+    if (spi->cs_active || spi->cs_mode == SPI_CS_MODE_HIGH)
+        return 0;
+
     spi->cs_active = 1; 
+
+    if (spi->cs_config ==  PIO_OUTPUT_HIGH)
+    {
+        pio_config_set (spi->cs, PIO_OUTPUT_LOW);
+        return 0;
+    }
+    else
+    {
+        /* The CS will be automatically driven low.  */
+        pio_config_set (spi->cs, spi->cs_config);            
+        return 1;
+    }
 }
 
 
-static inline void
+/** Force CS to go high.  */
+void
 spi_cs_negate (spi_t spi)
 {
-    /* This does nothing if the CS is automatically driven by the SPI
-       controller since the port in is not configured as a GPIO.  */
-    pio_output_high (spi->cs);
+    /* The CS may have automatically been driven high, but ensure it stays high
+       in case we switch to another device using the same channel.  */
+    pio_config_set (spi->cs, PIO_OUTPUT_HIGH);
     spi->cs_active = 0;
 }
 
@@ -540,15 +537,14 @@ spi_config (spi_t spi)
     if (spi == spi_config_last)
         return;
     spi_config_last = spi;
-    
+
+    spi_channel_select (spi->channel);    
     spi_channel_cs_mode_set (spi->channel, spi->cs_mode);
     spi_channel_mode_set (spi->channel, spi->mode);
     spi_channel_bits_set (spi->channel, spi->bits);
     spi_channel_clock_divisor_set (spi->channel, spi->clock_divisor);
     spi_channel_clock_delay_set (spi->channel, spi->cs_assert_delay);
     spi_channel_delay_set (spi->channel, (spi->cs_negate_delay + 31) / 32);
-
-    spi_channel_select (spi->channel);
 }
 
 
@@ -570,14 +566,9 @@ spi_init (const spi_cfg_t *cfg)
     spi_channel_csr_set (spi->channel, 0);
 
     spi_cs_mode_set (spi, SPI_CS_MODE_TOGGLE);
-    spi_cs_enable (spi);
-    spi->cs_active = 0;
 
-    if (spi->cs.bitmask && !spi->cs_auto)
-    {
-        pio_config_set (spi->cs, PIO_OUTPUT_HIGH);
-        spi_cs_negate (spi);
-    }
+    spi->cs_config = spi_channel_cs_config_get (spi->channel, spi->cs); 
+    spi_cs_negate (spi);
 
     spi_cs_assert_delay_set (spi, 0);
     spi_cs_negate_delay_set (spi, 0);
@@ -698,8 +689,7 @@ spi_shutdown (spi_t spi)
     /* Set all the chip select pins low.  */
     for (i = 0; i < spi_devices_num; i++)
     {
-        spi_cs_disable (spi_devices + i);
-        pio_output_low (spi_devices[i].cs);
+        pio_config_set (spi_devices[i].cs, PIO_OUTPUT_LOW);
     }
 }
 
@@ -721,9 +711,10 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
 
     spi_config (spi);
 
-    if (spi->cs_auto)
+    if (spi->cs_config != PIO_OUTPUT_HIGH)
     {
-        spi_channel_cs_mode_set (spi->channel, spi->cs_mode);
+        /* The CS won't be asserted until the transfer takes place.  */
+        spi_cs_assert (spi);
 
         for (i = 0; i < len; i++)
         {
@@ -733,7 +724,10 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
             tx = *txdata++;
 
             if (terminate && i >= len - 1)
-                spi_channel_cs_mode_set (spi->channel, SPI_CS_MODE_TOGGLE);
+            {
+                /* Ensure CS driven high at end of transfer.  */
+                spi_cs_negate (spi);
+            }
 
             SPI_XFER (pSPI, tx, rx);
 
@@ -790,11 +784,13 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
 
     spi_config (spi);
 
-    if (spi->cs_auto)
+    if (spi->cs_config != PIO_OUTPUT_HIGH)
     {
-        /* There is only a marginal benefit using automatic chip
-           select assertion.  It primarily designed for use with
+        /* The CS won't be asserted until the transfer takes place.
+           There is only a marginal benefit using automatic chip
+           select assertion.  It is primarily designed for use with
            DMA.  */
+        spi_cs_assert (spi);
 
         for (i = 0; i < len; i += 2)
         {
@@ -811,6 +807,10 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
             if (rxdata)
                 *rxdata++ = rx;
         }
+
+        if (terminate)
+            spi_cs_negate (spi);
+
         return i;
     }
 

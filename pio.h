@@ -46,7 +46,9 @@ typedef enum pio_config_enum
     PIO_PULLDOWN,           /* Configure as input pin with pulldown.  */
     PIO_OUTPUT_LOW,         /* Configure as output, initially low.  */
     PIO_OUTPUT_HIGH,        /* Configure as output, initially high.  */
-    PIO_PERIPH
+    PIO_PERIPH,
+    PIO_PERIPH_A = PIO_PERIPH,
+    PIO_PERIPH_B
 } pio_config_t;
 
 
@@ -81,8 +83,14 @@ bool pio_config_set (pio_t pio, pio_config_t config)
         pio.port->PIO_PPUER = pio.bitmask;
         return 1;
 
-    case PIO_PERIPH:
+    case PIO_PERIPH_A:
         pio.port->PIO_PDR = pio.bitmask;
+        pio.port->PIO_ASR = pio.bitmask;
+        return 1;
+
+    case PIO_PERIPH_B:
+        pio.port->PIO_PDR = pio.bitmask;
+        pio.port->PIO_BSR = pio.bitmask;
         return 1;
 
     default:

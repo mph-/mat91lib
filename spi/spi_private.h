@@ -20,9 +20,9 @@ typedef struct spi_dev_struct
     spi_mode_t mode;
     /* The GPIO port that drives the CS.  */
     pio_t cs;
+    pio_config_t cs_config;
     spi_cs_mode_t cs_mode;
     bool cs_active;
-    bool cs_auto;
 } spi_dev_t;
 
 
