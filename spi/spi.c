@@ -42,9 +42,16 @@
    we want to have other CS signals driven by PIO lines, we need to
    switch the NPCS signals at the start and end of a transfer.
 
-   There are two chip select modes: FRAME where the CS is asserted for
-   multiple SPI tranmissions; and TOGGLE where the CS is only asserted
-   for each SPI transmission.
+   There are three chip select modes: 
+   SPI_CS_MODE_FRAME where the CS is asserted for multiple SPI tranmissions,
+   SPI_CS_MODE_TOGGLE where the CS is only asserted for each SPI transmission, and
+   SPI_CS_MODE_HIGH where the CS is kept high.
+
+   Automatic CS driving is only used for SPI_CS_MODE_TOGGLE.  With
+   SPI_CS_MODE_FRAME it is necessary to change the CSAAT bit for the
+   ultimate transfer.  The additional fiddling around is not
+   worthwhile.  There is only a marginal benefit using automatic chip
+   select assertion.  It is primarily designed for use with DMA.
 
    Note, functions that configure the SPI peripheral (such as
    spi_bits_set) only take effect when spi_config is called (usually
@@ -449,8 +456,7 @@ spi_setup (AT91S_SPI *pSPI)
        PCSDEC = 0 (no decoding of chip selects)
        MSTR = 1 (master mode)
        MODFDIS = 1 (mode fault detection disabled)
-       CSAAT = 0 (chip select rises after transmission)
-    */
+       CSAAT = 0 (chip select rises after transmission)   */
     pSPI->SPI_MR = AT91C_SPI_MSTR | AT91C_SPI_MODFDIS;
 }
 
@@ -486,26 +492,12 @@ spi_channel_select (spi_t spi)
 }
 
 
-/** Force CS to go low.  Return non-zero if deferred.  */
-bool
+/** Force CS to go low.  */
+void
 spi_cs_assert (spi_t spi)
 {
-    if (spi->cs_active || spi->cs_mode == SPI_CS_MODE_HIGH)
-        return 0;
-
+    pio_config_set (spi->cs, PIO_OUTPUT_LOW);
     spi->cs_active = 1; 
-
-    if (spi->cs_config ==  PIO_OUTPUT_HIGH)
-    {
-        pio_config_set (spi->cs, PIO_OUTPUT_LOW);
-        return 0;
-    }
-    else
-    {
-        /* The CS will be automatically driven low.  */
-        pio_config_set (spi->cs, spi->cs_config);            
-        return 1;
-    }
 }
 
 
@@ -517,6 +509,27 @@ spi_cs_negate (spi_t spi)
        in case we switch to another device using the same channel.  */
     pio_config_set (spi->cs, PIO_OUTPUT_HIGH);
     spi->cs_active = 0;
+}
+
+
+/** Enable auto chip select.  Return zero if not possible with selected pio.  */
+bool
+spi_cs_auto_enable (spi_t spi)
+{
+    if (spi->cs_config == PIO_OUTPUT_HIGH)
+        return 0;
+        
+    /* The CS will be automatically driven low when the next transfer takes place.  */
+    pio_config_set (spi->cs, spi->cs_config);            
+    return 1;
+}
+
+
+/** Disable auto chip select.   */
+void
+spi_cs_auto_disable (spi_t spi)
+{
+    spi_cs_negate (spi);
 }
 
 
@@ -705,11 +718,8 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
 
     spi_config (spi);
 
-    if (spi->cs_config != PIO_OUTPUT_HIGH)
+    if (spi->cs_mode == SPI_CS_MODE_TOGGLE && spi_cs_auto_enable (spi))
     {
-        /* The CS won't be asserted until the transfer takes place.  */
-        spi_cs_assert (spi);
-
         for (i = 0; i < len; i++)
         {
             uint8_t rx;
@@ -717,17 +727,13 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
 
             tx = *txdata++;
 
-            if (terminate && i >= len - 1)
-            {
-                /* Ensure CS driven high at end of transfer.  */
-                spi_cs_negate (spi);
-            }
-
             SPI_XFER (spi->base, tx, rx);
 
             if (rxdata)
                 *rxdata++ = rx;
         }
+
+        spi_cs_auto_disable (spi);
 
         return i;
     }
@@ -777,21 +783,12 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
 
     spi_config (spi);
 
-    if (spi->cs_config != PIO_OUTPUT_HIGH)
+    if (spi->cs_mode == SPI_CS_MODE_TOGGLE && spi_cs_auto_enable (spi))
     {
-        /* The CS won't be asserted until the transfer takes place.
-           There is only a marginal benefit using automatic chip
-           select assertion.  It is primarily designed for use with
-           DMA.  */
-        spi_cs_assert (spi);
-
         for (i = 0; i < len; i += 2)
         {
             uint16_t rx;
             uint16_t tx;
-
-            if (terminate && i >= len - 1)
-                SPI_LASTXFER (spi->base);
 
             tx = *txdata++;
 
@@ -801,8 +798,7 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
                 *rxdata++ = rx;
         }
 
-        if (terminate)
-            spi_cs_negate (spi);
+        spi_cs_auto_disable (spi);
 
         return i;
     }

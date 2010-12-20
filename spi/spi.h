@@ -236,22 +236,27 @@ uint8_t
 spi_xferc (spi_t spi, char ch);
 
 
-/* Negate chip select.  Return non-zero if deferred.  */
+/** Negate chip select.  */
 void
 spi_cs_negate (spi_t spi);
 
 
-/* Assert chip select.  */
-bool
+/** Assert chip select.  */
+void
 spi_cs_assert (spi_t spi);
 
 
-/* Shutdown SPI peripheral.  */
+/** Enable auto chip select.  Return zero if not possible with selected pio.  */
+bool
+spi_cs_auto_enable (spi_t spi);
+
+
+/** Shutdown SPI peripheral.  */
 void
 spi_shutdown (spi_t spi);
 
 
-/* Wkae up SPI peripheral.  */
+/** Wake up SPI peripheral.  */
 void
 spi_wakeup (spi_t spi);
 
