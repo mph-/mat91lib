@@ -139,68 +139,63 @@ static uint32_t spi_devices_enabled = 0;
 
 
 static inline uint32_t
-spi_channel_csr_get (spi_channel_t channel)
+spi_channel_csr_get (spi_t spi)
 {
-    AT91S_SPI *pSPI = SPI_BASE_GET (channel);
-
-    return pSPI->SPI_CSR[channel & (SPI_CHANNELS_NUM - 1)];
+    return spi->base->SPI_CSR[spi->channel & (SPI_CHANNELS_NUM - 1)];
 }
 
 
 static inline void
-spi_channel_csr_set (spi_channel_t channel, uint32_t csr)
+spi_channel_csr_set (spi_t spi, uint32_t csr)
 {
-    AT91S_SPI *pSPI = SPI_BASE_GET (channel);
-
-    pSPI->SPI_CSR[channel & (SPI_CHANNELS_NUM - 1)] = csr;
+    spi->base->SPI_CSR[spi->channel & (SPI_CHANNELS_NUM - 1)] = csr;
 }
 
 
 /** Set the delay (in clocks * 32) before starting a transmission on
     same SPI channel.  The default is 0.  */
 static void
-spi_channel_delay_set (spi_channel_t channel, uint16_t delay)
+spi_channel_delay_set (spi_t spi, uint16_t delay)
 {
     uint32_t csr;
 
-    csr = spi_channel_csr_get (channel);
+    csr = spi_channel_csr_get (spi);
 
     /* Set the DLYBCT (delay between consecutive transfers).  This is
        the only mechanism for automatically delaying the automatic
        deassertion of the chip select.  */
     BITS_INSERT (csr, delay, 24, 31);
 
-    spi_channel_csr_set (channel, csr);
+    spi_channel_csr_set (spi, csr);
 }
 
 
 /** Set the delay (in clocks) before the clock starts.  */
 static void
-spi_channel_clock_delay_set (spi_channel_t channel, uint16_t delay)
+spi_channel_clock_delay_set (spi_t spi, uint16_t delay)
 {
     uint32_t csr;
 
-    csr = spi_channel_csr_get (channel);
+    csr = spi_channel_csr_get (spi);
 
     /* Set the DLYBS (delay before SPCK).  */
     BITS_INSERT (csr, delay, 16, 23);
 
-    spi_channel_csr_set (channel, csr);
+    spi_channel_csr_set (spi, csr);
 }
 
 
 /** The minimum divisor value is 1, this gives the maximum rate of MCK.  */
 static void
-spi_channel_clock_divisor_set (spi_channel_t channel,
-                               spi_clock_divisor_t clock_divisor)
+spi_channel_clock_divisor_set (spi_t spi, spi_clock_divisor_t clock_divisor)
 {
     uint32_t csr;
 
-    csr = spi_channel_csr_get (channel);
+    csr = spi_channel_csr_get (spi);
 
     BITS_INSERT (csr, clock_divisor, 8, 15);
 
-    spi_channel_csr_set (channel, csr);
+    spi_channel_csr_set (spi, csr);
 }
 
 
@@ -208,15 +203,15 @@ spi_channel_clock_divisor_set (spi_channel_t channel,
    (39.2.4.5) where the number of bits cannot be odd if the SPI
    divisor is 1.  */
 static void
-spi_channel_bits_set (spi_channel_t channel, uint8_t bits)
+spi_channel_bits_set (spi_t spi, uint8_t bits)
 {
     uint32_t csr;
 
-    csr = spi_channel_csr_get (channel);
+    csr = spi_channel_csr_get (spi);
 
     BITS_INSERT (csr, bits - 8, 4, 7);
 
-    spi_channel_csr_set (channel, csr);
+    spi_channel_csr_set (spi, csr);
 }
 
 
@@ -246,11 +241,11 @@ Mode 	CPOL 	CPHA  NCPHA
 */
 
 static void
-spi_channel_mode_set (spi_channel_t channel, spi_mode_t mode)
+spi_channel_mode_set (spi_t spi, spi_mode_t mode)
 {
     uint32_t csr;
 
-    csr = spi_channel_csr_get (channel);
+    csr = spi_channel_csr_get (spi);
 
     csr &= ~(SPI_CPOL_MASK | SPI_NCPHA_MASK);
 
@@ -277,23 +272,23 @@ spi_channel_mode_set (spi_channel_t channel, spi_mode_t mode)
         break;
     }
 
-    spi_channel_csr_set (channel, csr);
+    spi_channel_csr_set (spi, csr);
 }
 
 
 static void
-spi_channel_cs_mode_set (spi_channel_t channel, spi_cs_mode_t mode)
+spi_channel_cs_mode_set (spi_t spi, spi_cs_mode_t mode)
 {
     uint32_t csr;
 
-    csr = spi_channel_csr_get (channel) & ~SPI_CSAAT_MASK;
+    csr = spi_channel_csr_get (spi) & ~SPI_CSAAT_MASK;
 
     /* If framing with chip select then enable chip select active
        after transmission (CSAAT).  */
     if (mode == SPI_CS_MODE_FRAME)
         csr |= SPI_CSAAT_MASK;
 
-    spi_channel_csr_set (channel, csr);
+    spi_channel_csr_set (spi, csr);
 }
 
 
@@ -353,13 +348,13 @@ static const spi_cs_t spi_cs[] =
 
 
 static pio_config_t
-spi_channel_cs_config_get (spi_channel_t channel, pio_t cs)
+spi_channel_cs_config_get (spi_t spi, pio_t cs)
 {
     unsigned int i;
 
     for (i = 0; i < SPI_CS_NUM; i++)
     {
-        if (channel == spi_cs[i].channel
+        if (spi->channel == spi_cs[i].channel
             && cs.port == spi_cs[i].pio.port
             && cs.bitmask == spi_cs[i].pio.bitmask)
         {
@@ -480,16 +475,14 @@ spi_cs_mode_set (spi_t spi, spi_cs_mode_t mode)
     SPI transfer takes place, the channel is used to look up the
     correct CSR.  */
 static void
-spi_channel_select (spi_channel_t channel)
+spi_channel_select (spi_t spi)
 {
-    AT91S_SPI *pSPI = SPI_BASE_GET (channel);
-
-    pSPI->SPI_MR &= ~AT91C_SPI_PS_VARIABLE;
+    spi->base->SPI_MR &= ~AT91C_SPI_PS_VARIABLE;
 
     /* Insert bit pattern to specify which CSR to use and which NPCS
        to drive.  Note, if a value of 0xf is used then the SPI controller
        will hang.  */
-    BITS_INSERT (pSPI->SPI_MR, SPI_CHANNEL_MASK (channel), 16, 19);
+    BITS_INSERT (spi->base->SPI_MR, SPI_CHANNEL_MASK (spi->channel), 16, 19);
 }
 
 
@@ -538,13 +531,13 @@ spi_config (spi_t spi)
         return;
     spi_config_last = spi;
 
-    spi_channel_select (spi->channel);    
-    spi_channel_cs_mode_set (spi->channel, spi->cs_mode);
-    spi_channel_mode_set (spi->channel, spi->mode);
-    spi_channel_bits_set (spi->channel, spi->bits);
-    spi_channel_clock_divisor_set (spi->channel, spi->clock_divisor);
-    spi_channel_clock_delay_set (spi->channel, spi->cs_assert_delay);
-    spi_channel_delay_set (spi->channel, (spi->cs_negate_delay + 31) / 32);
+    spi_channel_select (spi);    
+    spi_channel_cs_mode_set (spi, spi->cs_mode);
+    spi_channel_mode_set (spi, spi->mode);
+    spi_channel_bits_set (spi, spi->bits);
+    spi_channel_clock_divisor_set (spi, spi->clock_divisor);
+    spi_channel_clock_delay_set (spi, spi->cs_assert_delay);
+    spi_channel_delay_set (spi, (spi->cs_negate_delay + 31) / 32);
 }
 
 
@@ -563,11 +556,13 @@ spi_init (const spi_cfg_t *cfg)
     spi->channel = cfg->channel;
     spi->cs = cfg->cs;
 
-    spi_channel_csr_set (spi->channel, 0);
+    spi->base = SPI_BASE_GET (spi->channel);
+
+    spi_channel_csr_set (spi, 0);
 
     spi_cs_mode_set (spi, SPI_CS_MODE_TOGGLE);
 
-    spi->cs_config = spi_channel_cs_config_get (spi->channel, spi->cs); 
+    spi->cs_config = spi_channel_cs_config_get (spi, spi->cs); 
     spi_cs_negate (spi);
 
     spi_cs_assert_delay_set (spi, 0);
@@ -701,7 +696,6 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
     spi_size_t i;
     const uint8_t *txdata = txbuffer;
     uint8_t *rxdata = rxbuffer;
-    AT91S_SPI *pSPI = SPI_BASE_GET (spi->channel);
         
     if (!len)
         return 0;
@@ -729,7 +723,7 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
                 spi_cs_negate (spi);
             }
 
-            SPI_XFER (pSPI, tx, rx);
+            SPI_XFER (spi->base, tx, rx);
 
             if (rxdata)
                 *rxdata++ = rx;
@@ -751,7 +745,7 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
 
         tx = *txdata++;
         
-        SPI_XFER (pSPI, tx, rx);
+        SPI_XFER (spi->base, tx, rx);
 
         if (rxdata)
             *rxdata++ = rx;
@@ -774,7 +768,6 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
     spi_size_t i;
     const uint16_t *txdata = txbuffer;
     uint16_t *rxdata = rxbuffer;
-    AT91S_SPI *pSPI = SPI_BASE_GET (spi->channel);
         
     if (!len)
         return 0;
@@ -798,11 +791,11 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
             uint16_t tx;
 
             if (terminate && i >= len - 1)
-                SPI_LASTXFER (pSPI);
+                SPI_LASTXFER (spi->base);
 
             tx = *txdata++;
 
-            SPI_XFER (pSPI, tx, rx);
+            SPI_XFER (spi->base, tx, rx);
 
             if (rxdata)
                 *rxdata++ = rx;
@@ -827,7 +820,7 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
 
         tx = *txdata++;
         
-        SPI_XFER (pSPI, tx, rx);
+        SPI_XFER (spi->base, tx, rx);
 
         if (rxdata)
             *rxdata++ = rx;
@@ -905,12 +898,11 @@ spi_xferc (spi_t spi, char ch)
     return rxdata;
 #else
     uint8_t rxdata;
-    AT91S_SPI *pSPI = SPI_BASE_GET (spi->channel);
 
     spi_config (spi);
     /* This is a nop if CS automatically driven.  */
     spi_cs_assert (spi);
-    SPI_XFER (pSPI, ch, rxdata);
+    SPI_XFER (spi->base, ch, rxdata);
     /* This is a nop if CS automatically driven.  */
     spi_cs_negate (spi);
 
