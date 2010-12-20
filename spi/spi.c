@@ -702,7 +702,7 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
     switch (spi->cs_mode)
     {
     case SPI_CS_MODE_TOGGLE:
-        if (spi_cs_auto_enable (spi))
+        if (0 && spi_cs_auto_enable (spi))
         {
             for (i = 0; i < len; i++)
             {
