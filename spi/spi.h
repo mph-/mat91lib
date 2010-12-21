@@ -124,6 +124,10 @@ typedef struct
 } spi_cfg_t;
 
 
+
+#define SPI_CLOCK_DIVISOR(SPEED) ((F_CPU + SPEED - 1) / (SPEED))
+
+
 /* Function Prototypes.  */
 
 
