@@ -15,9 +15,9 @@ typedef struct spi_dev_struct
     uint8_t bits;
     uint16_t clock_divisor;
     /* Delay from CS asserted (set low) until SPI transfer starts.  */
-    uint16_t cs_assert_delay;
+    uint16_t cs_setup;
     /* Delay from CS negated (set high) after SPI transfer stops.  */
-    uint16_t cs_negate_delay;
+    uint16_t cs_hold;
     spi_mode_t mode;
     /* The GPIO port that drives the CS.  */
     pio_t cs;

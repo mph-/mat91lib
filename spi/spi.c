@@ -159,10 +159,9 @@ spi_channel_csr_set (spi_t spi, uint32_t csr)
 }
 
 
-/** Set the delay (in clocks * 32) before starting a transmission on
-    same SPI channel.  The default is 0.  */
+/** Set the delay (in clocks * 32) for automatic deassertion of chip select.  */
 static void
-spi_channel_delay_set (spi_t spi, uint16_t delay)
+spi_channel_cs_hold_set (spi_t spi, uint16_t delay)
 {
     uint32_t csr;
 
@@ -177,9 +176,10 @@ spi_channel_delay_set (spi_t spi, uint16_t delay)
 }
 
 
-/** Set the delay (in clocks) before the clock starts.  */
+/** Set the delay (in clocks) to when the shift clock starts from when
+    the transmit data register is written.  */
 static void
-spi_channel_clock_delay_set (spi_t spi, uint16_t delay)
+spi_channel_cs_setup_set (spi_t spi, uint16_t delay)
 {
     uint32_t csr;
 
@@ -385,17 +385,17 @@ spi_clock_speed_set (spi_t spi, spi_clock_speed_t clock_speed)
 
 
 void
-spi_cs_negate_delay_set (spi_t spi, uint16_t delay)
+spi_cs_hold_set (spi_t spi, uint16_t delay)
 {
-    spi->cs_negate_delay = delay;
+    spi->cs_hold = delay;
     spi_update (spi);
 }
 
 
 void
-spi_cs_assert_delay_set (spi_t spi, uint16_t delay)
+spi_cs_setup_set (spi_t spi, uint16_t delay)
 {
-    spi->cs_assert_delay = delay;
+    spi->cs_setup = delay;
     spi_update (spi);
 }
 
@@ -530,8 +530,8 @@ spi_config (spi_t spi)
     spi_channel_mode_set (spi, spi->mode);
     spi_channel_bits_set (spi, spi->bits);
     spi_channel_clock_divisor_set (spi, spi->clock_divisor);
-    spi_channel_clock_delay_set (spi, spi->cs_assert_delay);
-    spi_channel_delay_set (spi, (spi->cs_negate_delay + 31) / 32);
+    spi_channel_cs_setup_set (spi, spi->cs_setup);
+    spi_channel_cs_hold_set (spi, (spi->cs_hold + 31) / 32);
 }
 
 
@@ -559,8 +559,8 @@ spi_init (const spi_cfg_t *cfg)
     spi->cs_config = spi_channel_cs_config_get (spi, spi->cs); 
     spi_cs_auto_disable (spi);
 
-    spi_cs_assert_delay_set (spi, 0);
-    spi_cs_negate_delay_set (spi, 0);
+    spi_cs_setup_set (spi, 0);
+    spi_cs_hold_set (spi, 0);
     spi_mode_set (spi, cfg->mode);
     spi_bits_set (spi, cfg->bits ? cfg->bits : 8);
     /* If clock divisor not specified, default to something slow.  */
@@ -725,15 +725,23 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
             {
                 uint8_t rx;
                 uint8_t tx;
+
+                /* Defer CS assertion a few cycles.  This can be
+                   deferred further with spi_cs_setup_set.
+                   This works by delaying the time when the SPI
+                   controller starts the shift clock from when the
+                   transmit data register is written.  */
+                spi_cs_assert (spi);
                 
                 tx = *txdata++;
                 
-                spi_cs_assert (spi);
                 SPI_XFER (spi->base, tx, rx);
-                spi_cs_negate (spi);
                 
                 if (rxdata)
                     *rxdata++ = rx;
+
+                /* Defer CS negation a few cycles.  */
+                spi_cs_negate (spi);
             }
         }
         break;
@@ -807,14 +815,22 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
                 uint16_t rx;
                 uint16_t tx;
                 
+                /* Defer CS assertion a few cycles.  This can be
+                   deferred further with spi_cs_setup_set.
+                   This works by delaying the time when the SPI
+                   controller starts the shift clock from when the
+                   transmit data register is written.  */
+                spi_cs_assert (spi);
+                
                 tx = *txdata++;
                 
-                spi_cs_assert (spi);
                 SPI_XFER (spi->base, tx, rx);
-                spi_cs_negate (spi);
                 
                 if (rxdata)
                     *rxdata++ = rx;
+
+                /* Defer CS negation a few cycles.  */
+                spi_cs_negate (spi);
             }
         }
         break;

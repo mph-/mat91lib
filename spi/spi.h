@@ -158,14 +158,14 @@ spi_cs_mode_set (spi_t spi, spi_cs_mode_t mode);
     starts.  The default is zero.  This does not take affect until
     spi_config or one of the I/O routines is called.  */
 void
-spi_cs_assert_delay_set (spi_t spi, uint16_t delay);
+spi_cs_setup_set (spi_t spi, uint16_t delay);
 
 
 /** Set the delay (in clocks) at end of transmission before CS is
     negated.  The default is 0.  This does not take affect until
     spi_config or one of the I/O routines is called.  */
 void
-spi_cs_negate_delay_set (spi_t spi, uint16_t delay);
+spi_cs_hold_set (spi_t spi, uint16_t delay);
 
 
 /** Set the clock divisor.  This does not take affect until spi_config
