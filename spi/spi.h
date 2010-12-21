@@ -251,6 +251,11 @@ bool
 spi_cs_auto_enable (spi_t spi);
 
 
+/** Disable auto chip select.  */
+void
+spi_cs_auto_disable (spi_t spi);
+
+
 /** Shutdown SPI peripheral.  */
 void
 spi_shutdown (spi_t spi);
