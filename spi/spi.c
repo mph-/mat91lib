@@ -501,7 +501,8 @@ spi_cs_auto_enable (spi_t spi)
     if (spi->cs_config == PIO_OUTPUT_HIGH)
         return 0;
         
-    /* The CS will be automatically driven low when the next transfer takes place.  */
+    /* The CS will be automatically driven low when the next transfer
+       takes place.  */
     pio_config_set (spi->cs, spi->cs_config);            
     return 1;
 }
@@ -702,7 +703,7 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
     switch (spi->cs_mode)
     {
     case SPI_CS_MODE_TOGGLE:
-        if (0 && spi_cs_auto_enable (spi))
+        if (1 && spi_cs_auto_enable (spi))
         {
             for (i = 0; i < len; i++)
             {
@@ -914,26 +915,13 @@ spi_write_ready_p (spi_t spi)
 uint8_t
 spi_xferc (spi_t spi, char ch)
 {
-#if 0
     uint8_t txdata;
     uint8_t rxdata;
 
     txdata = ch;
-    spi_transfer_8 (spi, &txdata, &rxdata, 1, 1);
+    spi_transfer_8 (spi, &txdata, &rxdata, sizeof (txdata), 1);
 
     return rxdata;
-#else
-    uint8_t rxdata;
-
-    spi_config (spi);
-    /* This is a nop if CS automatically driven.  */
-    spi_cs_assert (spi);
-    SPI_XFER (spi->base, ch, rxdata);
-    /* This is a nop if CS automatically driven.  */
-    spi_cs_negate (spi);
-
-    return rxdata;
-#endif
 }
 
 
