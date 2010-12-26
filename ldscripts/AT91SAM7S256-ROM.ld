@@ -36,9 +36,21 @@ SECTIONS
 
   __text_end__ = .;
 
+  /* Program code stored in FLASH that gets relocated into SRAM
+     to improve execution speed.  (__ramtext_start__ and __ramtext_end__ 
+     are addresses in SRAM).  */
+  .ramtext : AT (__text_end__)
+  {
+    __ramtext_start__ = .;
+    *(.ramtext)
+  } >SRAM
+  . = ALIGN(4);
+  __ramtext_end__ = .;
+  __ramtext_load__ = LOADADDR (.ramtext);
+
   /* Initialized data stored in FLASH that gets relocated into SRAM
      (__data_start__ and __data_end__ are addresses in SRAM).  */
-  .data : AT (__text_end__)
+  .data : AT (__text_end__ +  + SIZEOF (.ramtext))
   {
     __data_start__ = .;
     *(.data)
@@ -47,18 +59,6 @@ SECTIONS
   . = ALIGN(4);
   __data_end__ = .;
   __data_load__ = LOADADDR (.data);
-
-  /* Program code stored in FLASH that gets relocated into SRAM
-     to improve execution speed.  (__ramtext_start__ and __ramtext_end__ 
-     are addresses in SRAM).  */
-  .ramtext : AT (__text_end__ + SIZEOF (.data))
-  {
-    __ramtext_start__ = .;
-    *(.ramtext)
-  } >SRAM
-  . = ALIGN(4);
-  __ramtext_end__ = .;
-  __ramtext_load__ = LOADADDR (.ramtext);
 
   /* Uninitialized data.  */
   .bss :

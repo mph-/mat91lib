@@ -12,8 +12,9 @@
 
    The user application is run in Supervisor Mode.  This allows full
    privileges.  The top 72 bytes of SRAM are used as the IRQ Mode
-   stack.  The Supervisor Mode stack sits below this.  FIQ Mode has no
-   allocated stack.  
+   stack (this does not have to be large since the interrupt handler
+   switches to Supervisor Mode).  The Supervisor Mode stack sits below
+   this.  FIQ Mode has no allocated stack.
 
    Usually this is written in assembler; I have been bloody minded and
    wrote it in C using a fair bit of inline assembler when necessary.
@@ -319,6 +320,9 @@ void _reset_handler (void)
     {
         char *src;
         char *dst;
+        uint32_t *tmp;
+        /* Defined by the linker.  */
+        extern char end __asm ("end");
 
         /* Initialise initialised global variables in .data.  */
         for (src = &__data_load__, dst = &__data_start__; dst < &__data_end__; )
@@ -334,6 +338,10 @@ void _reset_handler (void)
         if (&__ramtext_load__ != &__ramtext_start__)
             for (src = &__ramtext_load__, dst = &__ramtext_start__; dst < &__ramtext_end__; )
                 *dst++ = *src++;
+
+        /* Mark heap and stack to help checking for memory overflow.  */
+        for (tmp = (uint32_t *)&end; tmp < (uint32_t *)p; tmp++)
+            *tmp = 0xDEADBEEF;
     }
 
     /* Call main using absolute addressing through the interworking.  */
