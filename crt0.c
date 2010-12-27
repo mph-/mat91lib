@@ -82,11 +82,11 @@ void start (void)
     /* Fetched instruction from invalid address (Prefetch Abort) 0x0c.
        LR - 8 points to the instruction that caused the abort.  SP is
        for abort mode.  */
-    __asm__ ("\tb _abort_handler"); 
+    __asm__ ("\tb _prefetch_abort_handler"); 
     /* Invalid address (or alignment) (Data Abort) 0x10.  LR - 8
        points to the instruction that caused the abort.  SP is for
        abort mode.  */ 
-    __asm__ ("\tb _abort_handler"); 
+    __asm__ ("\tb _data_abort_handler"); 
     /* Reserved  0x14.  */
     __asm__ ("\tb .");
     /* IRQ 0x18.  */
@@ -354,40 +354,76 @@ void _reset_handler (void)
 /* For a detailed description of data aborts see
    http://www.embedded.com/192202641
 
-   When an abort occurs, the CPU switches to Abort Mode and the PC + 8
+   When a data abort occurs, the CPU switches to Abort Mode and the PC + 8
    of the offending instruction is saved in LR_ABT.  The PC_ABT is
    then loaded with the address of the Abort Exception vector.
 */
 
-extern void _abort_handler (void)
-    __attribute__ ((section (".vectors")))
-    __attribute__ ((naked));
+extern void _data_abort_handler (void)
+    __attribute__ ((section (".vectors")));
 
-void _abort_handler (void)
+void _data_abort_handler (void)
 {
     /* In abort mode we have banked registers R13--R14.  R13 is reserved
        for the stack pointer (SP) and R14 is reserved for the link
        register (LR).  */
 
-#if 1
+    /* Save LR_ABT in r0 (we could save r0 on abort stack).  */
+    __asm__ ("\tmov r0, lr");
+    __asm__ ("\tsub r0, r0, #4");
+
+    /* Switch back to Supervisor Mode.  */
+    cpu_cpsr_c_set_const (CPU_I_BIT | CPU_MODE_SVC);
+
+    __asm__ ("\tmov lr, r0");
+
+    /* GDB cannot reconcile the PC with the address of a known
+       function since the PC is currently pointing into the first
+       block of memory.  */
+
+    __asm__ ("\tldr pc, =_data_abort_hang"); 
+}
+
+
+void _data_abort_hang (void)
+{
+    /* Hang.  Don't use a while (1) otherwise the debug info will be invalid.  */
+    __asm__ ("\tb ."); 
+}
+
+
+/* When a prefetch abort occurs, the CPU switches to Abort Mode and
+   the PC + 4 of the offending instruction is saved in LR_ABT.  The
+   PC_ABT is then loaded with the address of the Abort Exception
+   vector.  */
+
+extern void _prefetch_abort_handler (void)
+    __attribute__ ((section (".vectors")));
+
+void _prefetch_abort_handler (void)
+{
+    /* In abort mode we have banked registers R13--R14.  R13 is reserved
+       for the stack pointer (SP) and R14 is reserved for the link
+       register (LR).  */
+
     /* Save LR_ABT in r0 (we could save r0 on abort stack).  */
     __asm__ ("\tmov r0, lr");
 
     /* Switch back to Supervisor Mode.  */
     cpu_cpsr_c_set_const (CPU_I_BIT | CPU_MODE_SVC);
 
-    /* Save r0.  */
-    __asm__ ("\tstmfd sp!, {r0}");
-#endif
+    __asm__ ("\tmov lr, r0");
 
-    /* Jump to _hang so that debugger not confused.  Currently, the
-       debugger cannot reconcile the PC with the address of a known function
-       since the PC is currently pointing into the first block of memory.  */
-    __asm__ ("\tldr pc, =_hang"); }
+    /* GDB cannot reconcile the PC with the address of a known
+       function since the PC is currently pointing into the first
+       block of memory.  */
+
+    __asm__ ("\tldr pc, =_prefetch_abort_hang"); 
+}
 
 
-void _hang (void)
+void _prefetch_abort_hang (void)
 {
-    while (1)
-        continue;
+    /* Hang.  Don't use a while (1) otherwise the debug info will be invalid.  */
+    __asm__ ("\tb ."); 
 }
