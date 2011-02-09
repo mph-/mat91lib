@@ -274,6 +274,7 @@ struct udp_dev_struct
     uint8_t connection;
     /* Chosen configuration, 0 if not configured.  */
     uint8_t configuration;
+    uint16_t address;
     udp_request_handler_t request_handler;
     void *request_handler_arg;
     volatile udp_state_t state;
@@ -917,6 +918,7 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
             udp_completed (udp, endpoint, UDP_STATUS_SUCCESS);
         }
 
+        // Read then process setup packet
         udp_setup_read (udp, endpoint);
 
         if (!udp->request_handler
@@ -1024,18 +1026,14 @@ udp_halt (udp_t udp, udp_ep_t endpoint, bool halt)
 bool
 udp_idle_p (udp_t udp, udp_ep_t endpoint)
 {
-    udp_ep_info_t *pep = &udp->eps[endpoint];
-
-    return pep->state == UDP_EP_STATE_IDLE;
+    return udp->eps[endpoint].state == UDP_EP_STATE_IDLE;
 }
 
 
 bool
 udp_halt_p (udp_t udp, udp_ep_t endpoint)
 {
-    udp_ep_info_t *pep = &udp->eps[endpoint];
-
-    return pep->state == UDP_EP_STATE_HALTED;
+    return udp->eps[endpoint].state == UDP_EP_STATE_HALTED;
 }
 
 
@@ -1048,7 +1046,12 @@ udp_address_set (void *arg, udp_transfer_t *ptransfer __unused__)
 {
     udp_t udp = arg;
     AT91PS_UDP pUDP = udp->pUDP;
-    unsigned int address = udp->setup.value;
+    uint16_t address;
+
+    address = udp->setup.value;
+
+    // Save address for debugging
+    udp->address = address;
 
     TRACE_DEBUG (UDP, "UDP:SetAddr 0x%2x\n", address);
 
@@ -1506,7 +1509,8 @@ udp_bus_reset_handler (udp_t udp)
     
     // Enable the UDP
     pUDP->UDP_FADDR = AT91C_UDP_FEN;
-    
+
+    // Configure the control endpoint
     udp_endpoint_configure (udp, 0);
 
     // Configure UDP peripheral interrupts, here only EP0 and bus reset
