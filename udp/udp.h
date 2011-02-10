@@ -22,18 +22,16 @@ enum {UDP_EP_DIR_OUT = 0, UDP_EP_DIR_IN = 0x80};
 
 typedef enum
 {
-//! Last method has completed successfully
+//! Completed successfully
     UDP_STATUS_SUCCESS = 0,
-//! Method was aborted because the recipient (device, endpoint, ...) was busy
-    UDP_STATUS_LOCKED = 1,
-//! Method was aborted because of abnormal status
+//! Aborted because the recipient (device, endpoint, ...) was busy
+    UDP_STATUS_BUSY = 1,
+//! Aborted because of abnormal status
     UDP_STATUS_ABORTED = 2,
-//! Method was aborted because the endpoint or the device has been reset
+//! Aborted because the endpoint or the device has been reset
     UDP_STATUS_RESET = 3,
 //! Waiting completion of transfer
     UDP_STATUS_PENDING = 4,
-//! Method status unknown
-    UDP_STATUS_UNKOWN = 5
 } udp_status_t;
 
 
