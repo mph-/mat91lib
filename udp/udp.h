@@ -38,9 +38,9 @@ typedef enum
 typedef struct udp_transfer_struct
 {
     udp_status_t status;
-    volatile unsigned int remaining;
-    volatile unsigned int buffered;
-    volatile unsigned int transferred;
+    volatile uint16_t remaining;
+    volatile uint16_t buffered;
+    volatile uint16_t transferred;
 } udp_transfer_t;
 
 
