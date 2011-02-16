@@ -6,7 +6,9 @@
 
 #include "config.h"
 #include "spi.h"
+#include "cpu.h"
 #include "bits.h"
+
 
 /* This driver only configures the SPI controller as a master.
 
@@ -489,6 +491,9 @@ spi_cs_assert (spi_t spi)
 void
 spi_cs_negate (spi_t spi)
 {
+    cpu_nop ();
+    cpu_nop ();
+    cpu_nop ();
     pio_output_high (spi->cs);
     spi->cs_active = 0;
 }

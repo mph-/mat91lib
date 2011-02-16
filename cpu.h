@@ -1,4 +1,4 @@
-/** @file   cpu.c
+/** @file   cpu.h
     @author M. P. Hayes, UCECE
     @date   04 June 2007
     @brief  CPU routines for AT91SAM7 processors
