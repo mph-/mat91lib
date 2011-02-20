@@ -39,6 +39,7 @@ cpu_power_mode_low (void)
        to ground also saves about 100 uA.  */
     cpu_udp_disable ();
 
+#if 0
     /* Switch main clock (MCK) from PLLCLK to SLCK.  Note the prescale
        (PRES) and clock source (CSS) fields cannot be changed at the
        same time.  */
@@ -54,6 +55,18 @@ cpu_power_mode_low (void)
 
     while (!(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY))
         continue;
+#else
+    // MCK=48MHz to MCK=32kHz
+    // MCK = SLCK/2 : change source first from 48 000 000 to 18. / 2 = 9M
+    AT91C_BASE_PMC->PMC_MCKR = AT91C_PMC_PRES_CLK_2;
+    while ( !(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY))
+        continue;
+
+    // MCK=SLCK : then change prescaler
+    AT91C_BASE_PMC->PMC_MCKR = AT91C_PMC_CSS_SLOW_CLK;
+    while ( !(AT91C_BASE_PMC->PMC_SR & AT91C_PMC_MCKRDY))
+        continue;
+#endif
 
     /* Disable PLL.  */
     AT91C_BASE_PMC->PMC_PLLR = 0;
