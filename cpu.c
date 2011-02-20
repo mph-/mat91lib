@@ -33,11 +33,11 @@ void
 cpu_power_mode_low (void)
 {
     /* Deactivating the brownout detector saves 20 uA; this requires
-       programming of the GPNVM bits.
+       programming of the GPNVM bits.  */
        
-       For lowest power consumption call cpu_udp_disable.  
-       
-       Connecting the USB port pins to ground saves about 100 uA.  */
+    /* Disabling the UDP saves ??? uA.  Connecting the USB port pins
+       to ground also saves about 100 uA.  */
+    cpu_udp_disable ();
 
     /* Switch main clock (MCK) from PLLCLK to SLCK.  Note the prescale
        (PRES) and clock source (CSS) fields cannot be changed at the
@@ -109,8 +109,9 @@ cpu_watchdog_enable (void)
 void
 cpu_udp_disable (void)
 {
-    /* The UDP is enabled by default.  To disable the UDP it is necessary
-       to turn on the UDP clock.  */
+    /* The UDP is enabled by default.  To disable the UDP it is
+       necessary to turn on the UDP clock, disable the UDP, then turn
+       the clock off again.  */
     AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_UDP);
 
     AT91C_BASE_UDP->UDP_TXVC |= AT91C_UDP_TXVDIS;

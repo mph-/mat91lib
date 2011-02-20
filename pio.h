@@ -48,7 +48,10 @@ typedef enum pio_config_enum
     PIO_OUTPUT_HIGH,        /* Configure as output, initially high.  */
     PIO_PERIPH_A,
     PIO_PERIPH = PIO_PERIPH_A,
-    PIO_PERIPH_B
+    PIO_PERIPH_B,
+    PIO_PERIPH_A_PULLUP,
+    PIO_PERIPH_PULLUP = PIO_PERIPH_A_PULLUP,
+    PIO_PERIPH_B_PULLUP
 } pio_config_t;
 
 
@@ -93,6 +96,18 @@ bool pio_config_set (pio_t pio, pio_config_t config)
         pio.port->PIO_BSR = pio.bitmask;
         pio.port->PIO_PDR = pio.bitmask;
         pio.port->PIO_PPUDR = pio.bitmask;
+        return 1;
+
+    case PIO_PERIPH_A_PULLUP:
+        pio.port->PIO_ASR = pio.bitmask;
+        pio.port->PIO_PDR = pio.bitmask;
+        pio.port->PIO_PPUER = pio.bitmask;
+        return 1;
+
+    case PIO_PERIPH_B_PULLUP:
+        pio.port->PIO_BSR = pio.bitmask;
+        pio.port->PIO_PDR = pio.bitmask;
+        pio.port->PIO_PPUER = pio.bitmask;
         return 1;
 
     default:
