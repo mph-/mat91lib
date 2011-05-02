@@ -6,6 +6,9 @@
 #include "usart.h"
 #include "peripherals.h"
 
+/* This needs updating to be more general and to provide
+   support for synchronous operation.  You probably should use
+   uart.c  */
 
 /* A USART can be disabled in the target.h file, e.g., using
    #define USART0_ENABLE 0.  */

@@ -3,6 +3,10 @@
     @date   30 July 2007
     @brief  Routines for interfacing to the SPI bus.
 
+    SPI can be simple but gets complicated when performance is
+    required, especially with automatic driving of the chip select
+    signals.
+
     To access a device with this driver spi_init must be first called
     passing a configuration structure, specifying the channel to use,
     clock divisor, and chip select pin to use.  spi_init returns a
@@ -128,7 +132,7 @@ typedef struct
 #define SPI_CLOCK_DIVISOR(SPEED) ((F_CPU + SPEED - 1) / (SPEED))
 
 
-/* Function Prototypes.  */
+/* Function prototypes.  */
 
 
 /** Create new SPI device instance.  */
@@ -136,56 +140,7 @@ spi_t
 spi_init (const spi_cfg_t *cfg);
 
 
-/** Set number of bits in transfer.  This does not take affect until
-    spi_config or one of the I/O routines is called.  */
-void
-spi_bits_set (spi_t spi, uint8_t bits);
-
-
-/** Set SPI mode.  This does not take affect until
-    spi_config or one of the I/O routines is called.  */
-void
-spi_mode_set (spi_t spi, spi_mode_t spi_mode);
-
-
-/** Set chip select framing mode.  This does not take affect until
-    spi_config or one of the I/O routines is called.  */
-void
-spi_cs_mode_set (spi_t spi, spi_cs_mode_t mode);
-
-
-/** Set the delay (in clocks) after CS asserted before the clock
-    starts.  The default is zero.  This does not take affect until
-    spi_config or one of the I/O routines is called.  */
-void
-spi_cs_setup_set (spi_t spi, uint16_t delay);
-
-
-/** Set the delay (in clocks) at end of transmission before CS is
-    negated.  The default is 0.  This does not take affect until
-    spi_config or one of the I/O routines is called.  */
-void
-spi_cs_hold_set (spi_t spi, uint16_t delay);
-
-
-/** Set the clock divisor.  This does not take affect until spi_config
-    or one of the I/O routines is called.  */
-void
-spi_clock_divisor_set (spi_t spi, spi_clock_divisor_t clock_divisor);
-
-
-/** Set the clock speed.  This does not take affect until spi_config
-    or one of the I/O routines is called.  */
-spi_clock_speed_t
-spi_clock_speed_set (spi_t spi, spi_clock_speed_t clock_speed);
-
-
-/** Configure SPI with previously specified parameters.  */
-void
-spi_config (spi_t spi);
-
-
-/** Write a sequence of bytes to SPI.
+/** Write a sequence of bytes to SPI.  This is just a wrapper for spi_transfer.
     @param spi SPI channel to use.
     @param buffer Data buffer to write from.
     @param len Number of bytes to transfer.
@@ -194,7 +149,7 @@ spi_ret_t
 spi_write (spi_t spi, const void *buffer, spi_size_t len, bool terminate);
 
 
-/** Read a sequence of bytes from SPI.
+/** Read a sequence of bytes from SPI.  This is just a wrapper for spi_transfer.
     @param spi SPI channel to use.
     @param buffer Data buffer to read to.
     @param len Number of bytes to transfer.
@@ -205,8 +160,8 @@ spi_read (spi_t spi, void *buffer, spi_size_t len, bool terminate);
 
 /** Transfer a sequence of bytes to/from SPI.
     @param spi SPI channel to use.
-    @param txbuffer Data buffer to write from.
-    @param rxbuffer Data buffer to read into.
+    @param txbuffer Data buffer to write from (or NULL just for reading).
+    @param rxbuffer Data buffer to read into (or NULL just for writing).
     @param len Number of bytes to transfer.
     @param terminate True to negate CS when last byte transferred.  */
 spi_ret_t
@@ -235,19 +190,61 @@ void
 spi_putc (spi_t spi, char ch);
 
 
-/** Write character to SPI.  This returns the character just read.  */
+/** Write character to SPI and return the character read in response.  */
 uint8_t
 spi_xferc (spi_t spi, char ch);
 
 
-/** Negate chip select.  */
+/** Shutdown SPI peripheral to save power.  */
 void
-spi_cs_negate (spi_t spi);
+spi_shutdown (spi_t spi);
 
 
-/** Assert chip select.  */
+/* The following functions are for advanced use only.  */
+
+
+/** Change number of bits in transfer.  This does not take affect until
+    spi_config or one of the I/O routines is called.  */
 void
-spi_cs_assert (spi_t spi);
+spi_bits_set (spi_t spi, uint8_t bits);
+
+
+/** Change SPI mode.  This does not take affect until
+    spi_config or one of the I/O routines is called.  */
+void
+spi_mode_set (spi_t spi, spi_mode_t spi_mode);
+
+
+/** Change chip select framing mode.  This does not take affect until
+    spi_config or one of the I/O routines is called.  */
+void
+spi_cs_mode_set (spi_t spi, spi_cs_mode_t mode);
+
+
+/** Change the clock divisor.  This does not take affect until spi_config
+    or one of the I/O routines is called.  */
+void
+spi_clock_divisor_set (spi_t spi, spi_clock_divisor_t clock_divisor);
+
+
+/** Change the clock speed.  This does not take affect until spi_config
+    or one of the I/O routines is called.  */
+spi_clock_speed_t
+spi_clock_speed_set (spi_t spi, spi_clock_speed_t clock_speed);
+
+
+/** Set the delay (in clocks) after CS asserted before the clock
+    starts.  The default is zero.  This does not take affect until
+    spi_config or one of the I/O routines is called.  */
+void
+spi_cs_setup_set (spi_t spi, uint16_t delay);
+
+
+/** Set the delay (in clocks) at end of transmission before CS is
+    negated.  The default is 0.  This does not take affect until
+    spi_config or one of the I/O routines is called.  */
+void
+spi_cs_hold_set (spi_t spi, uint16_t delay);
 
 
 /** Enable auto chip select.  Return zero if not possible with selected pio.  */
@@ -260,13 +257,21 @@ void
 spi_cs_auto_disable (spi_t spi);
 
 
-/** Shutdown SPI peripheral.  */
+/** Configure SPI with previously specified parameters.  */
 void
-spi_shutdown (spi_t spi);
+spi_config (spi_t spi);
 
 
-/** Wake up SPI peripheral.  */
+/** Negate chip select.  */
 void
-spi_wakeup (spi_t spi);
+spi_cs_negate (spi_t spi);
+
+
+/** Assert chip select.  */
+void
+spi_cs_assert (spi_t spi);
+
+
+
 
 #endif

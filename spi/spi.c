@@ -541,43 +541,7 @@ spi_config (spi_t spi)
 }
 
 
-/** Initialise SPI for master mode.  */
-spi_t
-spi_init (const spi_cfg_t *cfg)
-{
-    spi_dev_t *spi;
-
-    if (spi_devices_num >= SPI_DEVICES_NUM)
-        return 0;
-
-    spi = spi_devices + spi_devices_num;
-    spi_devices_num++;
-
-    spi->channel = cfg->channel;
-    spi->cs = cfg->cs;
-
-    spi->base = SPI_BASE_GET (spi->channel);
-
-    spi_channel_csr_set (spi, 0);
-
-    spi_cs_mode_set (spi, SPI_CS_MODE_TOGGLE);
-
-    spi->cs_config = spi_channel_cs_config_get (spi, spi->cs); 
-    spi_cs_auto_disable (spi);
-
-    spi_cs_setup_set (spi, 0);
-    spi_cs_hold_set (spi, 0);
-    spi_mode_set (spi, cfg->mode);
-    spi_bits_set (spi, cfg->bits ? cfg->bits : 8);
-    /* If clock divisor not specified, default to something slow.  */
-    spi_clock_divisor_set (spi, cfg->clock_divisor ? cfg->clock_divisor : 128);
-
-    spi_wakeup (spi);
-    return spi;
-}
-
-
-void
+static void
 spi_wakeup (spi_t spi)
 {
     uint8_t dev_num;
@@ -628,6 +592,42 @@ spi_wakeup (spi_t spi)
     spi_setup (AT91C_BASE_SPI1);
     spi_enable (AT91C_BASE_SPI1);
 #endif
+}
+
+
+/** Initialise SPI for master mode.  */
+spi_t
+spi_init (const spi_cfg_t *cfg)
+{
+    spi_dev_t *spi;
+
+    if (spi_devices_num >= SPI_DEVICES_NUM)
+        return 0;
+
+    spi = spi_devices + spi_devices_num;
+    spi_devices_num++;
+
+    spi->channel = cfg->channel;
+    spi->cs = cfg->cs;
+
+    spi->base = SPI_BASE_GET (spi->channel);
+
+    spi_channel_csr_set (spi, 0);
+
+    spi_cs_mode_set (spi, SPI_CS_MODE_TOGGLE);
+
+    spi->cs_config = spi_channel_cs_config_get (spi, spi->cs); 
+    spi_cs_auto_disable (spi);
+
+    spi_cs_setup_set (spi, 0);
+    spi_cs_hold_set (spi, 0);
+    spi_mode_set (spi, cfg->mode);
+    spi_bits_set (spi, cfg->bits ? cfg->bits : 8);
+    /* If clock divisor not specified, default to something slow.  */
+    spi_clock_divisor_set (spi, cfg->clock_divisor ? cfg->clock_divisor : 128);
+
+    spi_wakeup (spi);
+    return spi;
 }
 
 
