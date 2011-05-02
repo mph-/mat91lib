@@ -1,25 +1,26 @@
-/** @file   usart.c
+/** @file   uart.c
     @author M. P. Hayes, UCECE
     @date   21 June 2007
-    @brief  Unbuffered USART implementation.  */
+    @brief  Unbuffered UART implementation (this is mostly a wrapper 
+    for the USART implementation).  */
 
-#include "usart.h"
+#include "uart.h"
 #include "peripherals.h"
 
 
-/* A USART can be disabled in the target.h file, e.g., using
-   #define USART0_ENABLE 0.  */
+/* A UART can be disabled in the target.h file, e.g., using
+   #define UART0_ENABLE 0.  */
 
-#ifndef USART0_ENABLE
-#define USART0_ENABLE (USART_NUM >= 1)
+#ifndef UART0_ENABLE
+#define UART0_ENABLE (UART_NUM >= 1)
 #endif
 
-#ifndef USART1_ENABLE
-#define USART1_ENABLE (USART_NUM >= 2)
+#ifndef UART1_ENABLE
+#define UART1_ENABLE (UART_NUM >= 2)
 #endif
 
 
-struct usart_dev_struct
+struct uart_dev_struct
 {
     int8_t (*putch) (char ch);
     int8_t (*getch) (void);
@@ -29,43 +30,42 @@ struct usart_dev_struct
 };
 
 
-/* Include machine dependent usart definitions.  */
-#if USART0_ENABLE
+/* Include machine dependent uart definitions.  */
+#if UART0_ENABLE
 #include "usart0.h"
 
-static usart_dev_t usart0_dev = {usart0_putc, usart0_getc,
+static uart_dev_t uart0_dev = {usart0_putc, usart0_getc,
                                  usart0_read_ready_p, usart0_write_ready_p,
                                  usart0_write_finished_p};
 #endif
 
-#if USART1_ENABLE
-#include "usart1.h"
+#if UART1_ENABLE
+#include "uart1.h"
 
-static usart_dev_t usart1_dev = {usart1_putc, usart1_getc,
+static uart_dev_t uart1_dev = {usart1_putc, usart1_getc,
                                  usart1_read_ready_p, usart1_write_ready_p,
                                  usart1_write_finished_p};
 #endif
 
 
-usart_t 
-usart_init (uint8_t channel,
-            uint16_t baud_divisor)
+uart_t 
+uart_init (uart_cfg_t *cfg)
 {
-    usart_dev_t *dev = 0;
+    uart_dev_t *dev = 0;
 
-#if USART0_ENABLE
-    if (channel == 0)
+#if UART0_ENABLE
+    if (cfg->channel == 0)
     {
-        usart0_init (baud_divisor);
-        dev = &usart0_dev;
+        usart0_init (USART0_BAUD_DIVISOR (cfg->baud));
+        dev = &uart0_dev;
     }
 #endif
 
-#if USART1_ENABLE
-    if (channel == 1)
+#if UART1_ENABLE
+    if (cfg->channel == 1)
     {
-        usart1_init (baud_divisor);
-        dev = &usart1_dev;
+        usart1_init (USART1_BAUD_DIVISOR (cfg->baud));
+        dev = &uart1_dev;
     }
 #endif
 
@@ -73,62 +73,62 @@ usart_init (uint8_t channel,
 }
 
 
-/* Return non-zero if there is a character ready to be read.  */
+/** Return non-zero if there is a character ready to be read.  */
 bool
-usart_read_ready_p (usart_t usart)
+uart_read_ready_p (uart_t uart)
 {
-    usart_dev_t *dev = usart;
+    uart_dev_t *dev = uart;
 
     return dev->read_ready_p ();
 }
 
 
-/* Return non-zero if a character can be written without blocking.  */
+/** Return non-zero if a character can be written without blocking.  */
 bool
-usart_write_ready_p (usart_t usart)
+uart_write_ready_p (uart_t uart)
 {
-    usart_dev_t *dev = usart;
+    uart_dev_t *dev = uart;
 
     return dev->write_ready_p ();
 }
 
 
-/* Return non-zero if transmitter finished.  */
+/** Return non-zero if transmitter finished.  */
 bool
-usart_write_finished_p (usart_t usart)
+uart_write_finished_p (uart_t uart)
 {
-    usart_dev_t *dev = usart;
+    uart_dev_t *dev = uart;
 
     return dev->write_finished_p ();
 }
 
 
-/* Read character.  This blocks.  */
+/** Read character.  This blocks.  */
 int8_t
-usart_getc (usart_t usart)
+uart_getc (uart_t uart)
 {
-    usart_dev_t *dev = usart;
+    uart_dev_t *dev = uart;
 
     return dev->getch ();
 }
 
 
-/* Write character.  This blocks.  */
+/** Write character.  This blocks.  */
 int8_t
-usart_putc (usart_t usart, char ch)
+uart_putc (uart_t uart, char ch)
 {
-    usart_dev_t *dev = usart;
+    uart_dev_t *dev = uart;
 
     return dev->putch (ch);
 }
 
 
-/* Write string.  This blocks.  */
+/** Write string.  This blocks.  */
 int8_t
-usart_puts (usart_t usart, const char *str)
+uart_puts (uart_t uart, const char *str)
 {
     while (*str)
-        usart_putc (usart, *str++);
+        uart_putc (uart, *str++);
 
     return 1;
 }

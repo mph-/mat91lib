@@ -13,13 +13,19 @@ typedef struct uart_dev_struct uart_dev_t;
 
 typedef uart_dev_t *uart_t;
 
-#define UART_BAUD_DIVISOR(BAUD_RATE) UART0_BAUD_DIVISOR(BAUD_RATE)
+/* UART configuration structure.  */
+typedef struct uart_cfg_struct 
+{
+    uint8_t channel;
+    uint16_t baud;
+    uint8_t bits;
+    uart_parity_t parity;
+} uart_cfg_t;
 
 
-/* Initialise UART for desired channel, baud rate, etc.  */
+/** Initialise UART for desired channel, baud rate, etc.  */
 uart_t
-uart_init (uint8_t channel,
-           uint16_t baud_divisor);
+uart_init (uart_cfg_t *uart_cfg);
 
 
 /** Return non-zero if there is a character ready to be read.  */
