@@ -29,8 +29,8 @@ cpu_reset (void)
 }
 
 
-/* Place this function in SRAM to avoid problem when switching from PLLCK to SLCK.  
-   See errata 39.4.4.2.  */
+/* Place this function in SRAM to avoid problem when switching from
+   PLLCK to SLCK.  See errata 39.4.4.2.  */
 void
 cpu_power_mode_low (void)
     __attribute__ ((section(".ramtext")));
