@@ -262,16 +262,14 @@ void
 spi_config (spi_t spi);
 
 
-/** Negate chip select.  */
-void
-spi_cs_negate (spi_t spi);
-
-
-/** Assert chip select.  */
+/** Force assertion of chip select (set low).  */
 void
 spi_cs_assert (spi_t spi);
 
 
+/** Force negatation of chip select (set high).  */
+void
+spi_cs_negate (spi_t spi);
 
 
 #endif
