@@ -17,10 +17,10 @@
  */
 
 
-static tc_t tc_info[TC_CHANNEL_NUM];
+static tc_dev_t tc_info[TC_CHANNEL_NUM];
 
 
-bool tc_start (tc_t *tc)
+bool tc_start (tc_t tc)
 {
     /* The TC_CCR register is write only.  */
     tc->base->TC_CCR |= (AT91C_TC_CLKEN | AT91C_TC_SWTRG); 
@@ -28,21 +28,21 @@ bool tc_start (tc_t *tc)
 }
 
 
-bool tc_stop (tc_t *tc)
+bool tc_stop (tc_t tc)
 {
     tc->base->TC_CCR |= AT91C_TC_CLKDIS; 
     return 1;
 }
 
 
-uint16_t tc_counter_get (tc_t *tc)
+uint16_t tc_counter_get (tc_t tc)
 {
     return tc->base->TC_CV;
 }
 
 
 bool
-tc_pulse_config (tc_t *tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period)
+tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period)
 {
     /* Many timer counters can only generate a pulse with a single
        timer clock period.  This timer counter allows the pulse width
@@ -132,7 +132,7 @@ tc_pulse_config (tc_t *tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period
 
 
 void
-tc_shutdown (void)
+tc_shutdown (tc_t tc)
 {
     /* Disable TC0, TC1, TC2 peripheral clocks.  */
     AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_TC0) | BIT (AT91C_ID_TC1) | BIT (AT91C_ID_TC2);
@@ -141,12 +141,12 @@ tc_shutdown (void)
 }
 
 
-tc_t *
-tc_init (tc_channel_t channel)
+tc_t 
+tc_init (tc_cfg_t *cfg)
 {
-    tc_t *tc;
+    tc_t tc;
 
-    switch (channel)
+    switch (cfg->channel)
     {
     case TC_CHANNEL_0:
         /* Enable TC0 peripheral clock.  */

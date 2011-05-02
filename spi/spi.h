@@ -67,7 +67,7 @@ typedef uint32_t spi_clock_speed_t;
 
 
 /* The AT91SAM7S has a single SPI controller with 4 channels;
-   the AT91SAM7S has two SPI controllers each with 4 channels.
+   the AT91SAM7X has two SPI controllers each with 4 channels.
    SPI_CHANNELX is a logical channel number.  */
 
 enum {SPI_CHANNEL0 = 0, SPI_CHANNEL1, SPI_CHANNEL2, SPI_CHANNEL3,
@@ -107,25 +107,30 @@ typedef enum
     SPI_CS_MODE_HIGH
 } spi_cs_mode_t;
 
-#include "spi_private.h"
 
-typedef spi_dev_t *spi_t;
-
-
-/** Configuration structure.  */
+/** SPI configuration structure.  */
 typedef struct
 {
     /* Logical channel number.  */
     uint8_t channel;
     /* Clock speed in kHz (maximum).  */
     spi_clock_speed_t clock_speed_kHz;
-    /* GPIO port to use for chip select.  */
+    /* PIO port to use for chip select.  */
     pio_t cs;
     /* SPI mode.  */
     spi_mode_t mode;
     /* Bits per frame.  */
     uint8_t bits;
 } spi_cfg_t;
+
+
+/** Include definition of data structures required for the driver
+    implementation.  Do not use.  */
+#include "spi_private.h"
+
+
+/** Define datatype for handle to SPI functions.  */
+typedef spi_dev_t *spi_t;
 
 
 /* Function prototypes.  */
@@ -258,12 +263,14 @@ void
 spi_config (spi_t spi);
 
 
-/** Force assertion of chip select (set low).  */
+/** Force assertion of chip select (set low).   This is useful 
+    when sleeping to avoid inadvertely powering the SPI device.  
+    This should only be done when all SPI transfers have finished.  */
 void
 spi_cs_assert (spi_t spi);
 
 
-/** Force negatation of chip select (set high).  */
+/** Force negation of chip select (set high).  */
 void
 spi_cs_negate (spi_t spi);
 

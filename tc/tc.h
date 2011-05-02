@@ -28,25 +28,36 @@ typedef enum
 } tc_pulse_mode_t;
 
 
+/** TC configuration structure.  */
 typedef struct
 {
-    AT91S_TC *base;
-} tc_t;
+    /* Logical channel number.  */
+    uint8_t channel;
+} tc_cfg_t;
 
 
-bool tc_pulse_config (tc_t *tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t pulse_width);
+/** Include definition of data structures required for the driver
+    implementation.  Do not use.  */
+#include "tc_private.h"
 
 
-bool tc_start (tc_t *tc);
+/** Define datatype for handle to TC functions.  */
+typedef tc_dev_t *tc_t;
 
 
-bool tc_stop (tc_t *tc);
+bool tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t pulse_width);
+
+
+bool tc_start (tc_t tc);
+
+
+bool tc_stop (tc_t tc);
               
 
-tc_t *tc_init (tc_channel_t channel);
+tc_t tc_init (tc_cfg_t *cfg);
 
 
-void tc_shutdown (void);
+void tc_shutdown (tc_t tc);
 
 #endif
 
