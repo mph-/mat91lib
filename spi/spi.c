@@ -378,11 +378,15 @@ spi_clock_divisor_set (spi_t spi, spi_clock_divisor_t clock_divisor)
 
 
 spi_clock_speed_t
-spi_clock_speed_set (spi_t spi, spi_clock_speed_t clock_speed)
+spi_clock_speed_kHz_set (spi_t spi, spi_clock_speed_t clock_speed_kHz)
 {
+    uint32_t clock_speed;
+
+    clock_speed = clock_speed_kHz * 1000;
     spi_clock_divisor_set (spi, (F_CPU + clock_speed - 1) / clock_speed);
     clock_speed = F_CPU / spi->clock_divisor;
-    return clock_speed;
+
+    return clock_speed / 1000;
 }
 
 
@@ -624,7 +628,8 @@ spi_init (const spi_cfg_t *cfg)
     spi_mode_set (spi, cfg->mode);
     spi_bits_set (spi, cfg->bits ? cfg->bits : 8);
     /* If clock divisor not specified, default to something slow.  */
-    spi_clock_divisor_set (spi, cfg->clock_divisor ? cfg->clock_divisor : 128);
+    spi_clock_speed_kHz_set (spi, cfg->clock_speed_kHz 
+                             ? cfg->clock_speed_kHz : 100);
 
     spi_wakeup (spi);
     return spi;

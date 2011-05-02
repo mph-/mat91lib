@@ -117,8 +117,8 @@ typedef struct
 {
     /* Logical channel number.  */
     uint8_t channel;
-    /* Clock divisor to use for SPI clock rate.  */
-    uint16_t clock_divisor;
+    /* Clock speed in kHz (maximum).  */
+    spi_clock_speed_t clock_speed_kHz;
     /* GPIO port to use for chip select.  */
     pio_t cs;
     /* SPI mode.  */
@@ -230,7 +230,7 @@ spi_clock_divisor_set (spi_t spi, spi_clock_divisor_t clock_divisor);
 /** Change the clock speed.  This does not take affect until spi_config
     or one of the I/O routines is called.  */
 spi_clock_speed_t
-spi_clock_speed_set (spi_t spi, spi_clock_speed_t clock_speed);
+spi_clock_speed_kHz_set (spi_t spi, spi_clock_speed_t clock_speed);
 
 
 /** Set the delay (in clocks) after CS asserted before the clock
