@@ -61,6 +61,9 @@
 */
 
 
+#define SPI_CLOCK_DIVISOR(SPEED) ((F_CPU + SPEED - 1) / (SPEED))
+
+
 /* Number of independent SPI controllers.  */
 #ifdef AT91C_BASE_SPI1
 #define SPI_CONTROLLERS_NUM 2
