@@ -1,7 +1,8 @@
 /** @file   pwm.h
     @author 
     @date   13 February 2008
-    @brief  Pulse Width Modulation routines for AT91SAM7 processors
+    @brief  Pulse Width Modulation routines for AT91SAM7 processors.
+    @note   The API needs a complete re-write.
 */
 
 #ifndef PWM_H
