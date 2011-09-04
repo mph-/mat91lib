@@ -351,8 +351,7 @@ spi_channel_cs_config_get (spi_t spi, pio_t cs)
     for (i = 0; i < SPI_CS_NUM; i++)
     {
         if (spi->channel == spi_cs[i].channel
-            && cs.port == spi_cs[i].pio.port
-            && cs.bitmask == spi_cs[i].pio.bitmask)
+            && cs == spi_cs[i].pio)
         {
             return spi_cs[i].periph == PERIPH_A ? PIO_PERIPH_A : PIO_PERIPH_B;
         }
