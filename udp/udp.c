@@ -1317,7 +1317,7 @@ udp_write (udp_t udp, const void *buffer, udp_size_t length)
 
 
 /* Signal the host by pulling D+ high (drive a K state).  */
-static void
+void
 udp_signal (udp_t udp __unused__)
 {
 #ifdef UDP_PULLUP_PIO
