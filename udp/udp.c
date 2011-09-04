@@ -1192,11 +1192,11 @@ udp_read_ready_p (udp_t udp)
     AT91PS_UDP pUDP = udp->pUDP;
     uint32_t rx_bank = udp->rx_bank;
 
-    if (udp->rx_bytes)
-        return 1;
-
     if (! udp_configured_p (udp))
         return 0;
+
+    if (udp->rx_bytes)
+        return 1;
 
     if (! (pUDP->UDP_CSR[UDP_EP_OUT] & rx_bank))
         return 0;
@@ -1539,6 +1539,11 @@ udp_t udp_init (udp_request_handler_t request_handler, void *arg)
     udp->rx_bank = AT91C_UDP_RX_DATA_BK0;
     udp->prev_state = UDP_STATE_NOT_POWERED;
     udp->state = UDP_STATE_NOT_POWERED;
+
+#ifdef UDP_PULLUP_PIO
+    /* Configure UDP pullup pio and drive high to disable pullup.  */
+    pio_config_set (UDP_PULLUP_PIO, PIO_OUTPUT_HIGH);
+#endif
 
     return udp;
 }
