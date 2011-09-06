@@ -108,26 +108,34 @@ stdio_redirect (void (*putc1) (void *stream, int ch),
 
 
 void
-sys_redirect_stdin (sys_read_t read1, void *file)
+sys_redirect (unsigned int fd, sys_read_t read1, sys_write_t write1, void *arg)
 {
-    sys_files[0].file_ops->read = read1;
-    sys_files[0].file = file;
+    if (read1)
+        sys_files[fd].file_ops->read = read1;
+    if (write1)
+        sys_files[fd].file_ops->write = write1;
+    sys_files[fd].file = arg;
 }
 
 
 void
-sys_redirect_stdout (sys_write_t write1, void *file)
+sys_redirect_stdin (sys_read_t read1, void *arg)
 {
-    sys_files[1].file_ops->write = write1;
-    sys_files[1].file = file;
+    sys_redirect (0, read1, 0, arg);
 }
 
 
 void
-sys_redirect_stderr (sys_write_t write1, void *file)
+sys_redirect_stdout (sys_write_t write1, void *arg)
 {
-    sys_files[2].file_ops->write = write1;
-    sys_files[2].file = file;
+    sys_redirect (1, 0, write1, arg);
+}
+
+
+void
+sys_redirect_stderr (sys_write_t write1, void *arg)
+{
+    sys_redirect (2, 0, write1, arg);
 }
 
 
@@ -396,4 +404,27 @@ sys_mount (sys_fs_t *fs, const char *mountname, int flags)
     sys_fs[i]->flags = flags;
     strncpy (sys_fs[i]->mountname, mountname, sizeof (sys_fs[i]->mountname));
     return 1;
+}
+
+
+int
+sys_attach (sys_file_ops_t *file_ops, void *arg)
+{
+    int fd;
+
+    for (fd = 3; fd < SYS_FD_NUM; fd++)
+    {
+        if (!sys_files[fd].file_ops)
+            break;
+    }
+    if (fd == SYS_FD_NUM)
+    {
+        errno = ENFILE;
+        return -1;
+    }
+
+    sys_files[fd].file_ops = file_ops;
+    sys_files[fd].file = arg;
+
+    return fd;
 }

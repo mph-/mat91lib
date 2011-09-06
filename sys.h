@@ -55,12 +55,18 @@ typedef struct sys_fs_struct
 } sys_fs_t;
 
 
-void sys_redirect_stdin (sys_read_t read, void *file);
 
-void sys_redirect_stdout (sys_write_t write, void *file);
+void sys_redirect (unsigned int fd, sys_read_t read, sys_write_t write, 
+                   void *arg);
 
-void sys_redirect_stderr (sys_write_t write, void *file);
+void sys_redirect_stdin (sys_read_t read, void *arg);
+
+void sys_redirect_stdout (sys_write_t write, void *arg);
+
+void sys_redirect_stderr (sys_write_t write, void *arg);
 
 bool sys_mount (sys_fs_t *fs, const char *mountname, int flags);
+
+int sys_attach (sys_file_ops_t *file_ops, void *arg);
 
 #endif
