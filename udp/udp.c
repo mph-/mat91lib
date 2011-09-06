@@ -1267,6 +1267,7 @@ udp_write (udp_t udp, const void *buffer, udp_size_t length)
     AT91PS_UDP pUDP = udp->pUDP;
     unsigned int tx_bytes = 0;
     unsigned int total;
+    unsigned int timeout;
     const uint8_t *data;
 
     if (! udp_configured_p (udp))
@@ -1294,19 +1295,38 @@ udp_write (udp_t udp, const void *buffer, udp_size_t length)
             pUDP->UDP_FDR[UDP_EP_IN] = *data++;
 
         // Wait for the the first bank to be sent
+        timeout = 50000;
         while (! (pUDP->UDP_CSR[UDP_EP_IN] & AT91C_UDP_TXCOMP))
+        {
+            udp_poll (udp);
             if (! udp_configured_p (udp))
                 return total;
 
+            /* What if the host application stops reading?  */
+            timeout--;
+            if (!timeout)
+                return total;
+        }
+
         pUDP->UDP_CSR[UDP_EP_IN] &= ~AT91C_UDP_TXCOMP;
-        while (pUDP->UDP_CSR[UDP_EP_IN] & AT91C_UDP_TXCOMP);
+        while (pUDP->UDP_CSR[UDP_EP_IN] & AT91C_UDP_TXCOMP)
+            continue;
         pUDP->UDP_CSR[UDP_EP_IN] |= AT91C_UDP_TXPKTRDY;
     }
 
     // Wait for the end of transfer
+    timeout = 50000;
     while (! (pUDP->UDP_CSR[UDP_EP_IN] & AT91C_UDP_TXCOMP))
+    {
+        udp_poll (udp);
         if (! udp_configured_p (udp))
             return total;
+
+        /* What if the host application stops reading?  */
+        timeout--;
+        if (!timeout)
+            return total;
+    }
 
     pUDP->UDP_CSR[UDP_EP_IN] &= ~AT91C_UDP_TXCOMP;
     while (pUDP->UDP_CSR[UDP_EP_IN] & AT91C_UDP_TXCOMP)
