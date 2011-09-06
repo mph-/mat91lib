@@ -1,3 +1,4 @@
+#include "delay.h"
 #include "irq.h"
 #include "pio.h"
 #include "trace.h"
@@ -1295,17 +1296,14 @@ udp_write (udp_t udp, const void *buffer, udp_size_t length)
             pUDP->UDP_FDR[UDP_EP_IN] = *data++;
 
         // Wait for the the first bank to be sent
-        timeout = 50000;
+        timeout = 500000;
         while (! (pUDP->UDP_CSR[UDP_EP_IN] & AT91C_UDP_TXCOMP))
         {
-            udp_poll (udp);
-            if (! udp_configured_p (udp))
-                return total;
-
-            /* What if the host application stops reading?  */
+            /* Timeout if the host application stops reading.  */
             timeout--;
             if (!timeout)
                 return total;
+            DELAY_US (1);
         }
 
         pUDP->UDP_CSR[UDP_EP_IN] &= ~AT91C_UDP_TXCOMP;
@@ -1315,17 +1313,14 @@ udp_write (udp_t udp, const void *buffer, udp_size_t length)
     }
 
     // Wait for the end of transfer
-    timeout = 50000;
+    timeout = 500000;
     while (! (pUDP->UDP_CSR[UDP_EP_IN] & AT91C_UDP_TXCOMP))
     {
-        udp_poll (udp);
-        if (! udp_configured_p (udp))
-            return total;
-
-        /* What if the host application stops reading?  */
+        /* Timeout if the host application stops reading.  */
         timeout--;
         if (!timeout)
             return total;
+        DELAY_US (1);
     }
 
     pUDP->UDP_CSR[UDP_EP_IN] &= ~AT91C_UDP_TXCOMP;
