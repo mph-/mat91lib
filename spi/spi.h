@@ -74,6 +74,13 @@ enum {SPI_CHANNEL0 = 0, SPI_CHANNEL1, SPI_CHANNEL2, SPI_CHANNEL3,
       SPI_CHANNEL4, SPI_CHANNEL5, SPI_CHANNEL6, SPI_CHANNEL7};
 
 
+/** Number of channels per controller.  */
+#define SPI_CHANNELS_NUM 4
+
+/** Bitmask to select desired channel.  */
+#define SPI_CHANNEL_MASK(channel) (0x0f ^ BIT (channel & (SPI_CHANNELS_NUM - 1)))
+
+
 /* SPI mode settings.  */
 typedef enum 
 {

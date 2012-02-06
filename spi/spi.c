@@ -72,10 +72,6 @@
 #endif
 
 
-/* Number of channels per controller.  */
-#define SPI_CHANNELS_NUM 4
-
-
 /* Currently the maximum of SPI devices is 32 due to the size
    of the mask used for recording active devices.  */
 #ifndef SPI_DEVICES_NUM
@@ -109,7 +105,6 @@ enum
 
 #define SPI_BASE_GET(channel) (((channel) < SPI_CHANNELS_NUM) ? AT91C_BASE_SPI0 : AT91C_BASE_SPI1)
 
-#define SPI_CHANNEL_MASK(channel) (0x0f ^ BIT (channel & (SPI_CHANNELS_NUM - 1)))
 
 #ifdef HOSTED
 #define SPI_READY_P(BASE) (HOSTED || ((BASE)->SPI_SR & AT91C_SPI_RDRF))
