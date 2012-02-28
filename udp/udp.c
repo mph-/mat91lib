@@ -590,7 +590,8 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
     pep->callback = 0;
     pep->arg = 0;
 
-    // Reset endpoint FIFOs
+    /* Reset endpoint FIFOs.  Thie clers RXBYTECNT.  It does not clear
+       the other CSR flags.  */
     UDP_REG_SET (pUDP->UDP_RSTEP, 1 << endpoint);
     UDP_REG_CLR (pUDP->UDP_RSTEP, 1 << endpoint);
 
@@ -606,6 +607,9 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
         udp->eps[1].max_packet_size = UDP_EP_OUT_SIZE;
         udp->eps[1].num_fifo = 2;
         pUDP->UDP_CSR[1] = AT91C_UDP_EPTYPE_BULK_OUT | AT91C_UDP_EPEDS;
+
+        /* Enable interrupt for reception.  */
+        UDP_REG_SET (pUDP->UDP_IER, 1 << endpoint);
         break;
 
     case UDP_EP_IN:
@@ -614,6 +618,9 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
         pUDP->UDP_CSR[2] = AT91C_UDP_EPTYPE_BULK_IN | AT91C_UDP_EPEDS;         
         break;
     }
+
+    UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], 
+                 AT91C_UDP_RX_DATA_BK0 | AT91C_UDP_RX_DATA_BK1);
 
     TRACE_DEBUG (UDP, "UDP:Cfg%d\n", endpoint);
 }
@@ -1406,7 +1413,7 @@ udp_disable (udp_t udp)
     pAIC->AIC_IDCR |= 1 << AT91C_ID_UDP;
 
     // Disable all UDP interrupts
-    pUDP->UDP_IDR = 0;
+    pUDP->UDP_IDR = ~0;
 
     // Disable UDP transceiver
     pUDP->UDP_TXVC |= AT91C_UDP_TXVDIS;
