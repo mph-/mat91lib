@@ -172,14 +172,14 @@
 /** Poll the status of flags in a register.  */
 #define UDP_REG_ISCLR(REG, FLAGS) (((REG) & (FLAGS)) == 0)
 
-/** Clear flags of UDP UDP_CSR register and wait for synchronization. */
+/** Clear flags of UDP UDP_CSR register and wait for synchronization.  */
 #define UDP_CSR_CLR(REG, FLAGS) { \
 while ((REG) & (FLAGS))           \
     (REG) &= ~(FLAGS);            \
 }
 
 /** Set flags of UDP UDP_CSR register and wait for synchronization.  */
-#define UDP_CSR_SET(REG, FLAGS) { \
+#define UDP_CSR_SET(REG, FLAGS) {      \
 while (((REG) & (FLAGS)) != (FLAGS))   \
     (REG) |= (FLAGS);                  \
 }
@@ -259,15 +259,15 @@ static udp_dev_t udp_dev;
  */
 typedef struct
 {
+    volatile udp_ep_state_t state;
     /* Pointer to where data is stored.  */
-    uint8_t *pData;
+    uint8_t *pdata;
     udp_transfer_t transfer;
     udp_callback_t callback;
     /* Callback argument.  */
     void *arg;
     uint16_t max_packet_size;
     uint8_t num_fifo;
-    udp_ep_state_t state;
     uint8_t bank;
 } udp_ep_info_t;
 
@@ -275,8 +275,6 @@ typedef struct
 struct udp_dev_struct
 {
     AT91PS_UDP pUDP;
-    uint32_t rx_bank;
-    uint16_t rx_bytes;
     uint8_t connection;
     /* Chosen configuration, 0 if not configured.  */
     uint8_t configuration;
@@ -520,19 +518,19 @@ void udp_completed (udp_t udp, udp_ep_t endpoint, udp_status_t status)
 {
     udp_ep_info_t *pep = &udp->eps[endpoint];
 
-    if ((pep->state == UDP_EP_STATE_WRITE)
-        || (pep->state == UDP_EP_STATE_READ)) 
+    if ((pep->state == UDP_EP_STATE_WRITE) || (pep->state == UDP_EP_STATE_READ)) 
     {
         TRACE_DEBUG (UDP, "UDP:EoT%d %d\n",
                      endpoint, pep->transfer.transferred);
-
-        pep->state = UDP_EP_STATE_IDLE;
 
         pep->transfer.status = status;
         
         // Invoke callback if present
         if (pep->callback != 0) 
+        {
             pep->callback (pep->arg, &pep->transfer);
+        }
+        pep->state = UDP_EP_STATE_IDLE;
     }
 }
 
@@ -559,7 +557,7 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
     pep->state = UDP_EP_STATE_IDLE;
 
     // Reset endpoint transfer descriptor
-    pep->pData = 0;
+    pep->pdata = 0;
     pep->transfer.remaining = 0;
     pep->transfer.transferred = 0;
     pep->transfer.buffered = 0;
@@ -596,7 +594,7 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
 
 
 /**
- * Clear transmission status flag and swap banks for dual FIFO endpoints.
+ * Clear transmission status flag and also swap banks for dual FIFO endpoints.
  * \param   endpoint    Endpoint where to clear flag
  */
 static void 
@@ -646,10 +644,10 @@ udp_payload_write (udp_t udp, udp_ep_t endpoint)
     TRACE_DEBUG (UDP, "UDP:Write%d %d\n", endpoint, bytes);
 
     // Transfer one packet to the FIFO buffer
-    src = pep->pData;
+    src = pep->pdata;
     for (i = 0; i < bytes; i++)
         pUDP->UDP_FDR[endpoint] = *src++;
-    pep->pData = src;
+    pep->pdata = src;
 
     pep->transfer.buffered += bytes;
     pep->transfer.remaining -= bytes;
@@ -661,15 +659,15 @@ udp_payload_write (udp_t udp, udp_ep_t endpoint)
 /**
  * Send data packet via given endpoint
  * \param   endpoint    Endpoint to send data through
- * \param   pData       Pointer to data buffer
+ * \param   pdata       Pointer to data buffer
  * \param   len         Packet size
- * \param   callback   Optional callback to invoke when the read finishes
- * \param   arg   Optional callback argument 
+ * \param   callback    Optional callback to invoke when the read finishes
+ * \param   arg         Optional callback argument 
  * \return  Operation result code
  * 
  */
 udp_status_t
-udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pData, 
+udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata, 
                  unsigned int len, udp_callback_t callback, void *arg)
 {
     AT91PS_UDP pUDP = udp->pUDP;
@@ -680,7 +678,7 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pData,
 
     TRACE_DEBUG (UDP, "UDP:AWrite%d %d\n", endpoint, len);
 
-    pep->pData = (uint8_t *)pData;
+    pep->pdata = (uint8_t *)pdata;
     pep->transfer.status = UDP_STATUS_PENDING;
     pep->transfer.remaining = len;
     pep->transfer.buffered = 0;
@@ -697,7 +695,7 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pData,
     UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
 
     // If double buffering is enabled and there is data remaining, 
-    // Prepare another packet
+    // prepare another packet
     if ((pep->num_fifo > 1) && (pep->transfer.remaining > 0))
         udp_payload_write (udp, endpoint);
 
@@ -730,10 +728,10 @@ udp_payload_read (udp_t udp, udp_ep_t endpoint, unsigned int packetsize)
     TRACE_DEBUG (UDP, "UDP:Read%d %d\n", endpoint, bytes);
 
     // Read packet from FIFO
-    dst = pep->pData;
+    dst = pep->pdata;
     for (i = 0; i < bytes; i++) 
         *dst++ = pUDP->UDP_FDR[endpoint];
-    pep->pData = dst;
+    pep->pdata = dst;
 
     pep->transfer.remaining -= bytes;
     pep->transfer.transferred += bytes;
@@ -749,7 +747,7 @@ udp_payload_read (udp_t udp, udp_ep_t endpoint, unsigned int packetsize)
  * Read a data packet with specific size from given endpoint.
  * 
  * \param   endpoint    Endpoint to send data through
- * \param   pData       Pointer to data buffer
+ * \param   pdata       Pointer to data buffer
  * \param   len         Packet size
  * \param   callback    Optional callback to invoke when the read finishes
  * \param   arg         Optional callback argument 
@@ -757,7 +755,7 @@ udp_payload_read (udp_t udp, udp_ep_t endpoint, unsigned int packetsize)
  * 
  */
 udp_status_t
-udp_read_async (udp_t udp, udp_ep_t endpoint, void *pData, unsigned int len, 
+udp_read_async (udp_t udp, udp_ep_t endpoint, void *pdata, unsigned int len, 
                 udp_callback_t callback, void *arg)
 {
     AT91PS_UDP pUDP = udp->pUDP;
@@ -768,7 +766,7 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pData, unsigned int len,
 
     TRACE_DEBUG (UDP, "UDP:ARead%d %d\n", endpoint, len);
 
-    pep->pData = pData;
+    pep->pdata = pdata;
     pep->transfer.status = UDP_STATUS_PENDING;
     pep->transfer.remaining = len;
     pep->transfer.buffered = 0;
@@ -924,7 +922,7 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
         }
     }
 
-    // Setup packet received
+    // Setup packet received (this is most likely on control endpoint 0)
     if (UDP_REG_ISSET (status, AT91C_UDP_RXSETUP))
     {
         // This interrupt occurs as a result of receiving a setup packet
@@ -1151,7 +1149,7 @@ udp_configuration_set (void *arg, udp_transfer_t *ptransfer __unused__)
 
 
 void 
-udp_control_write (udp_t udp, const void *buffer, udp_size_t length)
+udp_control_write (udp_t udp, const void *buffer, udp_size_t len)
 {
     AT91PS_UDP pUDP = udp->pUDP;
     uint32_t cpt;
@@ -1160,39 +1158,32 @@ udp_control_write (udp_t udp, const void *buffer, udp_size_t length)
 
     do 
     {
-        cpt = MIN (length, 8);
-        length -= cpt;
+        cpt = MIN (len, 8);
+        len -= cpt;
 
         while (cpt--)
             pUDP->UDP_FDR[0] = *data++;
 
-        if (pUDP->UDP_CSR[0] & AT91C_UDP_TXCOMP)
-        {
-            pUDP->UDP_CSR[0] &= ~AT91C_UDP_TXCOMP;
-            while (pUDP->UDP_CSR[0] & AT91C_UDP_TXCOMP);
-        }
+        if (pUDP->UDP_CSR[UDP_EP_CONTROL] & AT91C_UDP_TXCOMP)
+            UDP_CSR_CLR (pUDP->UDP_CSR[UDP_EP_CONTROL], AT91C_UDP_TXCOMP)
 
-        pUDP->UDP_CSR[0] |= AT91C_UDP_TXPKTRDY;
+        pUDP->UDP_CSR[UDP_EP_CONTROL] |= AT91C_UDP_TXPKTRDY;
         do 
         {
-            csr = pUDP->UDP_CSR[0];
+            csr = pUDP->UDP_CSR[UDP_EP_CONTROL];
 
             // Data IN stage has been stopped by a status OUT
             if (csr & AT91C_UDP_RX_DATA_BK0) 
             {
-                pUDP->UDP_CSR[0] &= ~AT91C_UDP_RX_DATA_BK0;
+                pUDP->UDP_CSR[UDP_EP_CONTROL] &= ~AT91C_UDP_RX_DATA_BK0;
                 return;
             }
         } while (! (csr & AT91C_UDP_TXCOMP));
 
-    } while (length);
+    } while (len);
 
-    if (pUDP->UDP_CSR[0] & AT91C_UDP_TXCOMP)
-    {
-        pUDP->UDP_CSR[0] &= ~AT91C_UDP_TXCOMP;
-        while (pUDP->UDP_CSR[0] & AT91C_UDP_TXCOMP)
-            continue;
-    }
+    if (pUDP->UDP_CSR[UDP_EP_CONTROL] & AT91C_UDP_TXCOMP)
+        UDP_CSR_CLR (pUDP->UDP_CSR[UDP_EP_CONTROL], AT91C_UDP_TXCOMP)
 }
 
 
@@ -1202,9 +1193,9 @@ udp_control_gobble (udp_t udp)
     AT91PS_UDP pUDP = udp->pUDP;
 
     /* I'm not too sure what the point of this is!.  */
-    while (! (pUDP->UDP_CSR[0] & AT91C_UDP_RX_DATA_BK0));
+    while (! (pUDP->UDP_CSR[UDP_EP_CONTROL] & AT91C_UDP_RX_DATA_BK0));
 
-    pUDP->UDP_CSR[0] &= ~AT91C_UDP_RX_DATA_BK0;
+    pUDP->UDP_CSR[UDP_EP_CONTROL] &= ~AT91C_UDP_RX_DATA_BK0;
 }
 
 
@@ -1212,147 +1203,63 @@ bool
 udp_read_ready_p (udp_t udp)
 {
     AT91PS_UDP pUDP = udp->pUDP;
-    uint32_t rx_bank = udp->rx_bank;
+    unsigned int status = pUDP->UDP_CSR[UDP_EP_OUT];
 
     if (! udp_configured_p (udp))
         return 0;
 
-    if (udp->rx_bytes)
-        return 1;
-
-    if (! (pUDP->UDP_CSR[UDP_EP_OUT] & rx_bank))
-        return 0;
-    
-    return (pUDP->UDP_CSR[UDP_EP_OUT] >> 16) != 0;
+    return UDP_REG_ISSET (status, AT91C_UDP_RX_DATA_BK0) 
+            || UDP_REG_ISSET (status, AT91C_UDP_RX_DATA_BK1);
 }
 
 
 udp_size_t
-udp_read (udp_t udp, void *buffer, udp_size_t length)
+udp_read (udp_t udp, void *buffer, udp_size_t len)
 {
-    AT91PS_UDP pUDP = udp->pUDP;
-    unsigned int rx_bytes;
-    unsigned int total;
-    uint32_t rx_bank = udp->rx_bank;
-    uint8_t *data;
-
-    data = buffer;
-    total = 0;
-
-    while (length)
-    {
-        if (udp->rx_bytes)
-        {
-            rx_bytes = MIN (udp->rx_bytes, length);
-            length -= rx_bytes;
-            udp->rx_bytes -= rx_bytes;
-
-            /* Transfer data from FIFO.  */
-            while (rx_bytes--)
-                data[total++] = pUDP->UDP_FDR[UDP_EP_OUT];
-
-            if (!udp->rx_bytes)
-            {
-                /* Indicate finished reading current bank.  */
-                pUDP->UDP_CSR[UDP_EP_OUT] &= ~rx_bank;
-                
-                /* Switch to other bank.  */
-                if (rx_bank == AT91C_UDP_RX_DATA_BK0)
-                    rx_bank = AT91C_UDP_RX_DATA_BK1;
-                else
-                    rx_bank = AT91C_UDP_RX_DATA_BK0;
-            }
-        }
-
-        if (!length)
-            break;
-
-        if (! udp_configured_p (udp))
-            break;
-
-        if (pUDP->UDP_CSR[UDP_EP_OUT] & rx_bank) 
-        {
-            /* It appears that the received byte count is not
-               decremented after reads from the FIFO so we keep our
-               own count.  */
-            udp->rx_bytes = pUDP->UDP_CSR[UDP_EP_OUT] >> 16;
-        }
-    }
-    udp->rx_bank = rx_bank;
-    return total;
-}
-
-
-udp_size_t
-udp_write (udp_t udp, const void *buffer, udp_size_t length)
-{
-    AT91PS_UDP pUDP = udp->pUDP;
-    unsigned int tx_bytes = 0;
-    unsigned int total;
     unsigned int timeout;
-    const uint8_t *data;
+    udp_ep_info_t *pep = &udp->eps[UDP_EP_OUT];
 
-    if (! udp_configured_p (udp))
+    if (udp_read_async(udp, UDP_EP_OUT, buffer, len, NULL, NULL)
+        != UDP_STATUS_SUCCESS)
         return 0;
 
-    data = buffer;
-    total = 0;
+    /* We may have a race condition if someone else grabs the endpoint
+       as soon as it goes idle.  I'm not sure if this can happen.  */
 
-    tx_bytes = MIN (length, UDP_EP_IN_SIZE);
-    length -= tx_bytes;
-    total += tx_bytes;
-
-    /* Do we need a lock?  How do we know if the buffer is empty?  */
-
-    while (tx_bytes--) 
-        pUDP->UDP_FDR[UDP_EP_IN] = *data++;
-
-    pUDP->UDP_CSR[UDP_EP_IN] |= AT91C_UDP_TXPKTRDY;
-
-    while (length)
-    {
-        // Fill the second bank
-        tx_bytes = MIN (length, UDP_EP_IN_SIZE);
-        total += tx_bytes;
-        length -= tx_bytes;
-        while (tx_bytes--)
-            pUDP->UDP_FDR[UDP_EP_IN] = *data++;
-
-        // Wait for the the first bank to be sent
-        timeout = 500000;
-        while (! (pUDP->UDP_CSR[UDP_EP_IN] & AT91C_UDP_TXCOMP))
-        {
-            /* Timeout if the host stops reading.  */
-            timeout--;
-            if (!timeout)
-                return total;
-            DELAY_US (1);
-        }
-
-        pUDP->UDP_CSR[UDP_EP_IN] &= ~AT91C_UDP_TXCOMP;
-
-        while (pUDP->UDP_CSR[UDP_EP_IN] & AT91C_UDP_TXCOMP)
-            continue;
-
-        pUDP->UDP_CSR[UDP_EP_IN] |= AT91C_UDP_TXPKTRDY;
-    }
-
-    // Wait for the end of transfer
     timeout = 500000;
-    while (! (pUDP->UDP_CSR[UDP_EP_IN] & AT91C_UDP_TXCOMP))
+    while (pep->state != UDP_EP_STATE_IDLE)
     {
-        /* Timeout if the host stops reading.  */
         timeout--;
-        if (!timeout)
-            return total;
+        if (!timeout || ! udp_configured_p (udp))
+            break;
         DELAY_US (1);
     }
+    return pep->transfer.transferred;
+}
 
-    pUDP->UDP_CSR[UDP_EP_IN] &= ~AT91C_UDP_TXCOMP;
-    while (pUDP->UDP_CSR[UDP_EP_IN] & AT91C_UDP_TXCOMP)
-        continue;
 
-    return total;
+udp_size_t
+udp_write (udp_t udp, const void *buffer, udp_size_t len)
+{
+    unsigned int timeout;
+    udp_ep_info_t *pep = &udp->eps[UDP_EP_IN];
+
+    if (udp_write_async(udp, UDP_EP_IN, buffer, len, NULL, NULL)
+        != UDP_STATUS_SUCCESS)
+        return 0;
+
+    /* We may have a race condition if someone else grabs the endpoint
+       as soon as it goes idle.  I'm not sure if this can happen.  */
+
+    timeout = 500000;
+    while (pep->state != UDP_EP_STATE_IDLE)
+    {
+        timeout--;
+        if (!timeout || ! udp_configured_p (udp))
+            break;
+        DELAY_US (1);
+    }
+    return pep->transfer.transferred;
 }
 
 
@@ -1575,8 +1482,6 @@ udp_t udp_init (udp_request_handler_t request_handler, void *arg)
     udp->pUDP = AT91C_BASE_UDP;
     udp->configuration = 0;
     udp->connection = 0;
-    udp->rx_bytes = 0;
-    udp->rx_bank = AT91C_UDP_RX_DATA_BK0;
     udp->prev_state = UDP_STATE_NOT_POWERED;
     udp->state = UDP_STATE_NOT_POWERED;
 
