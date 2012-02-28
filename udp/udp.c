@@ -277,9 +277,13 @@ typedef struct
 {
     volatile udp_ep_state_t state;
     volatile udp_status_t status;
+    /* There can be a race-condition with the following three
+       variables since they are written by both the ISR and main
+       code.  */
     volatile uint16_t remaining;
     volatile uint16_t buffered;
     volatile uint16_t transferred;
+
     /* Pointer to where data is stored.  */
     uint8_t *pdata;
     /* Callback function.  */
@@ -590,7 +594,7 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
     pep->callback = 0;
     pep->arg = 0;
 
-    /* Reset endpoint FIFOs.  Thie clers RXBYTECNT.  It does not clear
+    /* Reset endpoint FIFOs.  Thie clears RXBYTECNT.  It does not clear
        the other CSR flags.  */
     UDP_REG_SET (pUDP->UDP_RSTEP, 1 << endpoint);
     UDP_REG_CLR (pUDP->UDP_RSTEP, 1 << endpoint);
@@ -663,7 +667,7 @@ udp_rx_flag_clear (udp_t udp, udp_ep_t endpoint)
  * \return  Number of bytes written
  * 
  */
-static unsigned int
+unsigned int
 udp_fifo_write (udp_t udp, udp_ep_t endpoint)
 {
     AT91PS_UDP pUDP = udp->pUDP;
@@ -814,7 +818,6 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pdata, unsigned int len,
     pep->pdata = pdata;
     pep->status = UDP_STATUS_PENDING;
     pep->remaining = len;
-    pep->buffered = 0;
     pep->transferred = 0;
     pep->callback = callback;
     pep->arg = arg;
@@ -860,7 +863,7 @@ udp_setup_read (udp_t udp, udp_ep_t endpoint)
 }
 
 
-static void
+void
 udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
 {
     AT91PS_UDP pUDP = udp->pUDP;    
@@ -869,13 +872,21 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
 
     if (pep->state == UDP_EP_STATE_WRITE)
     {
-        /* The endpoint is in the write state.  */
+        /* The endpoint is in the write state.
+           The scenarios are:
+           1: no data left to send (buffered <= packet_size)
+           1: just buffered data to send (buffered > packet_size
+                                          && remaining == 0)
+           2: buffered data and more to send (remaining > 0 and ping-pong)
+           3: no buffered data and more to send (remaining > 0 and non-ping-pong)
+        */
+
         if ((pep->buffered < pep->max_packet_size)
             || (!UDP_REG_ISCLR (status, AT91C_UDP_EPTYPE)
                 && (pep->remaining == 0)
                 && (pep->buffered == pep->max_packet_size)))
         {
-            /* Transfer completed.  */
+            /* Case 1: Transfer completed.  */
             pep->transferred += pep->buffered;
             pep->buffered = 0;
             
@@ -944,6 +955,7 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
             /* Non-control endpoint so discard stalled data.  */
             TRACE_INFO (UDP, "UDP:Disc%d\n", endpoint);
             udp_rx_flag_clear (udp, endpoint);
+            UDP_REG_SET (pUDP->UDP_IDR, 1 << endpoint);
         }
         else
         {
@@ -972,7 +984,10 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
         udp_fifo_read (udp, endpoint);
         
         if (pep->remaining == 0)
+        {
             udp_transfer_complete (udp, endpoint, UDP_STATUS_SUCCESS);
+            UDP_REG_SET (pUDP->UDP_IDR, 1 << endpoint);
+        }
     }
 }
 
@@ -984,7 +999,7 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
  * 
  * Called from UDP interrupt handler in response to endpoint interrupt.
  */
-static void 
+void 
 udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
 {
     AT91PS_UDP pUDP = udp->pUDP;    
@@ -1285,7 +1300,15 @@ udp_read_ready_p (udp_t udp)
 {
     udp_ep_info_t *pep = &udp->eps[UDP_EP_OUT];
 
-    return pep->buffered != 0;
+    /* Have some data still in the buffer.  */
+    if (pep->buffered != 0)
+        return 1;
+
+    /* Have some data in the FIFO.  */
+    if (udp->pUDP->UDP_CSR[UDP_EP_OUT] >> 16)
+        return 1;
+
+    return 0;
 }
 
 
