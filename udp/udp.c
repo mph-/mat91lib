@@ -260,9 +260,13 @@ static udp_dev_t udp_dev;
 typedef struct
 {
     volatile udp_ep_state_t state;
+    volatile udp_status_t status;
+    volatile uint16_t remaining;
+    volatile uint16_t buffered;
+    volatile uint16_t transferred;
     /* Pointer to where data is stored.  */
     uint8_t *pdata;
-    udp_transfer_t transfer;
+    /* Callback function.  */
     udp_callback_t callback;
     /* Callback argument.  */
     void *arg;
@@ -521,14 +525,19 @@ void udp_completed (udp_t udp, udp_ep_t endpoint, udp_status_t status)
     if ((pep->state == UDP_EP_STATE_WRITE) || (pep->state == UDP_EP_STATE_READ)) 
     {
         TRACE_DEBUG (UDP, "UDP:EoT%d %d\n",
-                     endpoint, pep->transfer.transferred);
+                     endpoint, pep->transferred);
 
-        pep->transfer.status = status;
+        pep->status = status;
         
         // Invoke callback if present
         if (pep->callback != 0) 
         {
-            pep->callback (pep->arg, &pep->transfer);
+            udp_transfer_t transfer;
+
+            transfer.status = pep->status;
+            transfer.transferred = pep->transferred;
+
+            pep->callback (pep->arg, &transfer);
         }
         pep->state = UDP_EP_STATE_IDLE;
     }
@@ -558,9 +567,9 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
 
     // Reset endpoint transfer descriptor
     pep->pdata = 0;
-    pep->transfer.remaining = 0;
-    pep->transfer.transferred = 0;
-    pep->transfer.buffered = 0;
+    pep->remaining = 0;
+    pep->transferred = 0;
+    pep->buffered = 0;
     pep->callback = 0;
     pep->arg = 0;
 
@@ -639,7 +648,7 @@ udp_payload_write (udp_t udp, udp_ep_t endpoint)
 
     // Get the number of bytes to send
     bytes = MIN (pep->max_packet_size, 
-                 pep->transfer.remaining);
+                 pep->remaining);
 
     TRACE_DEBUG (UDP, "UDP:Write%d %d\n", endpoint, bytes);
 
@@ -649,8 +658,8 @@ udp_payload_write (udp_t udp, udp_ep_t endpoint)
         pUDP->UDP_FDR[endpoint] = *src++;
     pep->pdata = src;
 
-    pep->transfer.buffered += bytes;
-    pep->transfer.remaining -= bytes;
+    pep->buffered += bytes;
+    pep->remaining -= bytes;
 
     return bytes;
 }
@@ -679,10 +688,10 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     TRACE_DEBUG (UDP, "UDP:AWrite%d %d\n", endpoint, len);
 
     pep->pdata = (uint8_t *)pdata;
-    pep->transfer.status = UDP_STATUS_PENDING;
-    pep->transfer.remaining = len;
-    pep->transfer.buffered = 0;
-    pep->transfer.transferred = 0;
+    pep->status = UDP_STATUS_PENDING;
+    pep->remaining = len;
+    pep->buffered = 0;
+    pep->transferred = 0;
     pep->callback = callback;
     pep->arg = arg;
     pep->state = UDP_EP_STATE_WRITE;
@@ -696,7 +705,7 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
 
     // If double buffering is enabled and there is data remaining, 
     // prepare another packet
-    if ((pep->num_fifo > 1) && (pep->transfer.remaining > 0))
+    if ((pep->num_fifo > 1) && (pep->remaining > 0))
         udp_payload_write (udp, endpoint);
 
     // Enable interrupt on endpoint
@@ -723,7 +732,7 @@ udp_payload_read (udp_t udp, udp_ep_t endpoint, unsigned int packetsize)
     uint8_t *dst;
 
     // Get number of bytes to retrieve
-    bytes = MIN (pep->transfer.remaining, packetsize);
+    bytes = MIN (pep->remaining, packetsize);
 
     TRACE_DEBUG (UDP, "UDP:Read%d %d\n", endpoint, bytes);
 
@@ -733,9 +742,9 @@ udp_payload_read (udp_t udp, udp_ep_t endpoint, unsigned int packetsize)
         *dst++ = pUDP->UDP_FDR[endpoint];
     pep->pdata = dst;
 
-    pep->transfer.remaining -= bytes;
-    pep->transfer.transferred += bytes;
-    pep->transfer.buffered += packetsize - bytes;
+    pep->remaining -= bytes;
+    pep->transferred += bytes;
+    pep->buffered += packetsize - bytes;
 
     return bytes;
 }
@@ -767,10 +776,10 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pdata, unsigned int len,
     TRACE_DEBUG (UDP, "UDP:ARead%d %d\n", endpoint, len);
 
     pep->pdata = pdata;
-    pep->transfer.status = UDP_STATUS_PENDING;
-    pep->transfer.remaining = len;
-    pep->transfer.buffered = 0;
-    pep->transfer.transferred = 0;
+    pep->status = UDP_STATUS_PENDING;
+    pep->remaining = len;
+    pep->buffered = 0;
+    pep->transferred = 0;
     pep->callback = callback;
     pep->arg = arg;
     pep->state = UDP_EP_STATE_READ;
@@ -826,14 +835,14 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
         // Check that endpoint is in Write state
         if (pep->state == UDP_EP_STATE_WRITE)
         {
-            if ((pep->transfer.buffered < pep->max_packet_size)
+            if ((pep->buffered < pep->max_packet_size)
                 || (!UDP_REG_ISCLR (status, AT91C_UDP_EPTYPE)
-                    && (pep->transfer.remaining == 0)
-                    && (pep->transfer.buffered == pep->max_packet_size)))
+                    && (pep->remaining == 0)
+                    && (pep->buffered == pep->max_packet_size)))
             {
                 /* Transfer completed.  */
-                pep->transfer.transferred += pep->transfer.buffered;
-                pep->transfer.buffered = 0;
+                pep->transferred += pep->buffered;
+                pep->buffered = 0;
 
                 // Disable interrupt if this is not a control endpoint
                 if (!UDP_REG_ISCLR (status, AT91C_UDP_EPTYPE))
@@ -843,8 +852,8 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
             }
             else
             {
-                pep->transfer.transferred += pep->max_packet_size;
-                pep->transfer.buffered -= pep->max_packet_size;
+                pep->transferred += pep->max_packet_size;
+                pep->buffered -= pep->max_packet_size;
 
                 /* Transfer next block of data.  */
                 if (pep->num_fifo == 1)
@@ -881,7 +890,7 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
                 /* Control endpoint, 0 bytes received.  This is the
                    host sending an Ack in response to us sending a
                    zlp.  Acknowledge the data and finish the current
-                   transfer.  */
+                     */
                 TRACE_INFO (UDP, "UDP:Ack%d\n", endpoint);
                 udp_rx_flag_clear (udp, endpoint);
 
@@ -910,7 +919,7 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
 
             udp_rx_flag_clear (udp, endpoint);
 
-            if ((pep->transfer.remaining == 0)
+            if ((pep->remaining == 0)
                 || (packetsize < pep->max_packet_size))
             {
                 // Disable interrupt if this is not a control endpoint
@@ -1234,7 +1243,7 @@ udp_read (udp_t udp, void *buffer, udp_size_t len)
             break;
         DELAY_US (1);
     }
-    return pep->transfer.transferred;
+    return pep->transferred;
 }
 
 
@@ -1259,7 +1268,7 @@ udp_write (udp_t udp, const void *buffer, udp_size_t len)
             break;
         DELAY_US (1);
     }
-    return pep->transfer.transferred;
+    return pep->transferred;
 }
 
 
