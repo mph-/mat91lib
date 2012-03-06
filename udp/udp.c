@@ -270,26 +270,29 @@ static const char devDescriptor[] =
 static udp_dev_t udp_dev;
 
 /**
- * Structure for endpoint transfer parameters
+ * Structure for endpoint transfer parameters.
  * 
  */
 typedef struct
 {
     volatile udp_ep_state_t state;
-    volatile udp_status_t status;
-    /* There can be a race-condition with the following three
-       variables since they are written by both the ISR and main
-       code.  */
-    volatile uint16_t remaining;
-    volatile uint16_t buffered;
-    volatile uint16_t transferred;
+    /* There can be a race-condition with the following five variables
+       since they are written by both the ISR and main code.
+       transferred should not be read until the endpoint is in the
+       idle state.  */
+    udp_status_t status;
+    uint16_t remaining;
+    uint16_t buffered;
+    uint16_t transferred;
 
     /* Pointer to where data is stored.  */
     uint8_t *pdata;
+
     /* Callback function.  */
     udp_callback_t callback;
     /* Callback argument.  */
     void *arg;
+
     uint16_t max_packet_size;
     uint8_t num_fifo;
     uint8_t bank;
@@ -566,14 +569,14 @@ void udp_transfer_complete (udp_t udp, udp_ep_t endpoint, udp_status_t status)
 
 
 static void
-udp_endpoint_interrupt_disable(udp_t udp, udp_ep_t endpoint)
+udp_endpoint_interrupt_disable (udp_t udp, udp_ep_t endpoint)
 {
     UDP_REG_SET (udp->pUDP->UDP_IDR, 1 << endpoint);
 }
 
 
 static void
-udp_endpoint_interrupt_enable(udp_t udp, udp_ep_t endpoint)
+udp_endpoint_interrupt_enable (udp_t udp, udp_ep_t endpoint)
 {
     UDP_REG_SET (udp->pUDP->UDP_IER, 1 << endpoint);
 }
@@ -600,7 +603,6 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
 
     pep->state = UDP_EP_STATE_IDLE;
 
-    // Reset endpoint transfer descriptor
     pep->pdata = 0;
     pep->remaining = 0;
     pep->transferred = 0;
@@ -1000,6 +1002,7 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
         {
             /* Non-control endpoint so discard stalled data.  */
             TRACE_INFO (UDP, "UDP:Disc%d\n", endpoint);
+            pep->buffered = 0;
             udp_rx_flag_clear (udp, endpoint);
 
             /* Disable endpoint interrupt.  */
@@ -1013,6 +1016,9 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
                 /* Ouch.  Raise the white flag.  We've got another interrupt
                    before we've read the previous buffer.  */
             }
+
+            /* Read RXBYTECNT.  This tells us how many bytes are in
+               the FIFO.  */
             pep->buffered = status >> 16;
             
             /* We have received data but are not ready for it.
@@ -1361,7 +1367,7 @@ udp_read (udp_t udp, void *buffer, udp_size_t len)
         timeout--;
         if (!timeout || ! udp_configured_p (udp))
         {
-            udp_transfer_complete (udp, endpoint, UDP_STATUS_RESET);
+            udp_transfer_complete (udp, UDP_EP_OUT, UDP_STATUS_RESET);
             break;
         }
         DELAY_US (1);
@@ -1394,7 +1400,7 @@ udp_write (udp_t udp, const void *buffer, udp_size_t len)
         timeout--;
         if (!timeout || ! udp_configured_p (udp))
         {
-            udp_transfer_complete (udp, endpoint, UDP_STATUS_RESET);
+            udp_transfer_complete (udp, UDP_EP_IN, UDP_STATUS_RESET);
             break;
         }
         DELAY_US (1);
