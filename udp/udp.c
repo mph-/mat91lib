@@ -1035,7 +1035,7 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
            3: no buffered data and more to send (remaining > 0 and non-ping-pong)
         */
 
-        if ((pep->buffered < pep->fifo_size
+        if ((pep->buffered <= pep->fifo_size
              && pep->remaining == 0)
             || (!UDP_REG_ISCLR (status, AT91C_UDP_EPTYPE)
                 && (pep->remaining == 0)
