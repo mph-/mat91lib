@@ -12,7 +12,6 @@
 typedef struct
 {
     AT91S_TC *base;
-    uint8_t channel;
 } tc_dev_t;
 
 #endif

@@ -12,12 +12,15 @@
 
 /* Each of the three TCs has a 16 bit counter with 3 16 bit registers
    (RA, RB,and RC).  In waveform mode, RA and RB are used to drive
-   TIOA and TIOB, respectively.  RC can be used to stop the clock to
-   provide a one-shot.
+   TIOA and TIOB, respectively.  RC can be used to stop the timer
+   clock to provide a one-shot.
+
+   Only TIOAx can be driven at present.
    
    The counter can be clocked with MCK divided by 2, 8, 32, 128, and 1024.
-
  */
+
+#define TC_CHANNEL(TC) ((TC) - tc_info)
 
 
 static tc_dev_t tc_info[TC_CHANNEL_NUM];
@@ -86,6 +89,12 @@ tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period)
             | AT91C_TC_ASWTRG_SET;
         break;
 
+    case TC_DELAY_MODE_ONESHOT:
+        /* Don't change TIOAx.  Stop clock when RC matches.   */
+        tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
+            | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL_UP_AUTO;
+        break;
+
     default:
         return 0;
     }
@@ -99,13 +108,13 @@ tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period)
     tc->base->TC_RC = period >> 1;
 
     /* Generate a software trigger with the clock stopped to hopefully
-       set TIOAx to deisred state.  */
+       set TIOAx to desired state.  Yes, this seems to work.  */
     tc->base->TC_CCR |= (AT91C_TC_CLKDIS | AT91C_TC_SWTRG); 
 
     /* Make timer pin TIOAx a timer output.  Perhaps we could use
        different logical timer channels to generate pulses on TIOBx
        pins?  */
-    switch (tc - tc_info)
+    switch (TC_CHANNEL (tc))
     {
     case TC_CHANNEL_0:
         /* Switch to peripheral B and disable pin as PIO.  */
@@ -177,7 +186,7 @@ tc_init (tc_cfg_t *cfg)
     default:
         return 0;
     }
-    tc->channel = cfg->channel;
+
     return tc;
 }
 
@@ -200,11 +209,12 @@ tc_clock_sync (tc_t tc, uint32_t period)
 {
     uint32_t id;
 
-    tc_pulse_config (tc, TC_PULSE_MODE_ONESHOT, period, period);
+    tc_pulse_config (tc, TC_DELAY_MODE_ONESHOT, period, period);
 
-    switch (tc->channel)
+    switch (TC_CHANNEL (tc))
     {
     case TC_CHANNEL_0:
+    default:
         id = AT91C_ID_TC0;
         break;
 
