@@ -286,6 +286,8 @@ typedef struct
     uint16_t buffered;
     uint16_t transferred;
 
+    uint16_t transferred_prev;
+
     /* Pointer to where data is stored.  */
     uint8_t *pdata;
 
@@ -420,6 +422,17 @@ udp_irq_handler (void)
 
     status = pUDP->UDP_ISR & pUDP->UDP_IMR & ISR_MASK;
 
+#if 0
+    if (status & 1)
+        udp_endpoint_handler (&udp_dev, 0);        
+#endif
+    if (status & 2)
+        udp_endpoint_handler (&udp_dev, 1);        
+    if (status & 4)
+        udp_endpoint_handler (&udp_dev, 2);        
+
+    status &= ~6;
+
     while (status != 0)
     {
         // Start of frame (SOF)
@@ -519,21 +532,19 @@ udp_irq_handler (void)
                 // Get endpoint index
                 endpoint = last_set_bit (status);
                 udp_endpoint_handler (&udp_dev, endpoint);
-                
-                UDP_REG_CLR (pUDP->UDP_ICR, (1 << endpoint));
-                
                 UDP_REG_CLR (status, 1 << endpoint);
             }
         }          
 
+        // Why re-read?
         status = pUDP->UDP_ISR & pUDP->UDP_IMR & ISR_MASK;
+        status &= ~6;
        
         // Mask unneeded interrupts
         if (udp->state != UDP_STATE_DEFAULT)
         {
             status &= AT91C_UDP_ENDBUSRES | AT91C_UDP_SOFINT;
         }
-        
     }
 }
 
@@ -753,6 +764,7 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     pep->status = UDP_STATUS_PENDING;
     pep->remaining = len;
     pep->buffered = 0;
+    pep->transferred_prev = pep->transferred;
     pep->transferred = 0;
     pep->callback = callback;
     pep->arg = arg;
@@ -761,6 +773,8 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     if (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP))
         pep->fishy++;
 
+    /* This should be automatically cleared when a FIFO contents are
+       sent to the host.  */
     if (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY))
         pep->weird++;
 
@@ -779,10 +793,12 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     }
 
     //irq_disable (AT91C_ID_UDP);
-    //udp_endpoint_interrupt_disable (udp, endpoint);
+    udp_endpoint_interrupt_disable (udp, endpoint);
 
+#if 0
     /* Play safe in case something fishy with interrupts.  */
     UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
+#endif
 
 
     /* Write the first packet to the FIFO (this may be a ZLP).
