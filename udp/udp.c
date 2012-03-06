@@ -174,7 +174,7 @@
 #endif
 
 
-#define UDP_TIMEOUT_US 1000000
+#define UDP_TIMEOUT_US 500000
 
 
 /** Set flag(s) in a register.  */
@@ -298,8 +298,6 @@ typedef struct
     /* For debugging.  */
     uint16_t requested;
     uint16_t requested_prev;
-    uint16_t requested_error_prev;
-    uint16_t requested_error;
 
     /* Pointer to where data is stored.  */
     uint8_t *pdata;
@@ -309,7 +307,7 @@ typedef struct
     /* Callback argument.  */
     void *arg;
 
-    uint16_t max_packet_size;
+    uint16_t fifo_size;
     uint8_t num_fifo;
     uint8_t bank;
     uint16_t timeouts;
@@ -682,13 +680,13 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
     switch (endpoint)
     {
     case UDP_EP_CONTROL:
-        udp->eps[0].max_packet_size = UDP_EP_CONTROL_SIZE;
+        udp->eps[0].fifo_size = UDP_EP_CONTROL_SIZE;
         udp->eps[0].num_fifo = 1;
         pUDP->UDP_CSR[0] = AT91C_UDP_EPTYPE_CTRL | AT91C_UDP_EPEDS;
         break;
     
     case UDP_EP_OUT:
-        udp->eps[1].max_packet_size = UDP_EP_OUT_SIZE;
+        udp->eps[1].fifo_size = UDP_EP_OUT_SIZE;
         udp->eps[1].num_fifo = 2;
         pUDP->UDP_CSR[1] = AT91C_UDP_EPTYPE_BULK_OUT | AT91C_UDP_EPEDS;
 
@@ -697,7 +695,7 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
         break;
 
     case UDP_EP_IN:
-        udp->eps[2].max_packet_size = UDP_EP_IN_SIZE;
+        udp->eps[2].fifo_size = UDP_EP_IN_SIZE;
         udp->eps[2].num_fifo = 2;
         pUDP->UDP_CSR[2] = AT91C_UDP_EPTYPE_BULK_IN | AT91C_UDP_EPEDS;         
         break;
@@ -756,7 +754,7 @@ udp_fifo_write (udp_t udp, udp_ep_t endpoint)
     uint8_t *src;
 
     /* Determine the number of bytes to send.  */
-    bytes = MIN (pep->max_packet_size, pep->remaining);
+    bytes = MIN (pep->fifo_size, pep->remaining);
 
     TRACE_DEBUG (UDP, "UDP:Write%d %d\n", endpoint, bytes);
 
@@ -790,6 +788,8 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
 {
     AT91PS_UDP pUDP = udp->pUDP;
     udp_ep_info_t *pep = &udp->eps[endpoint];
+    unsigned int tx_bytes;
+    const uint8_t *data;
 
     if (pep->state != UDP_EP_STATE_IDLE) 
         return UDP_STATUS_BUSY;
@@ -809,40 +809,111 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     pep->requested_prev = pep->requested;
     pep->requested = len;
 
-    if (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP))
-        udp_endpoint_error (udp, endpoint, UDP_ERROR_FISHY);
+    if (endpoint == UDP_EP_CONTROL)
+    {
 
-    /* This should be automatically cleared when a FIFO contents are
-       sent to the host.  */
-    if (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY))
-        udp_endpoint_error (udp, endpoint, UDP_ERROR_WEIRD);
-
-    //irq_disable (AT91C_ID_UDP);
-    udp_endpoint_interrupt_disable (udp, endpoint);
-
+        if (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP))
+            udp_endpoint_error (udp, endpoint, UDP_ERROR_FISHY);
+        
+        /* This should be automatically cleared when a FIFO contents are
+           sent to the host.  */
+        if (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY))
+            udp_endpoint_error (udp, endpoint, UDP_ERROR_WEIRD);
+        
+        //irq_disable (AT91C_ID_UDP);
+        udp_endpoint_interrupt_disable (udp, endpoint);
+        
 #if 0
-    /* Play safe in case something fishy with interrupts.  */
-    UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
+        /* Play safe in case something fishy with interrupts.  */
+        UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
 #endif
 
 
-    /* Write the first packet to the FIFO (this may be a ZLP).
-       Interrupts should be disabled for this endpoint at this
-       point.  */
-    udp_fifo_write (udp, endpoint);
-
-    /* Tell the controller there is data ready to send.  */
-    UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
-
-    /* If there is data remaining and if double buffering is enabled
-       then load the other FIFO with a packet.  */
-    if ((pep->remaining > 0) && (pep->num_fifo > 1))
+        /* Write the first packet to the FIFO (this may be a ZLP).
+           Interrupts should be disabled for this endpoint at this
+           point.  */
         udp_fifo_write (udp, endpoint);
+        
+        /* Tell the controller there is data ready to send.  */
+        UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
+        
+        /* If there is data remaining and if double buffering is enabled
+           then load the other FIFO with a packet.  */
+        if ((pep->remaining > 0) && (pep->num_fifo > 1))
+            udp_fifo_write (udp, endpoint);
+        
+        udp_endpoint_interrupt_enable (udp, endpoint);
+        //irq_enable (AT91C_ID_UDP);
+        
+        return UDP_STATUS_SUCCESS;
+    }
+    else
+    {
+        unsigned int i;
+        unsigned int buffered_next;
 
-    udp_endpoint_interrupt_enable (udp, endpoint);
-    //irq_enable (AT91C_ID_UDP);
-    
-    return UDP_STATUS_SUCCESS;
+        data = pdata;
+        tx_bytes = MIN (pep->remaining, pep->fifo_size);
+        
+        /* Fill the first bank.  */
+        for (i = 0; i < tx_bytes; i++)
+            pUDP->UDP_FDR[endpoint] = *data++;
+        pep->remaining -= tx_bytes;
+        pep->buffered = tx_bytes;
+        
+        /* Indicate first bank ready.  */
+        UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
+        
+        while (pep->remaining)
+        {
+            tx_bytes = MIN (pep->remaining, pep->fifo_size);
+            
+            if (pep->num_fifo == 2)
+            {
+                /* Fill the next bank.  */
+                for (i = 0; i < tx_bytes; i++)
+                    pUDP->UDP_FDR[endpoint] = *data++;
+                pep->remaining -= tx_bytes;
+                buffered_next = tx_bytes;
+            }
+            
+            /* Wait for the previous bank to be sent.  */
+            while (UDP_REG_ISCLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP))
+            {
+                /* Check for timeout...  */
+            }
+            pep->transferred += pep->buffered;
+            
+            /* Acknowledge bank set.  */
+            UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
+            
+            if (pep->num_fifo == 1)
+            {
+                /* Fill the same bank.  */
+                for (i = 0; i < tx_bytes; i++)
+                    pUDP->UDP_FDR[endpoint] = *data++;
+                pep->remaining -= tx_bytes;
+                buffered_next = tx_bytes;
+            }
+            pep->buffered = buffered_next;
+            
+            /* Indicate next bank ready.  */
+            UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
+        }
+        
+        /* Wait for the the last bank to be sent.  */
+        while (UDP_REG_ISCLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP))
+        {
+            /* Check for timeout...  */
+        }
+        pep->transferred += tx_bytes;
+        
+        /* Acknowledge bank set.  */
+        UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
+        
+        udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
+        return UDP_STATUS_SUCCESS;
+    }
 }
 
 
@@ -973,18 +1044,19 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
     {
         /* The endpoint is in the write state.
            The scenarios are:
-           1: no more data to send (buffered <= packet_size)
+           1: no more data to send (buffered <= packet_size
+                                          && remaining == 0)
            1: just buffered data to send (buffered > packet_size
                                           && remaining == 0)
            2: buffered data and more to send (remaining > 0 and ping-pong)
            3: no buffered data and more to send (remaining > 0 and non-ping-pong)
         */
 
-        if ((pep->buffered <= pep->max_packet_size
+        if ((pep->buffered <= pep->fifo_size
              && pep->remaining == 0)
             || (!UDP_REG_ISCLR (status, AT91C_UDP_EPTYPE)
                 && (pep->remaining == 0)
-                && (pep->buffered == pep->max_packet_size)))
+                && (pep->buffered == pep->fifo_size)))
         {
             /* Case 1: Transfer completed.  */
             pep->transferred += pep->buffered;
@@ -1004,8 +1076,8 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
         }
         else
         {
-            pep->transferred += pep->max_packet_size;
-            pep->buffered -= pep->max_packet_size;
+            pep->transferred += pep->fifo_size;
+            pep->buffered -= pep->fifo_size;
             
             /* Transfer next block of data.  */
             if (pep->num_fifo == 1)
@@ -1046,7 +1118,23 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
                 /* Load other FIFO with data.  */
                 if (pep->remaining)
                     udp_fifo_write (udp, endpoint);
+                else if (pep->buffered <= pep->fifo_size)
+                {
+                    /* The transfer will terminate soon since
+                       there is only pep->buffered samples to send.
+                       So just poll for TXCOMP going high.  */
+                    while (UDP_REG_ISCLR (pUDP->UDP_CSR[endpoint],
+                                          AT91C_UDP_TXCOMP))
+                        continue;
 
+                    pep->transferred += pep->buffered;
+                    pep->buffered = 0;
+            
+                    UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
+
+                    /* Terminate transfer and call callback.  */
+                    udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
+                }
 #if 1
                 udp_endpoint_interrupt_enable (udp, endpoint);
 #endif
