@@ -8,6 +8,9 @@
 /* 
    UDP USB device port.
 
+   This driver is overly complicated.  It could be simplified by using
+   only EP0 for control, EP1 for bulk OUT, and EP2 for bulk IN.
+
    The AT91 UDP has two communication endpoints (EP1 and EP2) that
    support bulk and isochronous transfers using 64-byte ping-pong
    FIFOs.  EP1 is the bulk IN endpoint (to host) and EP2 is the bulk
@@ -503,24 +506,7 @@ udp_irq_handler (void)
     AT91PS_UDP pUDP = udp->pUDP;
     uint32_t status;
 
-#if 0
-    // End interrupt if we are not attached to UDP bus
-    if (udp->state == UDP_STATE_NOT_POWERED)
-        return;
-#endif
-
     status = pUDP->UDP_ISR & pUDP->UDP_IMR & ISR_MASK;
-
-#if 0
-    if (status & 1)
-        udp_endpoint_handler (&udp_dev, 0);        
-#endif
-    if (status & 2)
-        udp_endpoint_handler (&udp_dev, 1);        
-    if (status & 4)
-        udp_endpoint_handler (&udp_dev, 2);        
-
-    status &= ~6;
 
     while (status != 0)
     {
@@ -1085,27 +1071,15 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
             }
             else
             {
-#if 1
-
-                /* Double buffering.  The FIFO has already been
-                   loaded so say that a packet is ready.  */
-                UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
-
-                /* Acknowledge TXCOMP interrupt.  The data sheet shows
-                   this should be cleared after TXPKTRDY set and
-                   before the FIFO is written.  The tutorial says the
-                   other way around!  I guess the UDP controller won't
-                   have transferred the buffer before TXCOMP is
-                   cleared.  Let's see, 1 sample will take 1 us plus
-                   overhead.  What about a ZLP?  */
-                UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
-#else
+                /* Say another packet ready and acknowledge TXCOMP
+                   interrupt.  The data sheet shows this should be
+                   cleared after TXPKTRDY set and before the FIFO is
+                   written.  The tutorial says the other way around!
+                   Let's try both at the same time.  */
 
                 status = (status & ~AT91C_UDP_TXCOMP) | AT91C_UDP_TXPKTRDY;
                 while (pUDP->UDP_CSR[endpoint] != status)
                     pUDP->UDP_CSR[endpoint] = status;
-
-#endif
 
                 /* Load other FIFO with data.  */
                 if (pep->remaining)
@@ -1703,19 +1677,6 @@ void
 udp_poll (udp_t udp __unused__)
 {
     udp_bus_status_check (udp);
-
-#if 0
-    /* Perhaps could poll interrupts here.  */
-
-    if (!udp->setup.request)
-        return;
-
-    if (!udp->request_handler
-        || !udp->request_handler (udp->request_handler_arg, &udp->setup))
-        udp_stall (udp, UDP_EP_CONTROL);
-
-    udp->setup.request = 0;
-#endif
 }
 
 
