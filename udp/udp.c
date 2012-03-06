@@ -558,7 +558,7 @@ udp_irq_handler (void)
  * 
  */
 static __inline__
-void udp_transfer_complete (udp_t udp, udp_ep_t endpoint, udp_status_t status)
+void udp_endpoint_complete (udp_t udp, udp_ep_t endpoint, udp_status_t status)
 {
     udp_ep_info_t *pep = &udp->eps[endpoint];
 
@@ -584,14 +584,29 @@ void udp_transfer_complete (udp_t udp, udp_ep_t endpoint, udp_status_t status)
 }
 
 
+static void
+udp_endpoint_reset (udp_t udp, udp_ep_t endpoint)
+{
+    AT91PS_UDP pUDP = udp->pUDP;
+    
+
+    /* Reset endpoint FIFOs.  Thie clears RXBYTECNT.  It does not clear
+       the other CSR flags.  */
+    UDP_REG_SET (pUDP->UDP_RSTEP, 1 << endpoint);
+    UDP_REG_CLR (pUDP->UDP_RSTEP, 1 << endpoint);
+}
+
+
 /* This is for debugging.  */
 void
-udp_transfer_timeout (udp_t udp, udp_ep_t endpoint, udp_status_t status)
+udp_endpoint_timeout (udp_t udp, udp_ep_t endpoint, udp_status_t status)
 {
     udp_ep_info_t *pep = &udp->eps[endpoint];
 
     pep->timeouts++;
-    udp_transfer_complete (udp, endpoint, status);
+    udp_endpoint_complete (udp, endpoint, status);
+
+    udp_endpoint_reset (udp, endpoint);
 }
 
 
@@ -625,7 +640,7 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
     if ((pep->state == UDP_EP_STATE_READ)
         || (pep->state == UDP_EP_STATE_WRITE))
     {
-        udp_transfer_complete (udp, endpoint, UDP_STATUS_RESET);
+        udp_endpoint_complete (udp, endpoint, UDP_STATUS_RESET);
     }
 
     pep->state = UDP_EP_STATE_IDLE;
@@ -637,10 +652,7 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
     pep->callback = 0;
     pep->arg = 0;
 
-    /* Reset endpoint FIFOs.  Thie clears RXBYTECNT.  It does not clear
-       the other CSR flags.  */
-    UDP_REG_SET (pUDP->UDP_RSTEP, 1 << endpoint);
-    UDP_REG_CLR (pUDP->UDP_RSTEP, 1 << endpoint);
+    udp_endpoint_reset(udp, endpoint);
 
     switch (endpoint)
     {
@@ -786,7 +798,7 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
         timeout--;
         if (timeout == 0)
         {
-            udp_transfer_timeout (udp, endpoint, UDP_STATUS_ERROR);
+            udp_endpoint_timeout (udp, endpoint, UDP_STATUS_ERROR);
             break;
         }
         DELAY_US (1);
@@ -900,7 +912,7 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pdata, unsigned int len,
     udp_fifo_read (udp, endpoint);
     if (pep->remaining == 0)
     {
-        udp_transfer_complete (udp, endpoint, UDP_STATUS_SUCCESS);
+        udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
     }
     else
     {
@@ -975,7 +987,7 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
 #endif
             
             /* Terminate transfer and call callback.  */
-            udp_transfer_complete (udp, endpoint, UDP_STATUS_SUCCESS);
+            udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
         }
         else
         {
@@ -1059,7 +1071,7 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
         
         if (pep->remaining == 0)
         {
-            udp_transfer_complete (udp, endpoint, UDP_STATUS_SUCCESS);
+            udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
             udp_endpoint_interrupt_disable (udp, endpoint);
         }
     }
@@ -1077,7 +1089,7 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
             TRACE_INFO (UDP, "UDP:Ack%d\n", endpoint);
             udp_rx_flag_clear (udp, endpoint);
             
-            udp_transfer_complete (udp, endpoint, UDP_STATUS_SUCCESS);
+            udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
         }
         else if (UDP_REG_ISSET (status, AT91C_UDP_FORCESTALL))
         {
@@ -1148,7 +1160,7 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
         if ((pep->state == UDP_EP_STATE_WRITE)
             || (pep->state == UDP_EP_STATE_READ))
         {
-            udp_transfer_complete (udp, endpoint, UDP_STATUS_SUCCESS);
+            udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
         }
 
         /* Read then process setup packet.  */
@@ -1241,7 +1253,7 @@ udp_halt (udp_t udp, udp_ep_t endpoint, bool halt)
         TRACE_INFO (UDP, "UDP:Halt%d\n", endpoint);
 
         // Abort the current transfer if necessary
-        udp_transfer_complete (udp, endpoint, UDP_STATUS_ABORTED);
+        udp_endpoint_complete (udp, endpoint, UDP_STATUS_ABORTED);
 
         // Put endpoint into halt state
         UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_FORCESTALL);
@@ -1354,7 +1366,7 @@ udp_configuration_set (void *arg, udp_transfer_t *ptransfer __unused__)
         // For each endpoint, if it is enabled, disable it
         for (ep = 1; ep < UDP_EP_NUM; ep++)
         {
-            udp_transfer_complete (udp, ep, UDP_STATUS_RESET);
+            udp_endpoint_complete (udp, ep, UDP_STATUS_RESET);
             udp->eps[ep].state = UDP_EP_STATE_DISABLED;
         }
     }
@@ -1409,7 +1421,7 @@ udp_endpoint_read (udp_t udp, udp_ep_t endpoint, void *buffer, udp_size_t len)
         timeout--;
         if (!timeout || ! udp_configured_p (udp))
         {
-            udp_transfer_timeout (udp, endpoint, UDP_STATUS_TIMEOUT);
+            udp_endpoint_timeout (udp, endpoint, UDP_STATUS_TIMEOUT);
             break;
         }
         DELAY_US (1);
@@ -1450,7 +1462,7 @@ udp_endpoint_write (udp_t udp, udp_ep_t endpoint,
         timeout--;
         if (!timeout || ! udp_configured_p (udp))
         {
-            udp_transfer_timeout (udp, endpoint, UDP_STATUS_TIMEOUT);
+            udp_endpoint_timeout (udp, endpoint, UDP_STATUS_TIMEOUT);
             break;
         }
         DELAY_US (1);
