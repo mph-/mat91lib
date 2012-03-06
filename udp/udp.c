@@ -952,12 +952,6 @@ udp_endpoint_fifo_read (udp_t udp, udp_ep_t endpoint)
     pep->transferred += bytes;
 
     pep->buffered -= bytes;
-    if (!pep->buffered)
-    {
-        /* The FIFO buffer is empty so tell controller.  */
-        udp_rx_flag_clear (udp, endpoint);
-    }
-
     return bytes;
 }
 
@@ -999,6 +993,12 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pdata, unsigned int len,
     if (udp_endpoint_read_ready_p (udp, endpoint))
     {
         udp_endpoint_fifo_read (udp, endpoint);
+
+        if (!pep->buffered)
+        {
+            /* The FIFO buffer is empty so tell controller.  */
+            udp_rx_flag_clear (udp, endpoint);
+        }
 
         if (pep->remaining == 0)
         {
@@ -1154,6 +1154,12 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
 
         udp_endpoint_fifo_read (udp, endpoint);
         
+        if (!pep->buffered)
+        {
+            /* The FIFO buffer is empty so tell controller.  */
+            udp_rx_flag_clear (udp, endpoint);
+        }
+
         if (pep->remaining == 0)
         {
             udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
@@ -1491,13 +1497,6 @@ udp_endpoint_read (udp_t udp, udp_ep_t endpoint, void *buffer, udp_size_t len)
 
 
 udp_size_t
-udp_read (udp_t udp, void *buffer, udp_size_t len)
-{
-    return udp_endpoint_read (udp, UDP_EP_OUT, buffer, len);
-}
-
-
-udp_size_t
 udp_endpoint_write (udp_t udp, udp_ep_t endpoint,
                     const void *buffer, udp_size_t len)
 {
@@ -1509,7 +1508,7 @@ udp_endpoint_write (udp_t udp, udp_ep_t endpoint,
        more robust since it uses the standard endpoint handling
        code.  */
 
-    if (udp_write_async(udp, endpoint, buffer, len, NULL, NULL)
+    if (udp_write_async (udp, endpoint, buffer, len, NULL, NULL)
         != UDP_STATUS_SUCCESS)
         return 0;
 
@@ -1533,6 +1532,13 @@ udp_endpoint_write (udp_t udp, udp_ep_t endpoint,
 
 
 udp_size_t
+udp_read (udp_t udp, void *buffer, udp_size_t len)
+{
+    return udp_endpoint_read (udp, UDP_EP_OUT, buffer, len);
+}
+
+
+udp_size_t
 udp_write (udp_t udp, const void *buffer, udp_size_t len)
 {
     return udp_endpoint_write(udp, UDP_EP_IN, buffer, len);
@@ -1545,7 +1551,6 @@ udp_signal (udp_t udp __unused__)
 {
 #ifdef UDP_PULLUP_PIO
     /* Enable UDP pull up by driving gate of p-channel MOSFET low.  */
-
     pio_config_set (UDP_PULLUP_PIO, PIO_OUTPUT_LOW);
 #endif
 }
@@ -1631,27 +1636,29 @@ udp_bus_status_check (udp_t udp)
 
     if (udp_attached_p (udp))
     {
-        //  If UDP is deactivated enable it
+        /*  If UDP is deactivated enable it.  */
         if (udp->state == UDP_STATE_NOT_POWERED)
         {
             udp->state = UDP_STATE_ATTACHED;
 
             udp_enable (udp);
 
-            /* Signal the host by pulling D+ high.  This might be pulled high
-               with an external 1k5 resistor.  */
+            /* Signal the host by pulling D+ high.  This might be
+               permanently pulled high with an external 1k5
+               resistor.  */
             udp_signal (udp);            
 
-            // Clear all UDP interrupts
+            /* Clear all UDP interrupts.  */
             pUDP->UDP_ICR = 0;
 
+            /* Set up interrupt handler.  */
             irq_config (AT91C_ID_UDP, 7, 
                         AT91C_AIC_SRCTYPE_INT_LEVEL_SENSITIVE, 
                         udp_interrupt_handler);
             
             irq_enable (AT91C_ID_UDP);
 
-            // Enable UDP peripheral interrupts
+            /* Enable UDP peripheral interrupts.  */
             pUDP->UDP_IER = AT91C_UDP_ENDBUSRES | AT91C_UDP_RMWUPE
                 | AT91C_UDP_RXSUSP;
 
