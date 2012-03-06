@@ -174,7 +174,7 @@
 #endif
 
 
-#define UDP_TIMEOUT_US 5000000
+#define UDP_TIMEOUT_US 1000000
 
 
 /** Set flag(s) in a register.  */
@@ -298,6 +298,9 @@ typedef struct
     uint8_t num_fifo;
     uint8_t bank;
     uint16_t timeouts;
+    uint16_t spurious;
+    uint16_t fishy;
+    uint16_t weird;
 } udp_ep_info_t;
 
 
@@ -693,10 +696,9 @@ udp_rx_flag_clear (udp_t udp, udp_ep_t endpoint)
 /**
  * Writes data to UDP FIFO
  * \param   endpoint    Endpoint to write data
- * \return  Number of bytes written
  * 
  */
-unsigned int
+void
 udp_fifo_write (udp_t udp, udp_ep_t endpoint)
 {
     AT91PS_UDP pUDP = udp->pUDP;
@@ -718,8 +720,6 @@ udp_fifo_write (udp_t udp, udp_ep_t endpoint)
 
     pep->buffered += bytes;
     pep->remaining -= bytes;
-
-    return bytes;
 }
 
 
@@ -758,8 +758,11 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     pep->arg = arg;
     pep->state = UDP_EP_STATE_WRITE;
 
-    /* Play safe in case something fishy with interrupts.  */
-    UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
+    if (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP))
+        pep->fishy++;
+
+    if (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY))
+        pep->weird++;
 
     /* Need to start by waiting for TXPKTRDY bit clear. 
        This should be cleared when TXCOMP is set.  */
@@ -775,6 +778,13 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
         DELAY_US (1);
     }
 
+    //irq_disable (AT91C_ID_UDP);
+    //udp_endpoint_interrupt_disable (udp, endpoint);
+
+    /* Play safe in case something fishy with interrupts.  */
+    UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
+
+
     /* Write the first packet to the FIFO (this may be a ZLP).
        Interrupts should be disabled for this endpoint at this
        point.  */
@@ -788,11 +798,8 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     if ((pep->remaining > 0) && (pep->num_fifo > 1))
         udp_fifo_write (udp, endpoint);
 
-    /* Enable interrupt on endpoint.  The interrupt handler will be
-       called when TXCOMP set on completion of sending the first FIFO
-       contents.  The handler will send the following packets and
-       terminate the write when finished.  */
     udp_endpoint_interrupt_enable (udp, endpoint);
+    //irq_enable (AT91C_ID_UDP);
     
     return UDP_STATUS_SUCCESS;
 }
@@ -914,7 +921,6 @@ udp_setup_read (udp_t udp, udp_ep_t endpoint)
 }
 
 
-
 void
 udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
 {
@@ -946,8 +952,10 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
 
             /* Disable interrupt if this is not a control endpoint
                since there is no more data to send.  */
+#if 0
             if (!UDP_REG_ISCLR (status, AT91C_UDP_EPTYPE))
                 udp_endpoint_interrupt_disable (udp, endpoint);
+#endif
             
             /* Terminate transfer and call callback.  */
             udp_transfer_complete (udp, endpoint, UDP_STATUS_SUCCESS);
@@ -973,28 +981,39 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
             }
             else
             {
-                /* We don't want to be interrupted before
+#if 0
+                  /* We don't want to be interrupted before
                    udp_fifo_write is completed.  I guess we should not
                    be interrupted until TXCOMP is cleared first, but to
                    be safe we disable the interrupt.  */
-                // udp_endpoint_interrupt_disable (udp, endpoint);
+                udp_endpoint_interrupt_disable (udp, endpoint);
+#endif
+
+                /* Acknowledge TXCOMP interrupt.  The data sheet shows
+                   this should be cleared after TXPKTRDY set and
+                   before the FIFO is written.  The tutorial says the
+                   other way around!  */
+                UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
 
                 /* Double buffering.  The FIFO has already been
                    loaded so say that a packet is ready.  */
                 UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
 
-                /* Acknowledge TXCOMP interrupt.  The data sheet shows
-                   this be cleared after TXPKTRDY set and before the
-                   FIFO is written.  */
-                UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
-
                 /* Load other FIFO with data.  */
                 if (pep->remaining)
                     udp_fifo_write (udp, endpoint);
 
-                // udp_endpoint_interrupt_enable (udp, endpoint);
+#if 0
+                udp_endpoint_interrupt_enable (udp, endpoint);
+#endif
             }
         }
+    }
+    else
+    {
+        /* Hmmm, how did we get here?  */
+        UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
+        pep->spurious++;
     }
 }
 
@@ -1323,47 +1342,6 @@ udp_configuration_set (void *arg, udp_transfer_t *ptransfer __unused__)
 }
 
 
-void 
-udp_control_write (udp_t udp, const void *buffer, udp_size_t len)
-{
-    AT91PS_UDP pUDP = udp->pUDP;
-    uint32_t cpt;
-    AT91_REG csr;
-    const char *data = buffer;
-
-    /* FIXME, this should call udp_endpoint_write with UDP_EP_CONTROL.  */
-
-    do 
-    {
-        cpt = MIN (len, 8);
-        len -= cpt;
-
-        while (cpt--)
-            pUDP->UDP_FDR[0] = *data++;
-
-        if (pUDP->UDP_CSR[UDP_EP_CONTROL] & AT91C_UDP_TXCOMP)
-            UDP_CSR_CLR (pUDP->UDP_CSR[UDP_EP_CONTROL], AT91C_UDP_TXCOMP)
-
-        pUDP->UDP_CSR[UDP_EP_CONTROL] |= AT91C_UDP_TXPKTRDY;
-        do 
-        {
-            csr = pUDP->UDP_CSR[UDP_EP_CONTROL];
-
-            // Data IN stage has been stopped by a status OUT
-            if (csr & AT91C_UDP_RX_DATA_BK0) 
-            {
-                pUDP->UDP_CSR[UDP_EP_CONTROL] &= ~AT91C_UDP_RX_DATA_BK0;
-                return;
-            }
-        } while (! (csr & AT91C_UDP_TXCOMP));
-
-    } while (len);
-
-    if (pUDP->UDP_CSR[UDP_EP_CONTROL] & AT91C_UDP_TXCOMP)
-        UDP_CSR_CLR (pUDP->UDP_CSR[UDP_EP_CONTROL], AT91C_UDP_TXCOMP)
-}
-
-
 void
 udp_control_gobble (udp_t udp)
 {
@@ -1459,6 +1437,51 @@ udp_endpoint_write (udp_t udp, udp_ep_t endpoint,
         DELAY_US (1);
     }
     return pep->transferred;
+}
+
+
+void 
+udp_control_write (udp_t udp, const void *buffer, udp_size_t len)
+{
+    AT91PS_UDP pUDP = udp->pUDP;
+    uint32_t cpt;
+    AT91_REG csr;
+    const char *data = buffer;
+
+#if 0
+    /* FIXME, this should call udp_endpoint_write with UDP_EP_CONTROL.  */
+
+    do 
+    {
+        cpt = MIN (len, 8);
+        len -= cpt;
+
+        while (cpt--)
+            pUDP->UDP_FDR[0] = *data++;
+
+        if (pUDP->UDP_CSR[UDP_EP_CONTROL] & AT91C_UDP_TXCOMP)
+            UDP_CSR_CLR (pUDP->UDP_CSR[UDP_EP_CONTROL], AT91C_UDP_TXCOMP)
+
+        pUDP->UDP_CSR[UDP_EP_CONTROL] |= AT91C_UDP_TXPKTRDY;
+        do 
+        {
+            csr = pUDP->UDP_CSR[UDP_EP_CONTROL];
+
+            // Data IN stage has been stopped by a status OUT
+            if (csr & AT91C_UDP_RX_DATA_BK0) 
+            {
+                pUDP->UDP_CSR[UDP_EP_CONTROL] &= ~AT91C_UDP_RX_DATA_BK0;
+                return;
+            }
+        } while (! (csr & AT91C_UDP_TXCOMP));
+
+    } while (len);
+
+    if (pUDP->UDP_CSR[UDP_EP_CONTROL] & AT91C_UDP_TXCOMP)
+        UDP_CSR_CLR (pUDP->UDP_CSR[UDP_EP_CONTROL], AT91C_UDP_TXCOMP)
+#else
+    return udp_endpoint_write(udp, UDP_EP_CONTROL, buffer, len);
+#endif
 }
 
 
