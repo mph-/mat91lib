@@ -36,6 +36,8 @@ typedef enum
     UDP_STATUS_TIMEOUT = 4,
 //! Waiting completion of transfer
     UDP_STATUS_PENDING = 5,
+//! Something went wrong
+    UDP_STATUS_ERROR = 6,
 } udp_status_t;
 
 

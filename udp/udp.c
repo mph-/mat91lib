@@ -174,7 +174,7 @@
 #endif
 
 
-#define UDP_TIMEOUT_US 1000000
+#define UDP_TIMEOUT_US 5000000
 
 
 /** Set flag(s) in a register.  */
@@ -499,7 +499,7 @@ udp_irq_handler (void)
 
             udp->state = UDP_STATE_DEFAULT;
 
-            // Flush and enable the Suspend interrupt
+            // Flush and enable the suspend interrupt
             UDP_REG_SET (pUDP->UDP_ICR, AT91C_UDP_WAKEUP 
                  | AT91C_UDP_RXRSM | AT91C_UDP_RXSUSP);
 
@@ -566,6 +566,14 @@ void udp_transfer_complete (udp_t udp, udp_ep_t endpoint, udp_status_t status)
         }
         pep->state = UDP_EP_STATE_IDLE;
     }
+}
+
+
+/* This is for debugging.  */
+void
+udp_transfer_timeout (udp_t udp, udp_ep_t endpoint, udp_status_t status)
+{
+    udp_transfer_complete (udp, endpoint, status);
 }
 
 
@@ -730,6 +738,8 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
 {
     AT91PS_UDP pUDP = udp->pUDP;
     udp_ep_info_t *pep = &udp->eps[endpoint];
+    unsigned int timeout;
+
 
     if (pep->state != UDP_EP_STATE_IDLE) 
         return UDP_STATUS_BUSY;
@@ -744,6 +754,19 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     pep->callback = callback;
     pep->arg = arg;
     pep->state = UDP_EP_STATE_WRITE;
+
+    /* Need to start by waiting for TXPKTRDY bit clear.  */
+    timeout = 1000;
+    while (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY))
+    {
+        timeout--;
+        if (timeout == 0)
+        {
+            udp_transfer_timeout (udp, endpoint, UDP_STATUS_ERROR);
+            break;
+        }
+        DELAY_US (1);
+    }
 
     /* Write the first packet to the FIFO (this may be a ZLP).
        Interrupts should be disabled for this endpoint at this
@@ -1370,7 +1393,7 @@ udp_read (udp_t udp, void *buffer, udp_size_t len)
         timeout--;
         if (!timeout || ! udp_configured_p (udp))
         {
-            udp_transfer_complete (udp, UDP_EP_OUT, UDP_STATUS_TIMEOUT);
+            udp_transfer_timeout (udp, UDP_EP_OUT, UDP_STATUS_TIMEOUT);
             break;
         }
         DELAY_US (1);
@@ -1403,7 +1426,7 @@ udp_write (udp_t udp, const void *buffer, udp_size_t len)
         timeout--;
         if (!timeout || ! udp_configured_p (udp))
         {
-            udp_transfer_complete (udp, UDP_EP_IN, UDP_STATUS_TIMEOUT);
+            udp_transfer_timeout (udp, UDP_EP_IN, UDP_STATUS_TIMEOUT);
             break;
         }
         DELAY_US (1);
