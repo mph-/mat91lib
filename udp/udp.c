@@ -939,7 +939,8 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
            3: no buffered data and more to send (remaining > 0 and non-ping-pong)
         */
 
-        if ((pep->buffered < pep->max_packet_size)
+        if ((pep->buffered <= pep->max_packet_size
+             && pep->remaining == 0)
             || (!UDP_REG_ISCLR (status, AT91C_UDP_EPTYPE)
                 && (pep->remaining == 0)
                 && (pep->buffered == pep->max_packet_size)))
@@ -974,14 +975,13 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
 
                 UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
 
-                /* Acknowledge TXCOMP interrupt.  The data sheet shows
-                   this be cleared after TXPKTRDY set and before the
-                   FIFO is written.  */
+                /* Acknowledge TXCOMP interrupt.  The datasheet says
+                 * this must be cleared adfter TXPKTRDY is set. */
                 UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
             }
             else
             {
-#if 0
+#if 1
                   /* We don't want to be interrupted before
                    udp_fifo_write is completed.  I guess we should not
                    be interrupted until TXCOMP is cleared first, but to
@@ -989,21 +989,24 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
                 udp_endpoint_interrupt_disable (udp, endpoint);
 #endif
 
-                /* Acknowledge TXCOMP interrupt.  The data sheet shows
-                   this should be cleared after TXPKTRDY set and
-                   before the FIFO is written.  The tutorial says the
-                   other way around!  */
-                UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
-
                 /* Double buffering.  The FIFO has already been
                    loaded so say that a packet is ready.  */
                 UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
+
+                /* Acknowledge TXCOMP interrupt.  The data sheet shows
+                   this should be cleared after TXPKTRDY set and
+                   before the FIFO is written.  The tutorial says the
+                   other way around!  I guess the UDP controller won't
+                   have transferred the buffer before TXCOMP is
+                   cleared.  Let's see, 1 sample will take 1 us plus
+                   overhead.  What about a ZLP?  */
+                UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
 
                 /* Load other FIFO with data.  */
                 if (pep->remaining)
                     udp_fifo_write (udp, endpoint);
 
-#if 0
+#if 1
                 udp_endpoint_interrupt_enable (udp, endpoint);
 #endif
             }
@@ -1437,51 +1440,6 @@ udp_endpoint_write (udp_t udp, udp_ep_t endpoint,
         DELAY_US (1);
     }
     return pep->transferred;
-}
-
-
-void 
-udp_control_write (udp_t udp, const void *buffer, udp_size_t len)
-{
-    AT91PS_UDP pUDP = udp->pUDP;
-    uint32_t cpt;
-    AT91_REG csr;
-    const char *data = buffer;
-
-#if 0
-    /* FIXME, this should call udp_endpoint_write with UDP_EP_CONTROL.  */
-
-    do 
-    {
-        cpt = MIN (len, 8);
-        len -= cpt;
-
-        while (cpt--)
-            pUDP->UDP_FDR[0] = *data++;
-
-        if (pUDP->UDP_CSR[UDP_EP_CONTROL] & AT91C_UDP_TXCOMP)
-            UDP_CSR_CLR (pUDP->UDP_CSR[UDP_EP_CONTROL], AT91C_UDP_TXCOMP)
-
-        pUDP->UDP_CSR[UDP_EP_CONTROL] |= AT91C_UDP_TXPKTRDY;
-        do 
-        {
-            csr = pUDP->UDP_CSR[UDP_EP_CONTROL];
-
-            // Data IN stage has been stopped by a status OUT
-            if (csr & AT91C_UDP_RX_DATA_BK0) 
-            {
-                pUDP->UDP_CSR[UDP_EP_CONTROL] &= ~AT91C_UDP_RX_DATA_BK0;
-                return;
-            }
-        } while (! (csr & AT91C_UDP_TXCOMP));
-
-    } while (len);
-
-    if (pUDP->UDP_CSR[UDP_EP_CONTROL] & AT91C_UDP_TXCOMP)
-        UDP_CSR_CLR (pUDP->UDP_CSR[UDP_EP_CONTROL], AT91C_UDP_TXCOMP)
-#else
-    return udp_endpoint_write(udp, UDP_EP_CONTROL, buffer, len);
-#endif
 }
 
 
