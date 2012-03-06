@@ -1196,6 +1196,56 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
     }
 }
 
+
+void
+udp_endpoint_setup_handler (udp_t udp, udp_ep_t endpoint)
+{
+    udp_ep_info_t *pep = &udp->eps[endpoint];
+
+    /* This interrupt occurs as a result of receiving a setup packet.  */
+    TRACE_DEBUG (UDP, "UDP:Setup\n");
+    
+    /* Handle the case where during the status phase of a control
+       write transfer, the host receives the device ZLP and acks
+       it, but the ack is not received by the device.  Hmmm?  */
+    if ((pep->state == UDP_EP_STATE_WRITE)
+        || (pep->state == UDP_EP_STATE_READ))
+    {
+        udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
+    }
+
+    /* Read then process setup packet.  */
+    udp_setup_read (udp, endpoint);
+    
+    /* Pass setup packet to request handler.  */
+    if (!udp->request_handler
+        || !udp->request_handler (udp->request_handler_arg, &udp->setup))
+    {
+        /* Send protocol stall if not handled.  */
+        udp_stall (udp, UDP_EP_CONTROL);
+    }
+}
+
+
+void
+udp_endpoint_stall_handler (udp_t udp, udp_ep_t endpoint)
+{
+    AT91PS_UDP pUDP = udp->pUDP;    
+    udp_ep_info_t *pep = &udp->eps[endpoint];
+
+    /* This interrupt occurs as a result of setting FORCESTALL.  */
+    
+    TRACE_INFO (UDP, "UDP:Stallsent%d\n", endpoint);
+    
+    /* Acknowledge interrupt.  */
+    UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_STALLSENT);
+    
+    /* If the endpoint is not halted, clear the stall condition.  */
+    if (pep->state != UDP_EP_STATE_HALTED)
+        UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_FORCESTALL);
+}
+
+
     
 /**
  * UDP endpoint handler
@@ -1207,7 +1257,6 @@ void
 udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
 {
     AT91PS_UDP pUDP = udp->pUDP;    
-    udp_ep_info_t *pep = &udp->eps[endpoint];
     unsigned int status = pUDP->UDP_CSR[endpoint];
     
     /* IN packet sent.  */
@@ -1226,40 +1275,13 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
     /* Setup packet received.  */
     if (UDP_REG_ISSET (status, AT91C_UDP_RXSETUP))
     {
-        /* This interrupt occurs as a result of receiving a setup packet.  */
-        TRACE_DEBUG (UDP, "UDP:Setup\n");
-
-        /* Handle the case where during the status phase of a control
-           write transfer, the host receives the device ZLP and acks
-           it, but the ack is not received by the device.  Hmmm?  */
-        if ((pep->state == UDP_EP_STATE_WRITE)
-            || (pep->state == UDP_EP_STATE_READ))
-        {
-            udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
-        }
-
-        /* Read then process setup packet.  */
-        udp_setup_read (udp, endpoint);
-
-        /* Pass setup packet to request handler.  */
-        if (!udp->request_handler
-            || !udp->request_handler (udp->request_handler_arg, &udp->setup))
-            udp_stall (udp, UDP_EP_CONTROL);
+        udp_endpoint_setup_handler (udp, endpoint);
     }
 
     /* Stall sent.  */
     if (UDP_REG_ISSET (status, AT91C_UDP_STALLSENT))
     {
-        /* This interrupt occurs as a result of setting FORCESTALL.  */
-
-        TRACE_INFO (UDP, "UDP:Stallsent%d\n", endpoint);
-        
-        /* Acknowledge interrupt.  */
-        UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_STALLSENT);
-        
-        /* If the endpoint is not halted, clear the stall condition.  */
-        if (pep->state != UDP_EP_STATE_HALTED)
-            UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_FORCESTALL);
+        udp_endpoint_stall_handler (udp, endpoint);
     }
 }
 
