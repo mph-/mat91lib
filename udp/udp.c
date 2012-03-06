@@ -13,7 +13,7 @@
    FIFOs.  EP1 is the bulk IN endpoint (to host) and EP2 is the bulk
    OUT endpoint (from host).
 
-   EP0 is the control endpoint used for the enumeration process.  This
+   EP0 is the default control endpoint used for the enumeration process.  This
    is bidirectional with an 8-byte FIFO.
 
    EP0 and EP3 cannot be ping-ponged.
@@ -140,8 +140,86 @@
    3. When we have finished reading FIFO 0, we clear BK0 flag.  If a
       packet is pending in FIFO 1 then BK1 will be set and RXBYTECNT
       updated.
+
+
+   Transmission errors (see http://wiki.osdev.org/Universal_Serial_Bus):
+
+   1. Too Much Data
+
+   When transferring from host to device, if the host sends more data
+   than negotiated during the SETUP transaction (i.e., the device
+   receives more data than it expects; specifically, the host does not
+   advance to the STATUS stage when the device expects), the device
+   endpoint halts the pipe.
+
+   When transferring from device to host, if the device sends more
+   data than negotiated during the SETUP transaction (i.e., the host
+   receives an extra data payload, or the final data payload is larger
+   than it should be), the host considers it an error and aborts the
+   transfer.
+
+   2. Bus Errors
+
+   In the event of a bus error or anomaly, an endpoint may receive a
+   SETUP packet in the middle of a control transfer. In such a case, the
+   endpoint must abort the current transfer and handle the unexpected
+   SETUP packet. This behavior should be completely transparent to the
+   host; the host should neither expect nor take advantage of this
+   behavior.  
+
+   3. Halt Conditions
+
+   A control endpoint may recover from a halt condition upon receiving
+   a SETUP packet. If the endpoint does not recover from a SETUP packet,
+   it may need to be recovered via a different pipe. If an endpoint with
+   the endpoint number 0 does not recover with a SETUP packet, the host
+   should issue a device reset.
+
+
+   Bulk Data Transfer:
+
+   Like control transfers, a bulk transfer endpoint must transmit data
+   payloads of the maximum data payload size for that endpoint with
+   the exception of the last data payload in a particular
+   transfer. The last data payload should not be padded out to the
+   maximum data payload size.
+
+   The bulk transfer is considered complete when the endpoint has
+   transferred exactly as much data as expected, the endpoint
+   transfers a packet with a data payload size less than the
+   endpoint's maximum data payload size, or the endpoint transfers a
+   zero-length packet.
+
    
-*/
+   Setups:
+
+   A SETUP transaction's data payload is always 8 bytes and thus
+   receivable by the endpoint of any USB device. Consequently, the
+   host may query the appropriate descriptor from a newly-attached
+   full-speed device during configuration in order to determine the
+   maximum data payload size for any endpoint; the host can then
+   adhere to that maximum for any future transmissions.
+
+
+   Stalls:
+
+   A function uses the STALL handshake packet to indicate that it is
+   unable to transmit or receive data.  Besides the default control
+   pipe, all of a function's endpoints are in an undefined state after
+   the device issues a STALL handshake packet.  The host never issues
+   a STALL handshake packet.
+
+   Typically, the STALL handshake indicates a functional stall.  A
+   functional stall occurs when the halt feature of an endpoint is
+   set. In this circumstance, host intervention is required via the
+   default control pipe to clear the halt feature of the halted
+   endpoint.
+
+   Less often, the function returns a STALL handshake during a SETUP
+   or DATA stage of a control transfer.  This is called a protocol
+   stall and is resolved when the host issues the next SETUP
+   transaction.
+ */
 
 
 #ifndef USB_VENDOR_ID
@@ -809,111 +887,32 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     pep->requested_prev = pep->requested;
     pep->requested = len;
 
-    if (endpoint == UDP_EP_CONTROL || 1)
-    {
-
-        if (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP))
-            udp_endpoint_error (udp, endpoint, UDP_ERROR_FISHY);
+    if (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP))
+        udp_endpoint_error (udp, endpoint, UDP_ERROR_FISHY);
+    
+    /* This should be automatically cleared when a FIFO contents are
+       sent to the host.  */
+    if (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY))
+        udp_endpoint_error (udp, endpoint, UDP_ERROR_WEIRD);
+    
+    udp_endpoint_interrupt_disable (udp, endpoint);
         
-        /* This should be automatically cleared when a FIFO contents are
-           sent to the host.  */
-        if (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY))
-            udp_endpoint_error (udp, endpoint, UDP_ERROR_WEIRD);
-        
-        //irq_disable (AT91C_ID_UDP);
-        udp_endpoint_interrupt_disable (udp, endpoint);
-        
-#if 0
-        /* Play safe in case something fishy with interrupts.  */
-        UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
-#endif
-
-
-        /* Write the first packet to the FIFO (this may be a ZLP).
-           Interrupts should be disabled for this endpoint at this
-           point.  */
+    /* Write the first packet to the FIFO (this may be a ZLP).
+       Interrupts should be disabled for this endpoint at this
+       point.  */
+    udp_fifo_write (udp, endpoint);
+    
+    /* Tell the controller there is data ready to send.  */
+    UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
+    
+    /* If there is data remaining and if double buffering is enabled
+       then load the other FIFO with a packet.  */
+    if ((pep->remaining > 0) && (pep->num_fifo > 1))
         udp_fifo_write (udp, endpoint);
+    
+    udp_endpoint_interrupt_enable (udp, endpoint);
         
-        /* Tell the controller there is data ready to send.  */
-        UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
-        
-        /* If there is data remaining and if double buffering is enabled
-           then load the other FIFO with a packet.  */
-        if ((pep->remaining > 0) && (pep->num_fifo > 1))
-            udp_fifo_write (udp, endpoint);
-        
-        udp_endpoint_interrupt_enable (udp, endpoint);
-        //irq_enable (AT91C_ID_UDP);
-        
-        return UDP_STATUS_SUCCESS;
-    }
-    else
-    {
-        unsigned int i;
-        unsigned int buffered_next;
-
-        data = pdata;
-        tx_bytes = MIN (pep->remaining, pep->fifo_size);
-        
-        /* Fill the first bank.  */
-        for (i = 0; i < tx_bytes; i++)
-            pUDP->UDP_FDR[endpoint] = *data++;
-        pep->remaining -= tx_bytes;
-        pep->buffered = tx_bytes;
-        
-        /* Indicate first bank ready.  */
-        UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
-        
-        while (pep->remaining)
-        {
-            tx_bytes = MIN (pep->remaining, pep->fifo_size);
-            
-            if (pep->num_fifo == 2)
-            {
-                /* Fill the next bank.  */
-                for (i = 0; i < tx_bytes; i++)
-                    pUDP->UDP_FDR[endpoint] = *data++;
-                pep->remaining -= tx_bytes;
-                buffered_next = tx_bytes;
-            }
-            
-            /* Wait for the previous bank to be sent.  */
-            while (UDP_REG_ISCLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP))
-            {
-                /* Check for timeout...  */
-            }
-            pep->transferred += pep->buffered;
-            
-            /* Acknowledge bank set.  */
-            UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
-            
-            if (pep->num_fifo == 1)
-            {
-                /* Fill the same bank.  */
-                for (i = 0; i < tx_bytes; i++)
-                    pUDP->UDP_FDR[endpoint] = *data++;
-                pep->remaining -= tx_bytes;
-                buffered_next = tx_bytes;
-            }
-            pep->buffered = buffered_next;
-            
-            /* Indicate next bank ready.  */
-            UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
-        }
-        
-        /* Wait for the the last bank to be sent.  */
-        while (UDP_REG_ISCLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP))
-        {
-            /* Check for timeout...  */
-        }
-        pep->transferred += tx_bytes;
-        
-        /* Acknowledge bank set.  */
-        UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
-        
-        udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
-        return UDP_STATUS_SUCCESS;
-    }
+    return UDP_STATUS_SUCCESS;
 }
 
 
@@ -1052,13 +1051,14 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
            3: no buffered data and more to send (remaining > 0 and non-ping-pong)
         */
 
-        if ((pep->buffered <= pep->fifo_size
+        if ((pep->buffered < pep->fifo_size
              && pep->remaining == 0)
             || (!UDP_REG_ISCLR (status, AT91C_UDP_EPTYPE)
                 && (pep->remaining == 0)
                 && (pep->buffered == pep->fifo_size)))
         {
             /* Case 1: Transfer completed.  */
+
             pep->transferred += pep->buffered;
             pep->buffered = 0;
             
@@ -1095,6 +1095,8 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
                 udp_endpoint_interrupt_disable (udp, endpoint);
 #endif
 
+#if 0
+
                 /* Double buffering.  The FIFO has already been
                    loaded so say that a packet is ready.  */
                 UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
@@ -1107,6 +1109,13 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
                    cleared.  Let's see, 1 sample will take 1 us plus
                    overhead.  What about a ZLP?  */
                 UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
+#else
+
+                status = (status & ~AT91C_UDP_TXCOMP) | AT91C_UDP_TXPKTRDY;
+                while (pUDP->UDP_CSR[endpoint] != status)
+                    pUDP->UDP_CSR[endpoint] = status;
+
+#endif
 
                 /* Load other FIFO with data.  */
                 if (pep->remaining)
