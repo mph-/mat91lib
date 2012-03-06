@@ -220,6 +220,15 @@ while (((REG) & (FLAGS)) != (FLAGS))   \
 
 typedef enum
 {
+    UDP_ERROR_WEIRD,
+    UDP_ERROR_FISHY,
+    UDP_ERROR_READ_TIMEOUT,
+    UDP_ERROR_WRITE_TIMEOUT,
+} udp_error_t;
+
+
+typedef enum
+{
     UDP_STATE_NOT_POWERED,
     UDP_STATE_ATTACHED,
     UDP_STATE_POWERED,
@@ -286,7 +295,11 @@ typedef struct
     uint16_t buffered;
     uint16_t transferred;
 
-    uint16_t transferred_prev;
+    /* For debugging.  */
+    uint16_t requested;
+    uint16_t requested_prev;
+    uint16_t requested_error_prev;
+    uint16_t requested_error;
 
     /* Pointer to where data is stored.  */
     uint8_t *pdata;
@@ -588,7 +601,6 @@ static void
 udp_endpoint_reset (udp_t udp, udp_ep_t endpoint)
 {
     AT91PS_UDP pUDP = udp->pUDP;
-    
 
     /* Reset endpoint FIFOs.  Thie clears RXBYTECNT.  It does not clear
        the other CSR flags.  */
@@ -599,12 +611,25 @@ udp_endpoint_reset (udp_t udp, udp_ep_t endpoint)
 
 /* This is for debugging.  */
 void
-udp_endpoint_timeout (udp_t udp, udp_ep_t endpoint, udp_status_t status)
+udp_endpoint_error (udp_t udp, udp_ep_t endpoint, udp_error_t error)
 {
     udp_ep_info_t *pep = &udp->eps[endpoint];
 
-    pep->timeouts++;
-    udp_endpoint_complete (udp, endpoint, status);
+    switch (error)
+    {
+    case UDP_ERROR_FISHY:
+        pep->fishy++;
+        break;
+
+    case UDP_ERROR_WEIRD:
+        pep->weird++;
+        break;
+
+    case UDP_ERROR_READ_TIMEOUT:
+    case UDP_ERROR_WRITE_TIMEOUT:
+        pep->timeouts++;
+        break;
+    }
 
     udp_endpoint_reset (udp, endpoint);
 }
@@ -765,7 +790,6 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
 {
     AT91PS_UDP pUDP = udp->pUDP;
     udp_ep_info_t *pep = &udp->eps[endpoint];
-    unsigned int timeout;
 
     if (pep->state != UDP_EP_STATE_IDLE) 
         return UDP_STATUS_BUSY;
@@ -776,33 +800,22 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     pep->status = UDP_STATUS_PENDING;
     pep->remaining = len;
     pep->buffered = 0;
-    pep->transferred_prev = pep->transferred;
     pep->transferred = 0;
     pep->callback = callback;
     pep->arg = arg;
     pep->state = UDP_EP_STATE_WRITE;
 
+    /* For debugging.  */
+    pep->requested_prev = pep->requested;
+    pep->requested = len;
+
     if (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP))
-        pep->fishy++;
+        udp_endpoint_error (udp, endpoint, UDP_ERROR_FISHY);
 
     /* This should be automatically cleared when a FIFO contents are
        sent to the host.  */
     if (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY))
-        pep->weird++;
-
-    /* Need to start by waiting for TXPKTRDY bit clear. 
-       This should be cleared when TXCOMP is set.  */
-    timeout = 1000;
-    while (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY))
-    {
-        timeout--;
-        if (timeout == 0)
-        {
-            udp_endpoint_timeout (udp, endpoint, UDP_STATUS_ERROR);
-            break;
-        }
-        DELAY_US (1);
-    }
+        udp_endpoint_error (udp, endpoint, UDP_ERROR_WEIRD);
 
     //irq_disable (AT91C_ID_UDP);
     udp_endpoint_interrupt_disable (udp, endpoint);
@@ -1421,7 +1434,8 @@ udp_endpoint_read (udp_t udp, udp_ep_t endpoint, void *buffer, udp_size_t len)
         timeout--;
         if (!timeout || ! udp_configured_p (udp))
         {
-            udp_endpoint_timeout (udp, endpoint, UDP_STATUS_TIMEOUT);
+            udp_endpoint_error (udp, endpoint, UDP_ERROR_READ_TIMEOUT);
+            udp_endpoint_complete (udp, endpoint, UDP_STATUS_TIMEOUT);
             break;
         }
         DELAY_US (1);
@@ -1462,7 +1476,8 @@ udp_endpoint_write (udp_t udp, udp_ep_t endpoint,
         timeout--;
         if (!timeout || ! udp_configured_p (udp))
         {
-            udp_endpoint_timeout (udp, endpoint, UDP_STATUS_TIMEOUT);
+            udp_endpoint_error (udp, endpoint, UDP_ERROR_WRITE_TIMEOUT);
+            udp_endpoint_complete (udp, endpoint, UDP_STATUS_TIMEOUT);
             break;
         }
         DELAY_US (1);
