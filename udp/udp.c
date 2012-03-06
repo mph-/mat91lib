@@ -129,7 +129,7 @@
    Ping-pong operation (reads on IN):
 
    1. The host sends a data packet.  This goes into FIFO 0.  The
-      number of bytes in the packet is loaded into RXBYTECNT (note
+      number of bytes in the packet is loaded into RXBYTECNT (note,
       this not affected by reads from the FIFO) and the BK0 flag is
       set (this can generate an interrupt).
 
@@ -809,7 +809,7 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     pep->requested_prev = pep->requested;
     pep->requested = len;
 
-    if (endpoint == UDP_EP_CONTROL)
+    if (endpoint == UDP_EP_CONTROL || 1)
     {
 
         if (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP))
@@ -1064,13 +1064,6 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
             
             UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
 
-            /* Disable interrupt if this is not a control endpoint
-               since there is no more data to send.  */
-#if 0
-            if (!UDP_REG_ISCLR (status, AT91C_UDP_EPTYPE))
-                udp_endpoint_interrupt_disable (udp, endpoint);
-#endif
-            
             /* Terminate transfer and call callback.  */
             udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
         }
@@ -1198,9 +1191,6 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
             TRACE_INFO (UDP, "UDP:Disc%d\n", endpoint);
             pep->buffered = 0;
             udp_rx_flag_clear (udp, endpoint);
-
-            /* Disable endpoint interrupt.  Why??? */
-            udp_endpoint_interrupt_disable (udp, endpoint);
         }
         else
         {
@@ -1215,8 +1205,8 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
                the FIFO.  */
             pep->buffered = status >> 16;
             
-            /* We have received data but are not ready for it.
-               Disable interrupt.  */
+            /* We have received data but are not ready for it so
+               disable interrupt.  */
             udp_endpoint_interrupt_disable (udp, endpoint);
         }
     }
@@ -1490,13 +1480,16 @@ bool
 udp_read_ready_p (udp_t udp)
 {
     udp_ep_info_t *pep = &udp->eps[UDP_EP_OUT];
+    uint32_t status;
 
-    /* Have some data still in the buffer.  */
+    /* Check if have some data still in the buffer.  */
     if (pep->buffered != 0)
         return 1;
 
-    /* Have some data in the FIFO.  */
-    if (udp->pUDP->UDP_CSR[UDP_EP_OUT] >> 16)
+    /* Check if have some data in the FIFO.  */
+    status = udp->pUDP->UDP_CSR[UDP_EP_OUT];
+    if (UDP_REG_ISSET(status, AT91C_UDP_RX_DATA_BK0)
+        || UDP_REG_ISSET(status, AT91C_UDP_RX_DATA_BK1))
         return 1;
 
     return 0;
