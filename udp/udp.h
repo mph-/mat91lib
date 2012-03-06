@@ -15,6 +15,8 @@ typedef enum
     UDP_EP_IN = 2
 } udp_ep_t;
 
+
+/* There are 4 on the AT91SAM7 but we only use the first three.  */
 #define UDP_EP_NUM 3
 
 enum {UDP_EP_DIR_OUT = 0, UDP_EP_DIR_IN = 0x80};
@@ -30,8 +32,10 @@ typedef enum
     UDP_STATUS_ABORTED = 2,
 //! Aborted because the endpoint or the device has been reset
     UDP_STATUS_RESET = 3,
+//! Aborted because the endpoint or the device has timed out
+    UDP_STATUS_TIMEOUT = 4,
 //! Waiting completion of transfer
-    UDP_STATUS_PENDING = 4,
+    UDP_STATUS_PENDING = 5,
 } udp_status_t;
 
 

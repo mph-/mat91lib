@@ -174,6 +174,7 @@
 #endif
 
 
+#define UDP_TIMEOUT_US 1000000
 
 
 /** Set flag(s) in a register.  */
@@ -883,6 +884,7 @@ udp_setup_read (udp_t udp, udp_ep_t endpoint)
 }
 
 
+
 void
 udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
 {
@@ -935,8 +937,8 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
             {
                 /* We don't want to be interrupted before
                    udp_fifo_write is completed.  I guess we should not
-                   be interrupted until TXCOMP is cleared first but to
-                   be safe disable interrupt.  */
+                   be interrupted until TXCOMP is cleared first, but to
+                   be safe we disable the interrupt.  */
                 udp_endpoint_interrupt_disable (udp, endpoint);
 
                 /* Double buffering.  The FIFO has already been
@@ -944,7 +946,8 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
                 UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
 
                 /* Load other FIFO with data.  */
-                udp_fifo_write (udp, endpoint);
+                if (pep->remaining)
+                    udp_fifo_write (udp, endpoint);
 
                 udp_endpoint_interrupt_enable (udp, endpoint);
             }
@@ -1005,7 +1008,7 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
             pep->buffered = 0;
             udp_rx_flag_clear (udp, endpoint);
 
-            /* Disable endpoint interrupt.  */
+            /* Disable endpoint interrupt.  Why??? */
             udp_endpoint_interrupt_disable (udp, endpoint);
         }
         else
@@ -1022,7 +1025,7 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
             pep->buffered = status >> 16;
             
             /* We have received data but are not ready for it.
-               Disable interrupt.  Hmmm.  */
+               Disable interrupt.  */
             udp_endpoint_interrupt_disable (udp, endpoint);
         }
     }
@@ -1361,13 +1364,13 @@ udp_read (udp_t udp, void *buffer, udp_size_t len)
     /* We may have a race condition if someone else grabs the endpoint
        as soon as it goes idle.  I'm not sure if this can happen.  */
 
-    timeout = 500000;
+    timeout = UDP_TIMEOUT_US;
     while (pep->state != UDP_EP_STATE_IDLE)
     {
         timeout--;
         if (!timeout || ! udp_configured_p (udp))
         {
-            udp_transfer_complete (udp, UDP_EP_OUT, UDP_STATUS_RESET);
+            udp_transfer_complete (udp, UDP_EP_OUT, UDP_STATUS_TIMEOUT);
             break;
         }
         DELAY_US (1);
@@ -1394,13 +1397,13 @@ udp_write (udp_t udp, const void *buffer, udp_size_t len)
     /* We may have a race condition if someone else grabs the endpoint
        as soon as it goes idle.  I'm not sure if this can happen.  */
 
-    timeout = 500000;
+    timeout = UDP_TIMEOUT_US;
     while (pep->state != UDP_EP_STATE_IDLE)
     {
         timeout--;
         if (!timeout || ! udp_configured_p (udp))
         {
-            udp_transfer_complete (udp, UDP_EP_IN, UDP_STATUS_RESET);
+            udp_transfer_complete (udp, UDP_EP_IN, UDP_STATUS_TIMEOUT);
             break;
         }
         DELAY_US (1);
