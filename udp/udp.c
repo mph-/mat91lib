@@ -98,7 +98,7 @@
    ping-pong buffers.  They must be handled as quickly as possible.
    When we get a setup request on the control EP, we respond with either:
     1. A stall if the request is unrecognised
-    2. A zlp to acknowledge the request if no data is to be returned
+    2. A ZLP to acknowledge the request if no data is to be returned
     3. The requested data
    In each case we write to the control EP.
 
@@ -550,7 +550,7 @@ void udp_transfer_complete (udp_t udp, udp_ep_t endpoint, udp_status_t status)
 
         pep->status = status;
         
-        // Invoke callback if present
+        /* Invoke callback if present.  */
         if (pep->callback != 0) 
         {
             udp_transfer_t transfer;
@@ -565,6 +565,20 @@ void udp_transfer_complete (udp_t udp, udp_ep_t endpoint, udp_status_t status)
 }
 
 
+static void
+udp_endpoint_interrupt_disable(udp_t udp, udp_ep_t endpoint)
+{
+    UDP_REG_SET (udp->pUDP->UDP_IDR, 1 << endpoint);
+}
+
+
+static void
+udp_endpoint_interrupt_enable(udp_t udp, udp_ep_t endpoint)
+{
+    UDP_REG_SET (udp->pUDP->UDP_IER, 1 << endpoint);
+}
+
+
 /**
  * Configure specific endpoint
  * \param   endpoint Endpoint to configure
@@ -576,8 +590,8 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
     AT91PS_UDP pUDP = udp->pUDP;
     udp_ep_info_t *pep = &udp->eps[endpoint];
 
-    // Abort the current transfer if the endpoint was configured and in
-    // write or read state
+    /* Abort the current transfer if the endpoint was configured and
+       in read or write state.  */
     if ((pep->state == UDP_EP_STATE_READ)
         || (pep->state == UDP_EP_STATE_WRITE))
     {
@@ -613,7 +627,7 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
         pUDP->UDP_CSR[1] = AT91C_UDP_EPTYPE_BULK_OUT | AT91C_UDP_EPEDS;
 
         /* Enable interrupt for reception.  */
-        UDP_REG_SET (pUDP->UDP_IER, 1 << endpoint);
+        udp_endpoint_interrupt_enable (udp, endpoint);
         break;
 
     case UDP_EP_IN:
@@ -703,7 +717,9 @@ udp_fifo_write (udp_t udp, udp_ep_t endpoint)
  * \param   arg         Optional callback argument 
  * \return  Operation result code
  * 
- * This can be called within an ISR for handling setup requests.
+ * This may be called within an ISR for handling setup requests.
+ * There is no limit to the buffer size.   The callback function is
+ * called when the transfer is fully complete.
  */
 udp_status_t
 udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata, 
@@ -726,21 +742,24 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     pep->arg = arg;
     pep->state = UDP_EP_STATE_WRITE;
 
-    /* Send the first packet (this may be a zlp).  */
+    /* Write the first packet to the FIFO (this may be a ZLP).
+       Interrupts should be disabled for this endpoint at this
+       point.  */
     udp_fifo_write (udp, endpoint);
 
     /* Tell the controller there is data ready to send.  */
     UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
 
     /* If there is data remaining and if double buffering is enabled
-       then load the second FIFO with a packet.  */
+       then load the other FIFO with a packet.  */
     if ((pep->remaining > 0) && (pep->num_fifo > 1))
         udp_fifo_write (udp, endpoint);
 
     /* Enable interrupt on endpoint.  The interrupt handler will be
-       called when TXCOMP set.  The handler will send the following
-       packets and terminate the write when finished.  */
-    UDP_REG_SET (pUDP->UDP_IER, 1 << endpoint);
+       called when TXCOMP set on completion of sending the first FIFO
+       contents.  The handler will send the following packets and
+       terminate the write when finished.  */
+    udp_endpoint_interrupt_enable (udp, endpoint);
     
     return UDP_STATUS_SUCCESS;
 }
@@ -807,7 +826,6 @@ udp_status_t
 udp_read_async (udp_t udp, udp_ep_t endpoint, void *pdata, unsigned int len, 
                 udp_callback_t callback, void *arg)
 {
-    AT91PS_UDP pUDP = udp->pUDP;
     udp_ep_info_t *pep = &udp->eps[endpoint];
 
     if (pep->state != UDP_EP_STATE_IDLE)
@@ -831,7 +849,7 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pdata, unsigned int len,
     else
     {
         /* Enable interrupt on endpoint since waiting for more data.  */
-        UDP_REG_SET (pUDP->UDP_IER, 1 << endpoint);
+        udp_endpoint_interrupt_enable (udp, endpoint);
     }
     
     return UDP_STATUS_SUCCESS;
@@ -874,7 +892,7 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
     {
         /* The endpoint is in the write state.
            The scenarios are:
-           1: no data left to send (buffered <= packet_size)
+           1: no more data to send (buffered <= packet_size)
            1: just buffered data to send (buffered > packet_size
                                           && remaining == 0)
            2: buffered data and more to send (remaining > 0 and ping-pong)
@@ -893,8 +911,9 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
             /* Disable interrupt if this is not a control endpoint
                since there is no more data to send.  */
             if (!UDP_REG_ISCLR (status, AT91C_UDP_EPTYPE))
-                UDP_REG_SET (pUDP->UDP_IDR, 1 << endpoint);
+                udp_endpoint_interrupt_disable (udp, endpoint);
             
+            /* Terminate transfer and call callback.  */
             udp_transfer_complete (udp, endpoint, UDP_STATUS_SUCCESS);
         }
         else
@@ -912,12 +931,20 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
             }
             else
             {
+                /* We don't want to be interrupted before
+                   udp_fifo_write is completed.  I guess we should not
+                   be interrupted until TXCOMP is cleared first but to
+                   be safe disable interrupt.  */
+                udp_endpoint_interrupt_disable (udp, endpoint);
+
                 /* Double buffering.  The FIFO has already been
                    loaded so say that a packet is ready.  */
                 UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
-                
+
                 /* Load other FIFO with data.  */
                 udp_fifo_write (udp, endpoint);
+
+                udp_endpoint_interrupt_enable (udp, endpoint);
             }
         }
     }
@@ -934,7 +961,26 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
     udp_ep_info_t *pep = &udp->eps[endpoint];
     unsigned int status = pUDP->UDP_CSR[endpoint];
 
-    if (pep->state != UDP_EP_STATE_READ)
+    if (pep->state == UDP_EP_STATE_READ)
+    {
+        if (pep->buffered)
+        {
+            /* Ouch.  Raise the white flag.  We've got another interrupt
+               before we've read the previous buffer.  */
+        }
+
+        /* Read RXBYTECNT.  This tells us how many bytes are in the FIFO.  */
+        pep->buffered = status >> 16;
+        
+        udp_fifo_read (udp, endpoint);
+        
+        if (pep->remaining == 0)
+        {
+            udp_transfer_complete (udp, endpoint, UDP_STATUS_SUCCESS);
+            udp_endpoint_interrupt_disable (udp, endpoint);
+        }
+    }
+    else
     {
         /* Endpoint is not in read state so check the endpoint
            type to see if it is a control endpoint.  */
@@ -943,7 +989,7 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
         {
             /* Control endpoint, 0 bytes received.  This is the
                host sending an Ack in response to us sending a
-               zlp.  Acknowledge the data and finish the
+               ZLP.  Acknowledge the data and finish the
                current transfer.  */
             TRACE_INFO (UDP, "UDP:Ack%d\n", endpoint);
             udp_rx_flag_clear (udp, endpoint);
@@ -955,7 +1001,9 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
             /* Non-control endpoint so discard stalled data.  */
             TRACE_INFO (UDP, "UDP:Disc%d\n", endpoint);
             udp_rx_flag_clear (udp, endpoint);
-            UDP_REG_SET (pUDP->UDP_IDR, 1 << endpoint);
+
+            /* Disable endpoint interrupt.  */
+            udp_endpoint_interrupt_disable (udp, endpoint);
         }
         else
         {
@@ -969,28 +1017,10 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
             
             /* We have received data but are not ready for it.
                Disable interrupt.  Hmmm.  */
-            UDP_REG_SET (pUDP->UDP_IDR, 1 << endpoint);
-        }
-    }
-    else
-    {
-        if (pep->buffered)
-        {
-            /* Ouch.  Raise the white flag.  We've got another interrupt
-               before we've read the previous buffer.  */
-        }
-        pep->buffered = status >> 16;
-        
-        udp_fifo_read (udp, endpoint);
-        
-        if (pep->remaining == 0)
-        {
-            udp_transfer_complete (udp, endpoint, UDP_STATUS_SUCCESS);
-            UDP_REG_SET (pUDP->UDP_IDR, 1 << endpoint);
+            udp_endpoint_interrupt_disable (udp, endpoint);
         }
     }
 }
-
 
     
 /**
@@ -1009,20 +1039,20 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
     /* IN packet sent.  */
     if (UDP_REG_ISSET (status, AT91C_UDP_TXCOMP))
     {
-        udp_endpoint_write_handler(udp, endpoint);
+        udp_endpoint_write_handler (udp, endpoint);
     }
 
     /* OUT packet received.  */
     if (UDP_REG_ISSET (status, AT91C_UDP_RX_DATA_BK0) 
         || UDP_REG_ISSET (status, AT91C_UDP_RX_DATA_BK1))
     {
-        udp_endpoint_read_handler(udp, endpoint);
+        udp_endpoint_read_handler (udp, endpoint);
     }
 
     /* Setup packet received.  */
     if (UDP_REG_ISSET (status, AT91C_UDP_RXSETUP))
     {
-        // This interrupt occurs as a result of receiving a setup packet
+        /* This interrupt occurs as a result of receiving a setup packet.  */
         TRACE_DEBUG (UDP, "UDP:Setup\n");
 
         /* Handle the case where during the status phase of a control
@@ -1034,9 +1064,10 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
             udp_transfer_complete (udp, endpoint, UDP_STATUS_SUCCESS);
         }
 
-        // Read then process setup packet
+        /* Read then process setup packet.  */
         udp_setup_read (udp, endpoint);
 
+        /* Pass setup packet to request handler.  */
         if (!udp->request_handler
             || !udp->request_handler (udp->request_handler_arg, &udp->setup))
             udp_stall (udp, UDP_EP_CONTROL);
@@ -1045,14 +1076,14 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
     /* Stall sent.  */
     if (UDP_REG_ISSET (status, AT91C_UDP_STALLSENT))
     {
-        // This interrupt occurs as a result of setting FORCESTALL
+        /* This interrupt occurs as a result of setting FORCESTALL.  */
 
         TRACE_INFO (UDP, "UDP:Stallsent%d\n", endpoint);
         
-        // Acknowledge interrupt
+        /* Acknowledge interrupt.  */
         UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_STALLSENT);
         
-        // If the endpoint is not halted, clear the stall condition
+        /* If the endpoint is not halted, clear the stall condition.  */
         if (pep->state != UDP_EP_STATE_HALTED)
             UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_FORCESTALL);
     }
@@ -1120,7 +1151,6 @@ udp_halt (udp_t udp, udp_ep_t endpoint, bool halt)
     else if ((pep->state != UDP_EP_STATE_HALTED)
              && (pep->state != UDP_EP_STATE_DISABLED))
     {
-
         TRACE_INFO (UDP, "UDP:Halt%d\n", endpoint);
 
         // Abort the current transfer if necessary
@@ -1131,7 +1161,7 @@ udp_halt (udp_t udp, udp_ep_t endpoint, bool halt)
         pep->state = UDP_EP_STATE_HALTED;
 
         // Enable the endpoint interrupt
-        UDP_REG_SET (pUDP->UDP_IER, 1 << endpoint);
+        udp_endpoint_interrupt_enable (udp, endpoint);
     }
     
     // Return the endpoint halt status
@@ -1330,7 +1360,10 @@ udp_read (udp_t udp, void *buffer, udp_size_t len)
     {
         timeout--;
         if (!timeout || ! udp_configured_p (udp))
+        {
+            udp_transfer_complete (udp, endpoint, UDP_STATUS_RESET);
             break;
+        }
         DELAY_US (1);
     }
     return pep->transferred;
@@ -1360,7 +1393,10 @@ udp_write (udp_t udp, const void *buffer, udp_size_t len)
     {
         timeout--;
         if (!timeout || ! udp_configured_p (udp))
+        {
+            udp_transfer_complete (udp, endpoint, UDP_STATUS_RESET);
             break;
+        }
         DELAY_US (1);
     }
     return pep->transferred;
