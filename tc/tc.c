@@ -6,11 +6,14 @@
 
 
 #include "tc.h"
+#include "cpu.h"
+#include "irq.h"
 #include "bits.h"
 
-/* Each of the three TCs has a 16 bit counter with 3 16 bit registers (RA, RB,and RC).
-   In waveform mode, RA and RB are used to drive TIOA and TIOB, respectively.  RC can
-   be used to stop the clock to provide a one-shot. 
+/* Each of the three TCs has a 16 bit counter with 3 16 bit registers
+   (RA, RB,and RC).  In waveform mode, RA and RB are used to drive
+   TIOA and TIOB, respectively.  RC can be used to stop the clock to
+   provide a one-shot.
    
    The counter can be clocked with MCK divided by 2, 8, 32, 128, and 1024.
 
@@ -99,8 +102,9 @@ tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period)
        set TIOAx to deisred state.  */
     tc->base->TC_CCR |= (AT91C_TC_CLKDIS | AT91C_TC_SWTRG); 
 
-    /* Make timer pin TIOAx a timer output.  Perhaps we could use different logical
-       timer channels to generate pulses on TIOBx pins?  */
+    /* Make timer pin TIOAx a timer output.  Perhaps we could use
+       different logical timer channels to generate pulses on TIOBx
+       pins?  */
     switch (tc - tc_info)
     {
     case TC_CHANNEL_0:
@@ -135,7 +139,8 @@ void
 tc_shutdown (tc_t tc)
 {
     /* Disable TC0, TC1, TC2 peripheral clocks.  */
-    AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_TC0) | BIT (AT91C_ID_TC1) | BIT (AT91C_ID_TC2);
+    AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_TC0) 
+        | BIT (AT91C_ID_TC1) | BIT (AT91C_ID_TC2);
 
     /* Perhaps force TC output pins low?  */
 }
@@ -172,5 +177,65 @@ tc_init (tc_cfg_t *cfg)
     default:
         return 0;
     }
+    tc->channel = cfg->channel;
     return tc;
+}
+
+
+static void
+tc_interrupt_handler (void)
+{
+    /* Read status register to clear interrupt.  */
+    AT91C_BASE_TC0->TC_SR;
+    AT91C_BASE_TC1->TC_SR;
+    AT91C_BASE_TC2->TC_SR;
+}
+
+
+/* Sleep for specified period.  This is useful for synchronising the
+   CPU clock MCK to the timer clock, especially since the fastest
+   timer clock is MCK / 2.  */
+void
+tc_clock_sync (tc_t tc, uint32_t period)
+{
+    uint32_t id;
+
+    tc_pulse_config (tc, TC_PULSE_MODE_ONESHOT, period, period);
+
+    switch (tc->channel)
+    {
+    case TC_CHANNEL_0:
+        id = AT91C_ID_TC0;
+        break;
+
+    case TC_CHANNEL_1:
+        id = AT91C_ID_TC1;
+        break;
+
+    case TC_CHANNEL_2:
+        id = AT91C_ID_TC2;
+        break;
+    }
+
+    irq_config (id, 7, 
+                AT91C_AIC_SRCTYPE_INT_LEVEL_SENSITIVE, 
+                tc_interrupt_handler);
+            
+    irq_enable (id);
+
+    /* Enable interrupt when have compare on A.  */
+    tc->base->TC_IER = AT91C_TC_CPAS;
+
+    tc_start (tc);
+    
+    /* Stop CPU clock until interrupt.  FIXME, should disable other
+       interrrupts first. */
+    cpu_idle ();
+
+    /* Disable interrupt when have compare on A.  */
+    tc->base->TC_IDR = AT91C_TC_CPAS;
+
+    irq_disable (id);
+
+    tc_stop (tc);
 }

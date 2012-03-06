@@ -499,7 +499,7 @@ last_set_bit (unsigned int value)
 /* UDP interrupt service routine.  Handle all UDP peripheral
    interrupts.  */
 static void
-udp_irq_handler (void)
+udp_interrupt_handler (void)
 {
     udp_ep_t endpoint;
     udp_t udp = &udp_dev;
@@ -1646,7 +1646,8 @@ udp_bus_status_check (udp_t udp)
             pUDP->UDP_ICR = 0;
 
             irq_config (AT91C_ID_UDP, 7, 
-                        AT91C_AIC_SRCTYPE_INT_LEVEL_SENSITIVE, udp_irq_handler);
+                        AT91C_AIC_SRCTYPE_INT_LEVEL_SENSITIVE, 
+                        udp_interrupt_handler);
             
             irq_enable (AT91C_ID_UDP);
 

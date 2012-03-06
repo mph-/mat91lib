@@ -45,7 +45,8 @@ typedef struct
 typedef tc_dev_t *tc_t;
 
 
-bool tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t pulse_width);
+bool tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, 
+                      uint32_t delay, uint32_t pulse_width);
 
 
 bool tc_start (tc_t tc);
@@ -58,6 +59,9 @@ tc_t tc_init (tc_cfg_t *cfg);
 
 
 void tc_shutdown (tc_t tc);
+
+
+void tc_clock_sync (tc_t tc, uint32_t period);
 
 #endif
 
