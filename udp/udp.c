@@ -866,8 +866,6 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
 {
     AT91PS_UDP pUDP = udp->pUDP;
     udp_ep_info_t *pep = &udp->eps[endpoint];
-    unsigned int tx_bytes;
-    const uint8_t *data;
 
     if (pep->state != UDP_EP_STATE_IDLE) 
         return UDP_STATUS_BUSY;
@@ -1088,14 +1086,6 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
             else
             {
 #if 1
-                  /* We don't want to be interrupted before
-                   udp_fifo_write is completed.  I guess we should not
-                   be interrupted until TXCOMP is cleared first, but to
-                   be safe we disable the interrupt.  */
-                udp_endpoint_interrupt_disable (udp, endpoint);
-#endif
-
-#if 0
 
                 /* Double buffering.  The FIFO has already been
                    loaded so say that a packet is ready.  */
@@ -1137,9 +1127,6 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
                     /* Terminate transfer and call callback.  */
                     udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
                 }
-#if 1
-                udp_endpoint_interrupt_enable (udp, endpoint);
-#endif
             }
         }
     }
