@@ -297,6 +297,7 @@ typedef struct
     uint16_t max_packet_size;
     uint8_t num_fifo;
     uint8_t bank;
+    uint16_t timeouts;
 } udp_ep_info_t;
 
 
@@ -573,6 +574,9 @@ void udp_transfer_complete (udp_t udp, udp_ep_t endpoint, udp_status_t status)
 void
 udp_transfer_timeout (udp_t udp, udp_ep_t endpoint, udp_status_t status)
 {
+    udp_ep_info_t *pep = &udp->eps[endpoint];
+
+    pep->timeouts++;
     udp_transfer_complete (udp, endpoint, status);
 }
 
@@ -740,7 +744,6 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     udp_ep_info_t *pep = &udp->eps[endpoint];
     unsigned int timeout;
 
-
     if (pep->state != UDP_EP_STATE_IDLE) 
         return UDP_STATUS_BUSY;
 
@@ -755,7 +758,11 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     pep->arg = arg;
     pep->state = UDP_EP_STATE_WRITE;
 
-    /* Need to start by waiting for TXPKTRDY bit clear.  */
+    /* Play safe in case something fishy with interrupts.  */
+    UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
+
+    /* Need to start by waiting for TXPKTRDY bit clear. 
+       This should be cleared when TXCOMP is set.  */
     timeout = 1000;
     while (UDP_REG_ISSET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY))
     {
@@ -935,6 +942,8 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
             pep->transferred += pep->buffered;
             pep->buffered = 0;
             
+            UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
+
             /* Disable interrupt if this is not a control endpoint
                since there is no more data to send.  */
             if (!UDP_REG_ISCLR (status, AT91C_UDP_EPTYPE))
@@ -954,7 +963,13 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
                 /* No double buffering, so load FIFO and say it is
                    ready.  */
                 udp_fifo_write (udp, endpoint);
+
                 UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
+
+                /* Acknowledge TXCOMP interrupt.  The data sheet shows
+                   this be cleared after TXPKTRDY set and before the
+                   FIFO is written.  */
+                UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
             }
             else
             {
@@ -962,23 +977,25 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
                    udp_fifo_write is completed.  I guess we should not
                    be interrupted until TXCOMP is cleared first, but to
                    be safe we disable the interrupt.  */
-                udp_endpoint_interrupt_disable (udp, endpoint);
+                // udp_endpoint_interrupt_disable (udp, endpoint);
 
                 /* Double buffering.  The FIFO has already been
                    loaded so say that a packet is ready.  */
                 UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
 
+                /* Acknowledge TXCOMP interrupt.  The data sheet shows
+                   this be cleared after TXPKTRDY set and before the
+                   FIFO is written.  */
+                UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
+
                 /* Load other FIFO with data.  */
                 if (pep->remaining)
                     udp_fifo_write (udp, endpoint);
 
-                udp_endpoint_interrupt_enable (udp, endpoint);
+                // udp_endpoint_interrupt_enable (udp, endpoint);
             }
         }
     }
-    
-    /* Acknowledge TXCOMP interrupt.  */
-    UDP_CSR_CLR (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXCOMP);
 }
 
 
@@ -1314,6 +1331,8 @@ udp_control_write (udp_t udp, const void *buffer, udp_size_t len)
     AT91_REG csr;
     const char *data = buffer;
 
+    /* FIXME, this should call udp_endpoint_write with UDP_EP_CONTROL.  */
+
     do 
     {
         cpt = MIN (len, 8);
@@ -1375,12 +1394,12 @@ udp_read_ready_p (udp_t udp)
 
 
 udp_size_t
-udp_read (udp_t udp, void *buffer, udp_size_t len)
+udp_endpoint_read (udp_t udp, udp_ep_t endpoint, void *buffer, udp_size_t len)
 {
     unsigned int timeout;
-    udp_ep_info_t *pep = &udp->eps[UDP_EP_OUT];
+    udp_ep_info_t *pep = &udp->eps[endpoint];
 
-    if (udp_read_async(udp, UDP_EP_OUT, buffer, len, NULL, NULL)
+    if (udp_read_async(udp, endpoint, buffer, len, NULL, NULL)
         != UDP_STATUS_SUCCESS)
         return 0;
 
@@ -1393,7 +1412,48 @@ udp_read (udp_t udp, void *buffer, udp_size_t len)
         timeout--;
         if (!timeout || ! udp_configured_p (udp))
         {
-            udp_transfer_timeout (udp, UDP_EP_OUT, UDP_STATUS_TIMEOUT);
+            udp_transfer_timeout (udp, endpoint, UDP_STATUS_TIMEOUT);
+            break;
+        }
+        DELAY_US (1);
+    }
+    return pep->transferred;
+}
+
+
+udp_size_t
+udp_read (udp_t udp, void *buffer, udp_size_t len)
+{
+    return udp_endpoint_read (udp, UDP_EP_OUT, buffer, len);
+}
+
+
+udp_size_t
+udp_endpoint_write (udp_t udp, udp_ep_t endpoint,
+                    const void *buffer, udp_size_t len)
+{
+    unsigned int timeout;
+    udp_ep_info_t *pep = &udp->eps[endpoint];
+
+    /* This is slower than the old method of writing directly to the
+       FIFOs, especially when sending single characters, but should be
+       more robust since it uses the standard endpoint handling
+       code.  */
+
+    if (udp_write_async(udp, endpoint, buffer, len, NULL, NULL)
+        != UDP_STATUS_SUCCESS)
+        return 0;
+
+    /* We may have a race condition if someone else grabs the endpoint
+       as soon as it goes idle.  I'm not sure if this can happen.  */
+
+    timeout = UDP_TIMEOUT_US;
+    while (pep->state != UDP_EP_STATE_IDLE)
+    {
+        timeout--;
+        if (!timeout || ! udp_configured_p (udp))
+        {
+            udp_transfer_timeout (udp, endpoint, UDP_STATUS_TIMEOUT);
             break;
         }
         DELAY_US (1);
@@ -1405,33 +1465,7 @@ udp_read (udp_t udp, void *buffer, udp_size_t len)
 udp_size_t
 udp_write (udp_t udp, const void *buffer, udp_size_t len)
 {
-    unsigned int timeout;
-    udp_ep_info_t *pep = &udp->eps[UDP_EP_IN];
-
-    /* This is slower than the old method of writing directly to the
-       FIFOs, especially when sending single characters, but should be
-       more robust since it uses the standard endpoint handling
-       code.  */
-
-    if (udp_write_async(udp, UDP_EP_IN, buffer, len, NULL, NULL)
-        != UDP_STATUS_SUCCESS)
-        return 0;
-
-    /* We may have a race condition if someone else grabs the endpoint
-       as soon as it goes idle.  I'm not sure if this can happen.  */
-
-    timeout = UDP_TIMEOUT_US;
-    while (pep->state != UDP_EP_STATE_IDLE)
-    {
-        timeout--;
-        if (!timeout || ! udp_configured_p (udp))
-        {
-            udp_transfer_timeout (udp, UDP_EP_IN, UDP_STATUS_TIMEOUT);
-            break;
-        }
-        DELAY_US (1);
-    }
-    return pep->transferred;
+    return udp_endpoint_write(udp, UDP_EP_IN, buffer, len);
 }
 
 
