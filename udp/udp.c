@@ -613,7 +613,6 @@ udp_irq_handler (void)
 
         // Why re-read?
         status = pUDP->UDP_ISR & pUDP->UDP_IMR & ISR_MASK;
-        status &= ~6;
        
         // Mask unneeded interrupts
         if (udp->state != UDP_STATE_DEFAULT)
@@ -753,9 +752,6 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
         udp->eps[1].fifo_size = UDP_EP_OUT_SIZE;
         udp->eps[1].num_fifo = 2;
         pUDP->UDP_CSR[1] = AT91C_UDP_EPTYPE_BULK_OUT | AT91C_UDP_EPEDS;
-
-        /* Enable interrupt for reception.  */
-        udp_endpoint_interrupt_enable (udp, endpoint);
         break;
 
     case UDP_EP_IN:
@@ -809,7 +805,7 @@ udp_rx_flag_clear (udp_t udp, udp_ep_t endpoint)
  * 
  */
 void
-udp_fifo_write (udp_t udp, udp_ep_t endpoint)
+udp_endpoint_fifo_write (udp_t udp, udp_ep_t endpoint)
 {
     AT91PS_UDP pUDP = udp->pUDP;
     udp_ep_info_t *pep = &udp->eps[endpoint];
@@ -884,7 +880,7 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     /* Write the first packet to the FIFO (this may be a ZLP).
        Interrupts should be disabled for this endpoint at this
        point.  */
-    udp_fifo_write (udp, endpoint);
+    udp_endpoint_fifo_write (udp, endpoint);
     
     /* Tell the controller there is data ready to send.  */
     UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
@@ -892,11 +888,30 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     /* If there is data remaining and if double buffering is enabled
        then load the other FIFO with a packet.  */
     if ((pep->remaining > 0) && (pep->num_fifo > 1))
-        udp_fifo_write (udp, endpoint);
+        udp_endpoint_fifo_write (udp, endpoint);
     
     udp_endpoint_interrupt_enable (udp, endpoint);
         
     return UDP_STATUS_SUCCESS;
+}
+
+
+static unsigned int 
+udp_endpoint_read_bytes (udp_t udp, udp_ep_t endpoint)
+{
+    /* Return RXBYTECNT.  */
+    return udp->pUDP->UDP_CSR[endpoint] >> 16;
+}
+
+
+bool
+udp_endpoint_read_ready_p (udp_t udp, udp_ep_t endpoint)
+{
+    udp_ep_info_t *pep = &udp->eps[endpoint];
+
+    /* Check if have some data in the FIFO.  */
+    return UDP_REG_ISSET (udp->pUDP->UDP_CSR[endpoint],
+                          pep->bank);
 }
 
 
@@ -908,7 +923,7 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
  * 
  */
 static unsigned int 
-udp_fifo_read (udp_t udp, udp_ep_t endpoint)
+udp_endpoint_fifo_read (udp_t udp, udp_ep_t endpoint)
 {
     AT91PS_UDP pUDP = udp->pUDP;
     udp_ep_info_t *pep = &udp->eps[endpoint];
@@ -916,8 +931,11 @@ udp_fifo_read (udp_t udp, udp_ep_t endpoint)
     unsigned int i;
     uint8_t *dst;
 
-    if (!pep->buffered)
-        return 0;
+    /* Assume that something in buffer.  */
+
+    if (pep->buffered == 0
+        && udp_endpoint_read_ready_p (udp, endpoint))
+        pep->buffered = udp_endpoint_read_bytes (udp, endpoint);
 
     /* Get number of bytes to retrieve.  */
     bytes = MIN (pep->remaining, pep->buffered);
@@ -968,6 +986,8 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pdata, unsigned int len,
 
     TRACE_DEBUG (UDP, "UDP:ARead%d %d\n", endpoint, len);
 
+    udp_endpoint_interrupt_disable (udp, endpoint);
+
     pep->pdata = pdata;
     pep->status = UDP_STATUS_PENDING;
     pep->remaining = len;
@@ -976,16 +996,19 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pdata, unsigned int len,
     pep->arg = arg;
     pep->state = UDP_EP_STATE_READ;
 
-    udp_fifo_read (udp, endpoint);
-    if (pep->remaining == 0)
+    if (udp_endpoint_read_ready_p (udp, endpoint))
     {
-        udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
+        udp_endpoint_fifo_read (udp, endpoint);
+
+        if (pep->remaining == 0)
+        {
+            udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
+            return UDP_STATUS_SUCCESS;
+        }
     }
-    else
-    {
-        /* Enable interrupt on endpoint since waiting for more data.  */
-        udp_endpoint_interrupt_enable (udp, endpoint);
-    }
+
+    /* Enable interrupt on endpoint since waiting for more data.  */
+    udp_endpoint_interrupt_enable (udp, endpoint);
     
     return UDP_STATUS_SUCCESS;
 }
@@ -1061,7 +1084,7 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
             {
                 /* No double buffering, so load FIFO and say it is
                    ready.  */
-                udp_fifo_write (udp, endpoint);
+                udp_endpoint_fifo_write (udp, endpoint);
 
                 UDP_CSR_SET (pUDP->UDP_CSR[endpoint], AT91C_UDP_TXPKTRDY);
 
@@ -1083,7 +1106,7 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
 
                 /* Load other FIFO with data.  */
                 if (pep->remaining)
-                    udp_fifo_write (udp, endpoint);
+                    udp_endpoint_fifo_write (udp, endpoint);
                 else if (pep->buffered <= pep->fifo_size)
                 {
                     /* The transfer will terminate soon since
@@ -1126,12 +1149,10 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
         {
             /* Ouch.  Raise the white flag.  We've got another interrupt
                before we've read the previous buffer.  */
+            udp_endpoint_error (udp, endpoint, UDP_ERROR_FISHY);
         }
 
-        /* Read RXBYTECNT.  This tells us how many bytes are in the FIFO.  */
-        pep->buffered = status >> 16;
-        
-        udp_fifo_read (udp, endpoint);
+        udp_endpoint_fifo_read (udp, endpoint);
         
         if (pep->remaining == 0)
         {
@@ -1164,20 +1185,7 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
         }
         else
         {
-            /* Non-control endpoint.  */
-            if (pep->buffered)
-            {
-                /* Ouch.  Raise the white flag.  We've got another interrupt
-                   before we've read the previous buffer.  */
-            }
-
-            /* Read RXBYTECNT.  This tells us how many bytes are in
-               the FIFO.  */
-            pep->buffered = status >> 16;
-            
-            /* We have received data but are not ready for it so
-               disable interrupt.  */
-            udp_endpoint_interrupt_disable (udp, endpoint);
+            pep->spurious++;
         }
     }
 }
@@ -1449,20 +1457,7 @@ udp_control_gobble (udp_t udp)
 bool
 udp_read_ready_p (udp_t udp)
 {
-    udp_ep_info_t *pep = &udp->eps[UDP_EP_OUT];
-    uint32_t status;
-
-    /* Check if have some data still in the buffer.  */
-    if (pep->buffered != 0)
-        return 1;
-
-    /* Check if have some data in the FIFO.  */
-    status = udp->pUDP->UDP_CSR[UDP_EP_OUT];
-    if (UDP_REG_ISSET(status, AT91C_UDP_RX_DATA_BK0)
-        || UDP_REG_ISSET(status, AT91C_UDP_RX_DATA_BK1))
-        return 1;
-
-    return 0;
+    return udp_endpoint_read_ready_p (udp, UDP_EP_OUT);
 }
 
 
