@@ -9,8 +9,6 @@
 #include "config.h"
 #include "cpu.h"
 
-// #ifdef __THUMBEL__
-
 #ifdef RAM_RUN
 #define DELAY_LOOP_CYCLES 4
 #else
