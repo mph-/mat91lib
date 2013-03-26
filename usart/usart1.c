@@ -58,8 +58,11 @@ usart1_shutdown (void)
     /* Disable RxD1 and TxD1 pins.  */
     *AT91C_PIOA_PER = AT91C_PA21_RXD1 | AT91C_PA22_TXD1;
 
-    /* Disable pullups.  */
-    *AT91C_PIOA_PPUDR = AT91C_PA21_RXD1 | AT91C_PA22_TXD1;
+    /* Set the tx and rx pins as inputs with pullup enabled. */
+    *AT91C_PIOA_ODR = AT91C_PA21_RXD1 | AT91C_PA22_TXD1;
+
+    /* Enable pullups. Necessary to prevent a floating input drawing excess current. */
+    *AT91C_PIOA_PPUER = AT91C_PA21_RXD1 | AT91C_PA22_TXD1;
 
     /* Disable USART1 clock.  */
     AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_US1);
