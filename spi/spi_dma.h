@@ -8,20 +8,27 @@
 #ifndef SPI_DMA_H
 #define SPI_DMA_H
 
-#include "config.h"
+#include "spi.h"
 
+/** Bitmask to select desired channel for DMA transfers.  */
+#define SPI_DMA_CHANNEL_MASK(channel)  (SPI_CHANNEL_MASK(channel) << 16)
+
+/** Return true if DMA has finished writing a buffer.  */
 extern bool
 spi_dma_write_finished_p (spi_t spi);
 
 
+/** Return true if DMA has finished reading a buffer.  */
 extern bool
 spi_dma_read_finished_p (spi_t spi);
 
 
+/** Return true if DMA has nothing more to write.  */
 extern bool
 spi_dma_write_completed_p (spi_t spi);
 
 
+/** Return true if DMA has nothing more to read.  */
 extern bool
 spi_dma_read_completed_p (spi_t spi);
 

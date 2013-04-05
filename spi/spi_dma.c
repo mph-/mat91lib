@@ -42,6 +42,7 @@
 #define PDC_BASE_GET(spi) (((spi)->channel < SPI_CHANNELS_NUM) ? AT91C_BASE_PDC_SPI0 : AT91C_BASE_PDC_SPI1)
 
 
+/** Return true if DMA has finished writing a buffer.  */
 bool
 spi_dma_write_finished_p (spi_t spi)
 {
@@ -51,6 +52,7 @@ spi_dma_write_finished_p (spi_t spi)
 }
 
 
+/** Return true if DMA has finished reading a buffer.  */
 bool
 spi_dma_read_finished_p (spi_t spi)
 {
@@ -60,6 +62,7 @@ spi_dma_read_finished_p (spi_t spi)
 }
 
 
+/** Return true if DMA has nothing more to write.  */
 bool
 spi_dma_write_completed_p (spi_t spi)
 {
@@ -69,6 +72,7 @@ spi_dma_write_completed_p (spi_t spi)
 }
 
 
+/** Return true if DMA has nothing more to read.  */
 bool
 spi_dma_read_completed_p (spi_t spi)
 {
