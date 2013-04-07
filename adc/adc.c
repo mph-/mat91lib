@@ -88,7 +88,13 @@ adc_reset (void)
 void
 adc_sleep (void)
 {
+    adc_sample_t dummy;
+
+    /*  Errata for SAM7S256:RevisionB states that the ADC will not be placed into
+        sleep mode until a conversion has completed. */
+    adc_init(0);
     AT91C_BASE_ADC->ADC_MR |= AT91C_ADC_SLEEP;
+    adc_read_wait(0, &dummy);
 }
 
 
@@ -153,7 +159,6 @@ adc_init (uint8_t channels __UNUSED__)
 
     adc_reset ();
     adc_resolution_set (10);
-    // adc_sleep ();
     adc_read_wait (0, &dummy);
 }
 

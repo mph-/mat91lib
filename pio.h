@@ -62,12 +62,14 @@ bool pio_config_set (pio_t pio, pio_config_t config)
         PIO_PORT_ (pio)->PIO_SODR = PIO_BITMASK_ (pio);
         PIO_PORT_ (pio)->PIO_PER = PIO_BITMASK_ (pio);
         PIO_PORT_ (pio)->PIO_OER = PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_PPUDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_OUTPUT_LOW:
         PIO_PORT_ (pio)->PIO_CODR = PIO_BITMASK_ (pio);
         PIO_PORT_ (pio)->PIO_PER = PIO_BITMASK_ (pio);
         PIO_PORT_ (pio)->PIO_OER = PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_PPUDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_INPUT:

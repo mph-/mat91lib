@@ -58,9 +58,6 @@ usart1_shutdown (void)
     /* Disable RxD1 and TxD1 pins.  */
     *AT91C_PIOA_PER = AT91C_PA21_RXD1 | AT91C_PA22_TXD1;
 
-    /* Disable pullups.  */
-    *AT91C_PIOA_PPUDR = AT91C_PA21_RXD1 | AT91C_PA22_TXD1;
-
     /* Disable USART1 clock.  */
     AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_US1);
     

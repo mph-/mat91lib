@@ -59,9 +59,6 @@ usart0_shutdown (void)
     /* Disable RxD0 and TxD0 pins.  */
     *AT91C_PIOA_PER = AT91C_PA5_RXD0 | AT91C_PA6_TXD0;
 
-    /* Disable pullups.  */
-    *AT91C_PIOA_PPUDR = AT91C_PA5_RXD0 | AT91C_PA6_TXD0;
-
     /* Disable USART0 clock.  */
     AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_US0);
     
