@@ -68,4 +68,9 @@ adc_stop (void);
 extern void
 adc_disable (void);
 
+
+/** Puts ADC into sleep mode.  */
+extern void
+adc_sleep (void);
+
 #endif

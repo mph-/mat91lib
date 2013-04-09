@@ -83,18 +83,18 @@ adc_reset (void)
 }
 
 
-/* Puts ADC into sleep mode.  */
-/* Should wake up on next trigger.  */
+/** Puts ADC into sleep mode.
+    It should wake on next trigger.  */
 void
 adc_sleep (void)
 {
     adc_sample_t dummy;
 
-    /*  Errata for SAM7S256:RevisionB states that the ADC will not be placed into
-        sleep mode until a conversion has completed. */
-    adc_init(0);
+    /*  Errata for SAM7S256:RevisionB states that the ADC will not be
+        placed into sleep mode until a conversion has completed. */
+    adc_init (0);
     AT91C_BASE_ADC->ADC_MR |= AT91C_ADC_SLEEP;
-    adc_read_wait(0, &dummy);
+    adc_read_wait (0, &dummy);
 }
 
 
