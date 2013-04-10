@@ -1,7 +1,7 @@
 # Need to define:
 # OPT optimisation level, e.g. -O2
 # MCU name of microcontroller
-# RUN_MODE either ROM_RUN or RAM_RUN
+# RUN_MODE either ROM or RAM
 # MAT91LIB_DIR path to mat91lib
 # PERIPHERALS list of peripherals to build
 
@@ -10,7 +10,7 @@ $(error MCU undefined, this needs to be defined in the Makefile)
 endif
 
 ifndef RUN_MODE
-RUN_MODE = ROM_RUN	
+RUN_MODE = ROM	
 endif
 
 ifndef OPT
@@ -39,7 +39,7 @@ CFLAGS += -mcpu=arm7tdmi -Wall -Wstrict-prototypes -W -gdwarf-2 -D$(RUN_MODE) $(
 LDFLAGS += -mthumb-interwork -nostartfiles -lm -lc
 
 
-ifeq ($(RUN_MODE), RAM_RUN)
+ifeq ($(RUN_MODE), RAM)
 LDFLAGS +=-T$(LDSCRIPTS)/$(MCU)-RAM.ld
 else 
 LDFLAGS +=-T$(LDSCRIPTS)/$(MCU)-ROM.ld
