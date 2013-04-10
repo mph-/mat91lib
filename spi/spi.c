@@ -707,6 +707,7 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
 
     spi_config (spi);
 
+    i = 0;
     switch (spi->cs_mode)
     {
     case SPI_CS_MODE_TOGGLE:
@@ -796,6 +797,7 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
     
     spi_config (spi);
     
+    i = 0;
     switch (spi->cs_mode)
     {
     case SPI_CS_MODE_TOGGLE:
