@@ -67,7 +67,7 @@ bool
 spi_dma_write_completed_p (spi_t spi)
 {
     AT91S_PDC *pPDC = PDC_BASE_GET (spi);
-    
+
     return pPDC->PDC_TNCR == 0;
 }
 
@@ -77,7 +77,7 @@ bool
 spi_dma_read_completed_p (spi_t spi)
 {
     AT91S_PDC *pPDC = PDC_BASE_GET (spi);
-    
+
     return pPDC->PDC_TNCR == 0;
 }
 
@@ -110,7 +110,7 @@ spi_dma_write_enable (spi_t spi)
 }
 
 
-void 
+void
 spi_dma_write_disable (spi_t spi)
 {
     AT91S_PDC *pPDC = PDC_BASE_GET (spi);
@@ -130,7 +130,7 @@ spi_dma_read_enable (spi_t spi)
 }
 
 
-void 
+void
 spi_dma_read_disable (spi_t spi)
 {
     AT91S_PDC *pPDC = PDC_BASE_GET (spi);
@@ -175,8 +175,6 @@ spi_dma_write_init (spi_t spi, void *buffer, uint16_t size)
 
     pPDC->PDC_TPR = (uint32_t) buffer;
     pPDC->PDC_TCR = size;
-
-    spi_dma_write_enable (spi);
 }
 
 
@@ -193,8 +191,6 @@ spi_dma_read_init (spi_t spi, void *buffer, uint16_t size)
 
     pPDC->PDC_RPR = (uint32_t) buffer;
     pPDC->PDC_RCR = size;
-
-    spi_dma_read_enable (spi);
 }
 
 
@@ -234,7 +230,7 @@ spi_dma_next (spi_t spi, void *txbuffer, void *rxbuffer, uint16_t size)
 }
 
 
-void 
+void
 spi_dma_enable (spi_t spi)
 {
     spi_dma_read_enable (spi);
@@ -242,7 +238,7 @@ spi_dma_enable (spi_t spi)
 }
 
 
-void 
+void
 spi_dma_disable (spi_t spi)
 {
     spi_dma_read_disable (spi);
