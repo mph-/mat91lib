@@ -30,13 +30,6 @@ pit_stop (void)
 }
 
 
-bool
-pit_compare_p (void)
-{
-    return PIT_COMPARE_P ();
-}
-
-
 uint32_t pit_period_set (uint32_t period)
 {
     BITS_INSERT (pPITC->PITC_PIMR, period, 0, 19);
@@ -45,8 +38,50 @@ uint32_t pit_period_set (uint32_t period)
 }
 
 
-int8_t
+pit_tick_t pit_get (void)
+{
+    /* Read the image register (this has no affect on the counters).
+       Only the lower 20 bit corresponding to the CPIV are returned
+       although with PIV set to maximum count we could use all 32
+       bits.  */
+    return pPITC->PITC_PIIR & 0xfffff;
+}
+
+
+/** Wait until specified time:
+    @param when time to sleep until
+    @return current time.  */
+pit_tick_t pit_wait_until (pit_tick_t when)
+{
+    while (1)
+    {
+        pit_tick_t diff;
+        pit_tick_t now;
+        
+        now = pit_get ();
+
+        diff = now - when;
+
+        if (diff < PIT_OVERRUN_MAX)
+            return now;
+    }
+}
+
+
+/** Wait for specified period:
+    @param period how long to wait
+    @return current time.  */
+pit_tick_t pit_wait (pit_tick_t period)
+{
+    return pit_wait_until (pit_get () + period);
+}
+
+
+int
 pit_init (void)
 {
+    /* Set maximum period.  */
+    pit_period_set (0xfffff);
+    pit_start ();
     return 1;
 }
