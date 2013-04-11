@@ -45,6 +45,8 @@ else
 LDFLAGS +=-T$(LDSCRIPTS)/$(MCU)-ROM.ld
 endif
 
+# Hack.  FIXME
+SRC += syscalls.c
 
 # Create list of object and dependency files.  Note, sort removes duplicates.
 OBJ = $(addprefix objs/, $(sort $(SRC:.c=.o)))
