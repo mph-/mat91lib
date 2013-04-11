@@ -40,8 +40,11 @@ uint32_t pit_period_set (uint32_t period)
 
 pit_tick_t pit_get (void)
 {
-    /* 20 bit register.  */
-    return pPITC->PITC_PIVR & 0xfffff;
+    /* Read the image register (this has no affect on the counters).
+       Only the lower 20 bit corresponding to the CPIV are returned
+       although with PIV set to maximum count we could use all 32
+       bits.  */
+    return pPITC->PITC_PIIR & 0xfffff;
 }
 
 
