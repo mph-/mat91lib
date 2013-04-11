@@ -8,34 +8,43 @@
 
 #include "config.h"
 
-/* The PIT is clocked at F_CPU / 16.  */
-#define PIT_DIVISOR(FREQ) (((((uint32_t) (F_CPU / (FREQ))) + 8) >> 4) - 1)
+/* This is fixed.  */
+#define PIT_CLOCK_DIVISOR 16
+
+/** Rate in Hz that the pit is incremented.  */
+#define PIT_RATE (F_CPU / PIT_CLOCK_DIVISOR)
 
 
-/* Reading PITC_PIVR resets the PITS bit.  */
-#define PIT_RESET() \
-    AT91C_BASE_PITC->PITC_PIVR
+/** The maximum overrun (in ticks).  */
+#define PIT_OVERRUN_MAX 1000
 
 
-#define PIT_COMPARE_P() \
-    (AT91C_BASE_PITC->PITC_PISR & AT91C_PITC_PITS \
-     ? PIT_RESET (), 1 : 0)
-
-#define PIT_INT_ENABLE() \
-    AT91C_BASE_PITC->PITC_PIMR |= AT91C_PITC_PITIEN
-
-#define PIT_INT_DISABLE() \
-    AT91C_BASE_PITC->PITC_PIMR &= ~AT91C_PITC_PITIEN
+/** The maximum delay (in ticks).  */
+#define PIT_DELAY_MAX ((1u << 20) - PIT_OVERRUN_MAX)
 
 
-extern void pit_start (void);
+/** Define pit ticks.  */
+typedef uint32_t pit_tick_t;
 
-extern void pit_stop (void);
 
-extern bool pit_compare_p (void);
+/** Get current time:
+    @return current time in ticks.  */
+pit_tick_t pit_get (void);
 
-extern uint32_t pit_period_set (uint32_t period);
 
-extern int8_t pit_init (void);
+/** Wait until specified time:
+    @param when time to sleep until
+    @return current time.  */
+pit_tick_t pit_wait_until (pit_tick_t when);
+
+
+/** Wait for specified period:
+    @param period how long to wait
+    @return current time.  */
+pit_tick_t pit_wait (pit_tick_t period);
+
+
+/** Initialise pit.  */
+int pit_init (void);
 
 #endif
