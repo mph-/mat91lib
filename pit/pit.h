@@ -16,7 +16,7 @@
 
 
 /** The maximum overrun (in ticks).  */
-#define PIT_OVERRUN_MAX 1000
+#define PIT_OVERRUN_MAX 1000000u
 
 
 /** The maximum delay (in ticks).  */

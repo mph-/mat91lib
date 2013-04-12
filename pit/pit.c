@@ -30,7 +30,7 @@ pit_stop (void)
 }
 
 
-uint32_t pit_period_set (uint32_t period)
+static uint32_t pit_period_set (uint32_t period)
 {
     BITS_INSERT (pPITC->PITC_PIMR, period, 0, 19);
 
@@ -41,10 +41,9 @@ uint32_t pit_period_set (uint32_t period)
 pit_tick_t pit_get (void)
 {
     /* Read the image register (this has no affect on the counters).
-       Only the lower 20 bit corresponding to the CPIV are returned
-       although with PIV set to maximum count we could use all 32
-       bits.  */
-    return pPITC->PITC_PIIR & 0xfffff;
+       Since the maximum period is selected we can use both the CPIV and PICNT fields
+       as a single 32 bit counter.  */
+    return pPITC->PITC_PIIR;
 }
 
 
@@ -59,7 +58,7 @@ pit_tick_t pit_wait_until (pit_tick_t when)
         pit_tick_t now;
         
         now = pit_get ();
-
+        
         diff = now - when;
 
         if (diff < PIT_OVERRUN_MAX)
