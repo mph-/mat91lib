@@ -15,12 +15,16 @@
 #define PIT_RATE (F_CPU / PIT_CLOCK_DIVISOR)
 
 
+/** The maximum overrun period (s).  */
+#define PIT_OVERRUN_PERIOD 10
+
+
 /** The maximum overrun (in ticks).  */
-#define PIT_OVERRUN_MAX 1000000u
+#define PIT_OVERRUN_MAX (PIT_OVERRUN_PERIOD * PIT_RATE)
 
 
 /** The maximum delay (in ticks).  */
-#define PIT_DELAY_MAX ((1u << 20) - PIT_OVERRUN_MAX)
+#define PIT_DELAY_MAX (~0u - PIT_OVERRUN_MAX + 1)
 
 
 /** Define pit ticks.  */
