@@ -9,24 +9,13 @@
 #define PWM_H
 
 #include "config.h"
+#include "pio.h"
 
 
 #define PWM_PERIOD_DIVISOR(FREQ) (F_CPU / (FREQ))
+
 #define PWM_DUTY_DIVISOR(FREQ, DUTY_PERCENT) \
     ((F_CPU * (DUTY_PERCENT)) / ((FREQ) * 100))
-
-
-typedef enum
-{
-    PWM_CHANNEL_0,
-    PWM_CHANNEL_1,
-    PWM_CHANNEL_2,
-    PWM_CHANNEL_3,
-    PWM_CHANNEL_NUM
-} pwm_channel_t;
-              
-
-typedef uint8_t pwm_channel_mask_t;
 
 
 typedef enum
@@ -43,55 +32,77 @@ typedef enum
 } pwm_polarity_t;
 
 
+typedef struct pwm_dev_struct pwm_dev_t;
+
+typedef pwm_dev_t *pwm_t;
+
+typedef uint16_t pwm_period_t;
+
+typedef struct pwm_cfg_struct
+{
+    pio_t pio;
+    pwm_period_t period;
+    pwm_period_t duty;
+    pwm_align_t align;
+    pwm_polarity_t polarity;
+} pwm_cfg_t;
+
+typedef uint8_t pwm_channel_mask_t;
+
+
+/** Shutdown clock to PWM peripheral.  */
 void
 pwm_shutdown (void);
 
 
-/* Initialises PWM on specified pins.  */
+/** Initialises PWM on specified pin.  */
+pwm_t
+pwm_init (const pwm_cfg_t *cfg);
+
+
+/** Update the waveform period and duty.  */
 uint8_t
-pwm_init (void);
+pwm_update (pwm_t pwm, pwm_period_t new_period, pwm_period_t new_duty);
 
 
-/* Configures the PWM output The period of the waveform is in number
-   of MCK ticks.  The duty can be any number less than the period.
-   Support is only for fequencies above 750 Hz (no prescaling used
-   here).  So for 100 kHz, period would be 480 with MCK at 48 MHz.  */
+/** Start selected channel.  */
+void
+pwm_start (pwm_t pwm);
+
+
+/** Stop selected channel.  */
+void
+pwm_stop (pwm_t pwm);
+
+
+/** Enable PWM to drive pin.  */
+void
+pwm_enable (pwm_t pwm);
+
+
+/* Switch pin back to a PIO.  */
+void
+pwm_disable (pwm_t pwm);
+
+
+/** Updates the waveform period and duty.  */
 uint8_t
-pwm_config (pwm_channel_t channel, uint16_t period, uint16_t duty,
-            pwm_align_t alignment, pwm_polarity_t polarity);
+pwm_update (pwm_t pwm, pwm_period_t new_period, pwm_period_t new_duty);
 
 
-/* Start selected channels simultaneously.  */
+/** Start selected channels simultaneously.  */
 void
 pwm_channels_start (pwm_channel_mask_t channel_mask);
 
 
-/* Stop selected channels simultaneously.  */
+/** Stop selected channels simultaneously.  */
 void
 pwm_channels_stop (pwm_channel_mask_t channel_mask);
 
 
-/* Start selected channel.  */
-void
-pwm_start (pwm_channel_t channel);
-
-
-/* Stop selected channel.  */
-void
-pwm_stop (pwm_channel_t channel);
-
-
-void
-pwm_enable (pwm_channel_t channel);
-
-
-void
-pwm_disable (pwm_channel_t channel);
-
-
-/* Updates the waveform period and duty.  */
-uint8_t
-pwm_update (pwm_channel_t channel, uint16_t new_period, uint16_t new_duty);
+/** Get channel mask.  */
+pwm_channel_mask_t
+pwm_channel_mask (pwm_t pwm);
 
 #endif
 

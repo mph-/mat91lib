@@ -2,29 +2,69 @@
     @author 
     @date   12 February 2008
     @brief  Pulse Width Modulation routines for AT91SAM7 processors.
-            Note, the API needs a complete re-write.
 */
 
 #include "pwm.h"
 #include "bits.h"
 
 
-/* Currently no support for frequencies below 730 Hz.  */
-
-static inline AT91S_PWMC_CH *pwm_base (pwm_channel_t channel)
+typedef struct pwm_pin_struct
 {
-    switch (channel)
+    uint8_t channel;
+    pio_t pio;
+    pio_config_t periph;
+} pwm_pin_t;
+
+
+struct pwm_dev_struct
+{
+    const pwm_pin_t *pin;
+};
+
+
+static pwm_dev_t pwm_devices[4];
+
+
+#define PWM_PIN(CHANNEL, PIO, PERIPH) \
+    {.channel = (CHANNEL), .pio = (PIO), .periph = (PERIPH)}
+
+/* Define known PWM pins.  */
+static const pwm_pin_t pwm_pins[] = 
+{
+    PWM_PIN (0, PIO_DEFINE (PORT_A, 0), PIO_PERIPH_A),
+    PWM_PIN (0, PIO_DEFINE (PORT_A, 11), PIO_PERIPH_B),
+    PWM_PIN (0, PIO_DEFINE (PORT_A, 23), PIO_PERIPH_B),
+
+    PWM_PIN (1, PIO_DEFINE (PORT_A, 1), PIO_PERIPH_A),
+    PWM_PIN (1, PIO_DEFINE (PORT_A, 12), PIO_PERIPH_B),
+    PWM_PIN (1, PIO_DEFINE (PORT_A, 24), PIO_PERIPH_B),
+
+    PWM_PIN (2, PIO_DEFINE (PORT_A, 2), PIO_PERIPH_A),
+    PWM_PIN (2, PIO_DEFINE (PORT_A, 13), PIO_PERIPH_B),
+    PWM_PIN (2, PIO_DEFINE (PORT_A, 24), PIO_PERIPH_B),
+
+    PWM_PIN (3, PIO_DEFINE (PORT_A, 7), PIO_PERIPH_B),
+    PWM_PIN (3, PIO_DEFINE (PORT_A, 14), PIO_PERIPH_B),
+};
+
+
+#define PWM_PINS_NUM ARRAY_SIZE (pwm_pins)
+
+
+static inline AT91S_PWMC_CH *pwm_base (pwm_t pwm)
+{
+    switch (pwm->pin->channel)
     {
-    case PWM_CHANNEL_0:
+    case 0:
         return AT91C_BASE_PWMC_CH0;
 					
-    case PWM_CHANNEL_1:
+    case 1:
         return AT91C_BASE_PWMC_CH1;
 					
-    case PWM_CHANNEL_2:
+    case 2:
         return AT91C_BASE_PWMC_CH2;
         
-    case PWM_CHANNEL_3:
+    case 3:
         return AT91C_BASE_PWMC_CH3;
 			
     default:
@@ -32,7 +72,7 @@ static inline AT91S_PWMC_CH *pwm_base (pwm_channel_t channel)
     }
 }
 
-
+/** Shutdown clock to PWM peripheral.  */
 void
 pwm_shutdown (void)
 {
@@ -41,30 +81,20 @@ pwm_shutdown (void)
 }
 
 
-/* Initialises PWM on specified pins.  */
-uint8_t
-pwm_init (void)
-{
-    /* Enable PWM peripheral clock.  */
-    AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_PWMC);
-
-    return 1;
-}
-
-
-/* Configures the PWM output The period of the waveform is in number
-   of MCK ticks.  The duty can be any number less than the period.
-   Support is only for fequencies above 750Hz (no prescaling used
-   here).  So for 100kHz, period would be 480 with MCK at 48MHz.  */
-uint8_t
-pwm_config (pwm_channel_t channel, uint16_t period, uint16_t duty,
-            pwm_align_t alignment, pwm_polarity_t polarity)
+/** Configures the PWM output The period of the waveform is in number
+    of MCK ticks.  The duty can be any number less than the period.
+    Support is only for fequencies above 750 Hz (no prescaling used
+    here).  So for 100 kHz, period would be 480 with MCK at 48
+    MHz.  */
+static uint8_t
+pwm_config (pwm_t pwm, pwm_period_t period, pwm_period_t duty,
+            pwm_align_t align, pwm_polarity_t polarity)
 {
     AT91S_PWMC_CH *pPWM;
     
     /* Select the channel peripheral base address.  */	
-    pPWM = pwm_base (channel);
-	
+    pPWM = pwm_base (pwm);
+    
     if (!pPWM)
         return 0;
     
@@ -77,8 +107,8 @@ pwm_config (pwm_channel_t channel, uint16_t period, uint16_t duty,
     
     pPWM->PWMC_CDTYR = duty;
     
-    /* Configure wave alignment.  */
-    BITS_INSERT (pPWM->PWMC_CMR, alignment, 8, 8);
+    /* Configure wave align.  */
+    BITS_INSERT (pPWM->PWMC_CMR, align, 8, 8);
     
     /* Configure polarity.  */
     BITS_INSERT (pPWM->PWMC_CMR, polarity, 9, 9);
@@ -87,7 +117,47 @@ pwm_config (pwm_channel_t channel, uint16_t period, uint16_t duty,
 }
 
 
-/* Start selected channels simultaneously.  */
+/** Initialises PWM on specified pin.  */
+pwm_t
+pwm_init (const pwm_cfg_t *cfg)
+{
+    const pwm_pin_t *pin;
+    pwm_dev_t *dev;
+    unsigned int i;
+
+
+    /* Enable PWM peripheral clock.  */
+    AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_PWMC);
+
+    pin = 0;
+    for (i = 0; i < PWM_PINS_NUM; i++)
+    {
+        pin = &pwm_pins[i]; 
+        if (pin->pio == cfg->pio)
+            break;
+    }
+    if (!pin)
+        return 0;
+    
+    /* Allow user to override PWM channel.  */
+    dev = &pwm_devices[pin->channel];
+    dev->pin = pin;
+
+    pwm_config (dev, cfg->period, cfg->duty, cfg->align, cfg->polarity);
+
+    return dev;
+}
+
+
+/** Get channel mask.  */
+pwm_channel_mask_t
+pwm_channel_mask (pwm_t pwm)
+{
+    return BIT (pwm->pin->channel);
+}
+
+
+/** Start selected channels simultaneously.  */
 void
 pwm_channels_start (pwm_channel_mask_t channel_mask)
 {
@@ -95,7 +165,7 @@ pwm_channels_start (pwm_channel_mask_t channel_mask)
 }
 
 
-/* Stop selected channels simultaneously.  */
+/** Stop selected channels simultaneously.  */
 void
 pwm_channels_stop (pwm_channel_mask_t channel_mask)
 {
@@ -103,163 +173,60 @@ pwm_channels_stop (pwm_channel_mask_t channel_mask)
 }
 
 
-/* Start selected channel.  */
+/** Start selected channel.  */
 void
-pwm_start (pwm_channel_t channel)
+pwm_start (pwm_t pwm)
 {
-    pwm_channels_start (BIT (channel));
+    pwm_channels_start (pwm_channel_mask (pwm));
 }
 
 
-/* Stop selected channel.  */
+/** Stop selected channel.  */
 void
-pwm_stop (pwm_channel_t channel)
+pwm_stop (pwm_t pwm)
 {
-    pwm_channels_stop (BIT (channel));
+    pwm_channels_stop (pwm_channel_mask (pwm));
 }
 
 
+/** Enable PWM to drive pin.  */
 void
-pwm_enable (pwm_channel_t channel)
+pwm_enable (pwm_t pwm)
 {
-    switch (channel)
-    {
-#ifdef PWM0_BIT
-    case PWM_CHANNEL_0:
-#if PWM0_BIT == 0
-        AT91C_BASE_PIOA->PIO_ASR = AT91C_PA0_PWM0;
-        AT91C_BASE_PIOA->PIO_PDR = AT91C_PA0_PWM0;
-#elif PWM0_BIT == 11
-        AT91C_BASE_PIOA->PIO_BSR = AT91C_PA11_PWM0;
-        AT91C_BASE_PIOA->PIO_PDR = AT91C_PA11_PWM0;
-#elif PWM0_BIT == 23
-        AT91C_BASE_PIOA->PIO_BSR = AT91C_PA23_PWM0;
-        AT91C_BASE_PIOA->PIO_PDR = AT91C_PA23_PWM0;
-#endif
-        break;
-#endif
-
-#ifdef PWM1_BIT
-    case PWM_CHANNEL_1:
-#if PWM1_BIT == 1
-        AT91C_BASE_PIOA->PIO_ASR = AT91C_PA1_PWM1;
-        AT91C_BASE_PIOA->PIO_PDR = AT91C_PA1_PWM1;
-#elif PWM1_BIT == 12
-        AT91C_BASE_PIOA->PIO_BSR = AT91C_PA12_PWM1;
-        AT91C_BASE_PIOA->PIO_PDR = AT91C_PA12_PWM1;
-#elif PWM1_BIT == 24
-        AT91C_BASE_PIOA->PIO_BSR = AT91C_PA24_PWM1;
-        AT91C_BASE_PIOA->PIO_PDR = AT91C_PA24_PWM1;
-#endif
-        break;
-#endif
-
-#ifdef PWM2_BIT
-    case PWM_CHANNEL_2:
-#if PWM2_BIT == 2
-        AT91C_BASE_PIOA->PIO_ASR = AT91C_PA2_PWM2;
-        AT91C_BASE_PIOA->PIO_PDR = AT91C_PA2_PWM2;
-#elif PWM2_BIT == 13
-        AT91C_BASE_PIOA->PIO_BSR = AT91C_PA13_PWM2;
-        AT91C_BASE_PIOA->PIO_PDR = AT91C_PA13_PWM2;
-#elif PWM2_BIT == 25
-        AT91C_BASE_PIOA->PIO_BSR = AT91C_PA25_PWM2;
-        AT91C_BASE_PIOA->PIO_PDR = AT91C_PA25_PWM2;
-#endif
-        break;
-#endif
-
-#ifdef PWM3_BIT
-    case PWM_CHANNEL_3:
-#if PWM3_BIT == 7
-        AT91C_BASE_PIOA->PIO_BSR = AT91C_PA7_PWM3;
-        AT91C_BASE_PIOA->PIO_PDR = AT91C_PA7_PWM3;
-#elif PWM3_BIT == 14
-        AT91C_BASE_PIOA->PIO_BSR = AT91C_PA14_PWM3;
-        AT91C_BASE_PIOA->PIO_PDR = AT91C_PA14_PWM3;
-#endif
-        break;
-#endif
-    default:
-        break;
-    }
+    pio_config_set (pwm->pin->pio, pwm->pin->periph);
 }
 
 
+/** Switch pin back to a PIO.  */
 void
-pwm_disable (pwm_channel_t channel)
+pwm_disable (pwm_t pwm)
 {
-    switch (channel)
-    {
-#ifdef PWM0_BIT
-    case 0:
-#if PWM0_BIT == 0
-        AT91C_BASE_PIOA->PIO_PER = AT91C_PA0_PWM0;
-#elif PWM0_BIT == 11
-        AT91C_BASE_PIOA->PIO_PER = AT91C_PA11_PWM0;
-#elif PWM0_BIT == 23
-        AT91C_BASE_PIOA->PIO_PER = AT91C_PA23_PWM0;
-#endif
-        break;
-#endif
-
-#ifdef PWM1_BIT
-    case 1:
-#if PWM1_BIT == 1
-        AT91C_BASE_PIOA->PIO_PER = AT91C_PA1_PWM1;
-#elif PWM1_BIT == 12
-        AT91C_BASE_PIOA->PIO_PER = AT91C_PA12_PWM1;
-#elif PWM1_BIT == 24
-        AT91C_BASE_PIOA->PIO_PER = AT91C_PA24_PWM1;
-#endif
-        break;
-#endif
-
-#ifdef PWM2_BIT
-    case 2:
-#if PWM2_BIT == 2
-        AT91C_BASE_PIOA->PIO_PER = AT91C_PA2_PWM2;
-#elif PWM2_BIT == 13
-        AT91C_BASE_PIOA->PIO_PER = AT91C_PA13_PWM2;
-#elif PWM2_BIT == 25
-        AT91C_BASE_PIOA->PIO_PER = AT91C_PA25_PWM2;
-#endif
-        break;
-#endif
-
-#ifdef PWM3_BIT
-    case 3:
-#if PWM3_BIT == 7
-        AT91C_BASE_PIOA->PIO_PER = AT91C_PA7_PWM3;
-#elif PWM3_BIT == 14
-        AT91C_BASE_PIOA->PIO_PER = AT91C_PA14_PWM3;
-#endif
-        break;
-#endif
-    default:
-        break;
-    }
+    /* Return PIO to previous state.  This is a violation of the PIO
+       API.  FIXME.  */
+    PIO_PORT_ (pwm->pin->pio)->PIO_PER = PIO_BITMASK_ (pwm->pin->pio);    
 }
 
 
-
-/* Updates the waveform period and duty.  */
+/** Update the waveform period and duty.  */
 uint8_t
-pwm_update (pwm_channel_t channel, uint16_t new_period, uint16_t new_duty)
+pwm_update (pwm_t pwm, pwm_period_t new_period, pwm_period_t new_duty)
 {
     AT91S_PWMC_CH *pPWM;
     uint8_t status;
+    pwm_channel_mask_t mask;
     
     /* Select the channel peripheral base address.  */	
-    pPWM = pwm_base (channel);
+    pPWM = pwm_base (pwm);
 	
     if (!pPWM)
         return 0;
-        
+    
     /* Check that the duty cycle is ok.  */
     if (new_duty > new_period)
         return 0;
 
+    mask = pwm_channel_mask (pwm);
+    
     /* Read update interrupt.  */
     status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3); 
 
@@ -267,7 +234,7 @@ pwm_update (pwm_channel_t channel, uint16_t new_period, uint16_t new_duty)
     BITS_INSERT (pPWM->PWMC_CMR, 0, 10, 10);
         
     /* Wait for a new period.  */
-    while (!(status & BIT (channel)))
+    while (!(status & mask))
     {
         status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3);
     }
@@ -282,7 +249,7 @@ pwm_update (pwm_channel_t channel, uint16_t new_period, uint16_t new_duty)
     BITS_INSERT (pPWM->PWMC_CMR, 1, 10, 10);
         
     /* Wait for a new period.  */
-    while (!(status & BIT (channel)))
+    while (!(status & mask))
     {
         status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3);
     }
@@ -292,3 +259,5 @@ pwm_update (pwm_channel_t channel, uint16_t new_period, uint16_t new_duty)
 
     return 1;
 }
+
+
