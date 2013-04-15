@@ -36,7 +36,7 @@ static extint_dev_t extints[] =
 
 
 static void
-extint_wakeup_isr (void)
+extint_default_handler (void)
 {
     /* Nothing to do.  */
 }
@@ -56,10 +56,6 @@ void extint_disable (extint_t extint)
 
 void extint_sleep (extint_t extint)
 {
-    irq_config (extint->irq_id, 1,
-                AT91C_AIC_SRCTYPE_EXT_LOW_LEVEL, 
-                extint_wakeup_isr);
-    
     extint_enable (extint);
     
     /* Turn off main oscillator, PLL, and master clock, switch to slow
@@ -81,7 +77,18 @@ extint_t extint_init (const extint_cfg_t *cfg)
         
         if (dev->pio == cfg->pio)
         {
+            void (*handler)(void);
+
             pio_config_set (dev->pio, dev->periph);
+
+            handler = cfg->handler;
+            if (!handler)
+                handler = extint_default_handler;
+            
+            irq_config (dev->irq_id, 1,
+                        AT91C_AIC_SRCTYPE_EXT_LOW_LEVEL, 
+                        handler);
+
             return dev;
         }
     }

@@ -13,6 +13,7 @@
 typedef struct extint_cfg_struct
 {
     pio_t pio;
+    void (*handler)(void);
 } extint_cfg_t;
 
 
