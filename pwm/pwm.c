@@ -221,7 +221,7 @@ pwm_update (pwm_t pwm, pwm_period_t new_period, pwm_period_t new_duty)
     if (!pPWM)
         return 0;
     
-    /* Check that the duty cycle is ok.  */
+    /* Check that the duty cycle is okay.  */
     if (new_duty > new_period)
         return 0;
 

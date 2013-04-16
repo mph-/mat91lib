@@ -1495,7 +1495,7 @@ udp_endpoint_read (udp_t udp, udp_ep_t endpoint, void *buffer, udp_size_t len)
     unsigned int timeout;
     udp_ep_info_t *pep = &udp->eps[endpoint];
 
-    if (udp_read_async(udp, endpoint, buffer, len, NULL, NULL)
+    if (udp_read_async(udp, endpoint, buffer, len, 0, 0)
         != UDP_STATUS_SUCCESS)
         return 0;
 
@@ -1530,7 +1530,7 @@ udp_endpoint_write (udp_t udp, udp_ep_t endpoint,
        more robust since it uses the standard endpoint handling
        code.  */
 
-    if (udp_write_async (udp, endpoint, buffer, len, NULL, NULL)
+    if (udp_write_async (udp, endpoint, buffer, len, 0, 0)
         != UDP_STATUS_SUCCESS)
         return 0;
 
