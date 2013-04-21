@@ -1,7 +1,9 @@
 /** @file   tc.c
     @author M. P. Hayes
     @date   30 November 2010
-    @brief  Timer counter routines for AT91SAM7 processors
+    @brief  Timer counter routines for AT91SAM7
+    @note   There is no support for capture modes.  Only TIOAx can be
+            driven at present.  
 */
 
 
@@ -16,8 +18,6 @@
    (RA, RB,and RC).  In waveform mode, RA and RB are used to drive
    TIOA and TIOB, respectively.  RC can be used to stop the timer
    clock to provide a one-shot.
-
-   Only TIOAx can be driven at present.
    
    The counter can be clocked with MCK divided by 2, 8, 32, 128, and 1024.
  */
@@ -122,8 +122,8 @@ tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period)
     tc->base->TC_RA = delay >> 1;
     tc->base->TC_RC = period >> 1;
 
-    /* Generate a software trigger with the clock stopped to hopefully
-       set TIOAx to desired state.  Yes, this seems to work.  */
+    /* Generate a software trigger with the clock stopped to set TIOAx
+       to desired state.  */
     tc->base->TC_CCR |= (AT91C_TC_CLKDIS | AT91C_TC_SWTRG); 
 
     /* Make timer pin TIOAx a timer output.  Perhaps we could use
