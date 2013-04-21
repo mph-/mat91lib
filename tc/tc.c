@@ -118,8 +118,9 @@ tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, tc_period_t delay, tc_period_t p
         return 0;
     }
 
-    /* If period > 65536 then need to select a slower timer clock.
-       For now use MCK / 2.  */
+    /* TODO: If period > 65536 then need to select a slower timer
+       clock.  For now use MCK / 2.  Other prescale factors are 8, 32,
+       128, and 1024.  */
     tc->base->TC_CMR |= AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
 
     /* These registers are read only when not in wave mode.  */
