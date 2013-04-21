@@ -8,7 +8,9 @@
 #define TC_H
 
 #include "config.h"
+#include "pio.h"
 
+#define TC_PERIOD_DIVISOR(FREQ) (F_CPU / (2 * (FREQ)))
 
 typedef enum
 {
@@ -32,8 +34,7 @@ typedef enum
 /** TC configuration structure.  */
 typedef struct
 {
-    /* Logical channel number.  */
-    uint8_t channel;
+    pio_t pio;
 } tc_cfg_t;
 
 

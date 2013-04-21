@@ -9,6 +9,8 @@
 #include "cpu.h"
 #include "irq.h"
 #include "bits.h"
+#include "pinmap.h"
+
 
 /* Each of the three TCs has a 16 bit counter with 3 16 bit registers
    (RA, RB,and RC).  In waveform mode, RA and RB are used to drive
@@ -21,6 +23,18 @@
  */
 
 #define TC_CHANNEL(TC) ((TC) - tc_info)
+
+
+/* Define known TC pins.  */
+static const pinmap_t tc_pins[] = 
+{
+    {0, PIO_DEFINE (PORT_A, 0), PIO_PERIPH_B},
+    {1, PIO_DEFINE (PORT_A, 15), PIO_PERIPH_B},
+    {2, PIO_DEFINE (PORT_A, 26), PIO_PERIPH_B},
+};
+
+
+#define TC_PINS_NUM ARRAY_SIZE (tc_pins)
 
 
 static tc_dev_t tc_info[TC_CHANNEL_NUM];
@@ -159,32 +173,40 @@ tc_t
 tc_init (tc_cfg_t *cfg)
 {
     tc_t tc;
+    const pinmap_t *pin;
+    unsigned int i;
 
-    switch (cfg->channel)
+    pin = 0;
+    for (i = 0; i < TC_PINS_NUM; i++)
+    {
+        pin = &tc_pins[i]; 
+        if (pin->pio == cfg->pio)
+            break;
+    }
+    if (!pin)
+        return 0;
+
+    tc = &tc_info[pin->channel];
+
+    switch (pin->channel)
     {
     case TC_CHANNEL_0:
         /* Enable TC0 peripheral clock.  */
         AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_TC0);
-        tc = &tc_info[TC_CHANNEL_0];
         tc->base = AT91C_BASE_TC0;
         break;
 
     case TC_CHANNEL_1:
         /* Enable TC1 peripheral clock.  */
         AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_TC1);
-        tc = &tc_info[TC_CHANNEL_1];
         tc->base = AT91C_BASE_TC1;
         break;
 
     case TC_CHANNEL_2:
         /* Enable TC2 peripheral clock.  */
         AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_TC2);
-        tc = &tc_info[TC_CHANNEL_2];
         tc->base = AT91C_BASE_TC2;
         break;
-
-    default:
-        return 0;
     }
 
     return tc;
