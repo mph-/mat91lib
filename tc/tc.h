@@ -57,7 +57,7 @@ bool tc_start (tc_t tc);
 bool tc_stop (tc_t tc);
               
 
-tc_t tc_init (tc_cfg_t *cfg);
+tc_t tc_init (const tc_cfg_t *cfg);
 
 
 void tc_shutdown (tc_t tc);

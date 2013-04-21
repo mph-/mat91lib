@@ -22,7 +22,7 @@
    The counter can be clocked with MCK divided by 2, 8, 32, 128, and 1024.
  */
 
-#define TC_CHANNEL(TC) ((TC) - tc_info)
+#define TC_CHANNEL(TC) ((TC) - tc_devices)
 
 
 /* Define known TC pins.  */
@@ -36,8 +36,9 @@ static const pinmap_t tc_pins[] =
 
 #define TC_PINS_NUM ARRAY_SIZE (tc_pins)
 
+#define TC_DEVICES_NUM TC_PINS_NUM
 
-static tc_dev_t tc_info[TC_CHANNEL_NUM];
+static tc_dev_t tc_devices[TC_DEVICES_NUM];
 
 
 bool tc_start (tc_t tc)
@@ -165,12 +166,12 @@ tc_shutdown (tc_t tc)
     AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_TC0) 
         | BIT (AT91C_ID_TC1) | BIT (AT91C_ID_TC2);
 
-    /* Perhaps force TC output pins low?  */
+    /* Perhaps should force TC output pins low?  */
 }
 
 
 tc_t 
-tc_init (tc_cfg_t *cfg)
+tc_init (const tc_cfg_t *cfg)
 {
     tc_t tc;
     const pinmap_t *pin;
@@ -186,7 +187,7 @@ tc_init (tc_cfg_t *cfg)
     if (!pin)
         return 0;
 
-    tc = &tc_info[pin->channel];
+    tc = &tc_devices[pin->channel];
 
     switch (pin->channel)
     {
@@ -214,7 +215,7 @@ tc_init (tc_cfg_t *cfg)
 
 
 static void
-tc_interrupt_handler (void)
+tc_clock_sync_handler (void)
 {
     /* Read status register to clear interrupt.  */
     AT91C_BASE_TC0->TC_SR;
@@ -251,7 +252,7 @@ tc_clock_sync (tc_t tc, uint32_t period)
 
     irq_config (id, 7, 
                 AT91C_AIC_SRCTYPE_INT_LEVEL_SENSITIVE, 
-                tc_interrupt_handler);
+                tc_clock_sync_handler);
             
     irq_enable (id);
 
