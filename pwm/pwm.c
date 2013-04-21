@@ -15,7 +15,9 @@ struct pwm_dev_struct
 };
 
 
-static pwm_dev_t pwm_devices[4];
+#define PWM_DEVICES_NUM 4
+
+static pwm_dev_t pwm_devices[PWM_DEVICES_NUM];
 
 
 /* Define known PWM pins.  */
