@@ -10,7 +10,7 @@
 #include "config.h"
 #include "pio.h"
 
-#define TC_PERIOD_DIVISOR(FREQ) (F_CPU / (2 * (FREQ)))
+#define TC_PERIOD_DIVISOR(FREQ) ((tc_period_t)(F_CPU / (FREQ)))
 
 typedef enum
 {

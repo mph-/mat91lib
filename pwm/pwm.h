@@ -12,7 +12,7 @@
 #include "pio.h"
 
 
-#define PWM_PERIOD_DIVISOR(FREQ) (F_CPU / (FREQ))
+#define PWM_PERIOD_DIVISOR(FREQ) ((pwm_period_t)(F_CPU / (FREQ)))
 
 #define PWM_DUTY_DIVISOR(FREQ, DUTY_PERCENT) \
     ((F_CPU * (DUTY_PERCENT)) / ((FREQ) * 100))
