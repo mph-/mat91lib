@@ -50,8 +50,10 @@ typedef uint32_t tc_period_t;
 typedef tc_dev_t *tc_t;
 
 
+/** Configure pulse generation with specified mode.   The delay and period
+    are in terms of the CPU clock.  The pulse width is delay - period.  */
 bool tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, 
-                      tc_period_t delay, tc_period_t pulse_width);
+                      tc_period_t delay, tc_period_t period);
 
 
 bool tc_start (tc_t tc);

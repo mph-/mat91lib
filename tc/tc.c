@@ -68,8 +68,10 @@ tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, tc_period_t delay, tc_period_t p
     /* Many timer counters can only generate a pulse with a single
        timer clock period.  This timer counter allows the pulse width
        to be varied.  It is specified by period - delay. 
-       With WAVESEL_UP_AUTO, the counter is incremented and is reset
-       when RC matches.  */
+
+       We configure the TC in mode WAVESEL_UP_AUTO.  Here the counter
+       is incremented and is reset when RC matches.  The output is
+       driven when RA matches.  */
     switch (mode)
     {
     case TC_PULSE_MODE:
