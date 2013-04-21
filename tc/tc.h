@@ -38,6 +38,9 @@ typedef struct
 } tc_cfg_t;
 
 
+typedef uint32_t tc_period_t;
+
+
 /** Include definition of data structures required for the driver
     implementation.  Do not use.  */
 #include "tc_private.h"
@@ -48,7 +51,7 @@ typedef tc_dev_t *tc_t;
 
 
 bool tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, 
-                      uint32_t delay, uint32_t pulse_width);
+                      tc_period_t delay, tc_period_t pulse_width);
 
 
 bool tc_start (tc_t tc);
@@ -63,7 +66,7 @@ tc_t tc_init (const tc_cfg_t *cfg);
 void tc_shutdown (tc_t tc);
 
 
-void tc_clock_sync (tc_t tc, uint32_t period);
+void tc_clock_sync (tc_t tc, tc_period_t period);
 
 #endif
 

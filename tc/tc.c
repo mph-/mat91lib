@@ -63,7 +63,7 @@ uint16_t tc_counter_get (tc_t tc)
 
 
 bool
-tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period)
+tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, tc_period_t delay, tc_period_t period)
 {
     /* Many timer counters can only generate a pulse with a single
        timer clock period.  This timer counter allows the pulse width
@@ -224,27 +224,13 @@ tc_clock_sync_handler (void)
    CPU clock MCK to the timer clock, especially since the fastest
    timer clock is MCK / 2.  */
 void
-tc_clock_sync (tc_t tc, uint32_t period)
+tc_clock_sync (tc_t tc, tc_period_t period)
 {
     uint32_t id;
 
     tc_pulse_config (tc, TC_DELAY_MODE_ONESHOT, period, period);
 
-    switch (TC_CHANNEL (tc))
-    {
-    case TC_CHANNEL_0:
-    default:
-        id = AT91C_ID_TC0;
-        break;
-
-    case TC_CHANNEL_1:
-        id = AT91C_ID_TC1;
-        break;
-
-    case TC_CHANNEL_2:
-        id = AT91C_ID_TC2;
-        break;
-    }
+    id = AT91C_ID_TC0 + TC_CHANNEL (tc);
 
     irq_config (id, 7, 
                 AT91C_AIC_SRCTYPE_INT_LEVEL_SENSITIVE, 
