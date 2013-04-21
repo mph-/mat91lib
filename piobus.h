@@ -111,7 +111,7 @@ bool piobus_output_get (piobus_t piobus)
 /** Read input state of PIOBUS.
     @param piobus
     @return state  */
-static inline
+static __always_inline__
 uint32_t piobus_input_get (piobus_t piobus)
 {
     return (PIOBUS_PORT_ (piobus)->PIO_PDSR & PIOBUS_BITMASK_ (piobus)) >> PIOBUS_SHIFT_ (piobus);
