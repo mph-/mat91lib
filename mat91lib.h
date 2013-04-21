@@ -28,6 +28,11 @@ typedef uint8_t bool;
 #endif
 
 
+#ifndef __always_inline__
+#define  __always_inline__ __attribute__ ((always_inline))
+#endif
+
+
 #ifndef _DOXYGEN_
 #define __packed__ __attribute__((packed))
 #else
