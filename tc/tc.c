@@ -162,11 +162,10 @@ tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, uint32_t delay, uint32_t period)
 void
 tc_shutdown (tc_t tc)
 {
-    /* Disable TC0, TC1, TC2 peripheral clocks.  */
-    AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_TC0) 
-        | BIT (AT91C_ID_TC1) | BIT (AT91C_ID_TC2);
+    /* Disable peripheral clock.  */
+    AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_TC0 + TC_CHANNEL (tc));
 
-    /* Perhaps should force TC output pins low?  */
+    /* Perhaps should force TC output pin low?  */
 }
 
 
@@ -192,23 +191,20 @@ tc_init (const tc_cfg_t *cfg)
     switch (pin->channel)
     {
     case TC_CHANNEL_0:
-        /* Enable TC0 peripheral clock.  */
-        AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_TC0);
         tc->base = AT91C_BASE_TC0;
         break;
 
     case TC_CHANNEL_1:
-        /* Enable TC1 peripheral clock.  */
-        AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_TC1);
         tc->base = AT91C_BASE_TC1;
         break;
 
     case TC_CHANNEL_2:
-        /* Enable TC2 peripheral clock.  */
-        AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_TC2);
         tc->base = AT91C_BASE_TC2;
         break;
     }
+
+    /* Enable TCx peripheral clock.  */
+    AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_TC0 + pin->channel);
 
     return tc;
 }
