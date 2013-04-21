@@ -23,10 +23,15 @@ typedef enum
 
 typedef enum
 {
+    /** Active high repetitive pulse.  */
     TC_PULSE_MODE,
+    /** Active low repetitive pulse.  */
     TC_PULSE_MODE_INVERT,
+    /** Active high single pulse.  */
     TC_PULSE_MODE_ONESHOT,
+    /** Active low single pulse.  */
     TC_PULSE_MODE_ONESHOT_INVERT,
+    /** Drive output high after delay.  */
     TC_DELAY_MODE_ONESHOT,
 } tc_pulse_mode_t;
 
@@ -54,6 +59,10 @@ typedef tc_dev_t *tc_t;
     are in terms of the CPU clock.  The pulse width is delay - period.  */
 bool tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, 
                       tc_period_t delay, tc_period_t period);
+
+
+/** Configure squarewave generation with specified period.  */
+bool tc_squarewave_config (tc_t tc, tc_period_t period);
 
 
 bool tc_start (tc_t tc);

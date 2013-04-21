@@ -62,6 +62,8 @@ uint16_t tc_counter_get (tc_t tc)
 }
 
 
+/** Configure pulse generation with specified mode.   The delay and period
+    are in terms of the CPU clock.  The pulse width is delay - period.  */
 bool
 tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, tc_period_t delay, tc_period_t period)
 {
@@ -158,6 +160,13 @@ tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, tc_period_t delay, tc_period_t p
     tc->base->TC_SR;
 
     return 1;
+}
+
+
+/** Configure squarewave generation with specified period.  */
+bool tc_squarewave_config (tc_t tc, tc_period_t period)
+{
+    return tc_pulse_config (tc, TC_PULSE_MODE, period >> 1, period);
 }
 
 
