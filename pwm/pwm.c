@@ -6,45 +6,35 @@
 
 #include "pwm.h"
 #include "bits.h"
-
-
-typedef struct pwm_pin_struct
-{
-    uint8_t channel;
-    pio_t pio;
-    pio_config_t periph;
-} pwm_pin_t;
+#include "pinmap.h"
 
 
 struct pwm_dev_struct
 {
-    const pwm_pin_t *pin;
+    const pinmap_t *pin;
 };
 
 
 static pwm_dev_t pwm_devices[4];
 
 
-#define PWM_PIN(CHANNEL, PIO, PERIPH) \
-    {.channel = (CHANNEL), .pio = (PIO), .periph = (PERIPH)}
-
 /* Define known PWM pins.  */
-static const pwm_pin_t pwm_pins[] = 
+static const pinmap_t pwm_pins[] = 
 {
-    PWM_PIN (0, PIO_DEFINE (PORT_A, 0), PIO_PERIPH_A),
-    PWM_PIN (0, PIO_DEFINE (PORT_A, 11), PIO_PERIPH_B),
-    PWM_PIN (0, PIO_DEFINE (PORT_A, 23), PIO_PERIPH_B),
+    {0, PIO_DEFINE (PORT_A, 0), PIO_PERIPH_A},
+    {0, PIO_DEFINE (PORT_A, 11), PIO_PERIPH_B},
+    {0, PIO_DEFINE (PORT_A, 23), PIO_PERIPH_B},
 
-    PWM_PIN (1, PIO_DEFINE (PORT_A, 1), PIO_PERIPH_A),
-    PWM_PIN (1, PIO_DEFINE (PORT_A, 12), PIO_PERIPH_B),
-    PWM_PIN (1, PIO_DEFINE (PORT_A, 24), PIO_PERIPH_B),
+    {1, PIO_DEFINE (PORT_A, 1), PIO_PERIPH_A},
+    {1, PIO_DEFINE (PORT_A, 12), PIO_PERIPH_B},
+    {1, PIO_DEFINE (PORT_A, 24), PIO_PERIPH_B},
 
-    PWM_PIN (2, PIO_DEFINE (PORT_A, 2), PIO_PERIPH_A),
-    PWM_PIN (2, PIO_DEFINE (PORT_A, 13), PIO_PERIPH_B),
-    PWM_PIN (2, PIO_DEFINE (PORT_A, 24), PIO_PERIPH_B),
+    {2, PIO_DEFINE (PORT_A, 2), PIO_PERIPH_A},
+    {2, PIO_DEFINE (PORT_A, 13), PIO_PERIPH_B},
+    {2, PIO_DEFINE (PORT_A, 24), PIO_PERIPH_B},
 
-    PWM_PIN (3, PIO_DEFINE (PORT_A, 7), PIO_PERIPH_B),
-    PWM_PIN (3, PIO_DEFINE (PORT_A, 14), PIO_PERIPH_B),
+    {3, PIO_DEFINE (PORT_A, 7), PIO_PERIPH_B},
+    {3, PIO_DEFINE (PORT_A, 14), PIO_PERIPH_B},
 };
 
 
@@ -121,7 +111,7 @@ pwm_config (pwm_t pwm, pwm_period_t period, pwm_period_t duty,
 pwm_t
 pwm_init (const pwm_cfg_t *cfg)
 {
-    const pwm_pin_t *pin;
+    const pinmap_t *pin;
     pwm_dev_t *dev;
     unsigned int i;
 
