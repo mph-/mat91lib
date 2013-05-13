@@ -117,10 +117,7 @@ pwm_init (const pwm_cfg_t *cfg)
     pwm_dev_t *dev;
     unsigned int i;
 
-
-    /* Enable PWM peripheral clock.  */
-    AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_PWMC);
-
+    /* Find PWM channel matching selected PIO.  */
     pin = 0;
     for (i = 0; i < PWM_PINS_NUM; i++)
     {
@@ -130,10 +127,13 @@ pwm_init (const pwm_cfg_t *cfg)
     }
     if (!pin)
         return 0;
-    
+
     /* Allow user to override PWM channel.  */
     dev = &pwm_devices[pin->channel];
     dev->pin = pin;
+
+    /* Enable PWM peripheral clock.  */
+    AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_PWMC);
 
     pwm_config (dev, cfg->period, cfg->duty, cfg->align, cfg->polarity);
 
