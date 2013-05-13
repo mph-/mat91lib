@@ -33,7 +33,7 @@ static const pinmap_t pwm_pins[] =
 
     {2, PIO_DEFINE (PORT_A, 2), PIO_PERIPH_A},
     {2, PIO_DEFINE (PORT_A, 13), PIO_PERIPH_B},
-    {2, PIO_DEFINE (PORT_A, 24), PIO_PERIPH_B},
+    {2, PIO_DEFINE (PORT_A, 25), PIO_PERIPH_B},
 
     {3, PIO_DEFINE (PORT_A, 7), PIO_PERIPH_B},
     {3, PIO_DEFINE (PORT_A, 14), PIO_PERIPH_B},
