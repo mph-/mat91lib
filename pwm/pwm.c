@@ -74,15 +74,23 @@ pwm_shutdown (void)
 
 
 /** Configures the PWM output The period of the waveform is in number
-    of MCK ticks.  The duty can be any number less than the period.
-    Support is only for fequencies above 750 Hz (no prescaling used
-    here).  So for 100 kHz, period would be 480 with MCK at 48
-    MHz.  */
+    of MCK ticks.  The duty can be any number less than the period.   */
 static uint8_t
 pwm_config (pwm_t pwm, pwm_period_t period, pwm_period_t duty,
             pwm_align_t align, pwm_polarity_t polarity)
 {
     AT91S_PWMC_CH *pPWM;
+
+    /* The duty cycle cannot be greater than 100 %.  */
+    if (duty > period)
+        return 0;
+
+    /* If the period is greater than 16-bits then need to select the
+       appropriate prescaler.  TODO.  This restricts the PWM fequency
+       to be above 750 Hz.  So for 100 kHz, the period would be 480 with
+       MCK at 48 MHz.  */
+    if (period >= 65536u)
+        return 0;
     
     /* Select the channel peripheral base address.  */	
     pPWM = pwm_base (pwm);
@@ -92,10 +100,6 @@ pwm_config (pwm_t pwm, pwm_period_t period, pwm_period_t duty,
     
     /* Configure period.  */
     pPWM->PWMC_CPRDR = period;
-    
-    /* Check and configure duty cycle.  */
-    if (duty > period)
-        return 0;
     
     pPWM->PWMC_CDTYR = duty;
     
