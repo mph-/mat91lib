@@ -81,24 +81,36 @@ pwm_config (pwm_t pwm, pwm_period_t period, pwm_period_t duty,
             pwm_align_t align, pwm_polarity_t polarity)
 {
     AT91S_PWMC_CH *pPWM;
+    int prescale;
 
-    /* The duty cycle cannot be greater than 100 %.  */
-    if (duty > period)
-        return 0;
-
-    /* If the period is greater than 16-bits then need to select the
-       appropriate prescaler.  TODO.  This restricts the PWM fequency
-       to be above 750 Hz.  So for 100 kHz, the period would be 480 with
-       MCK at 48 MHz.  */
-    if (period >= 65536u)
-        return 0;
-    
     /* Select the channel peripheral base address.  */	
     pPWM = pwm_base (pwm);
     
     if (!pPWM)
         return 0;
     
+    /* The duty cycle cannot be greater than 100 %.  */
+    if (duty > period)
+        return 0;
+
+    /* If the period is greater than 16-bits then need to select the
+       appropriate prescaler.  */
+    for (prescale = 0; prescale < 11 && period <= 65535u; prescale++)
+    {
+        period >>= 1;
+        duty >> = 1;
+    }
+
+    /* TODO: it is possible to configure CLKA and CLKB to have
+       an even lower frequency.  */
+    if (period > 65535u)
+        return 0;
+
+
+    /* Configure prescaler.  */
+    BITS_INSERT (pPWM->PWMC_MR, prescale, 8, 11);
+    BITS_INSERT (pPWM->PWMC_MR, prescale, 24, 27);
+
     /* Configure period.  */
     pPWM->PWMC_CPRDR = period;
     
@@ -238,7 +250,7 @@ pwm_stop (pwm_t pwm)
 
 /** Update the waveform period and duty.  */
 uint8_t
-pwm_update (pwm_t pwm, pwm_period_t new_period, pwm_period_t new_duty)
+pwm_update (pwm_t pwm, pwm_period_t period, pwm_period_t duty)
 {
     AT91S_PWMC_CH *pPWM;
     uint8_t status;
@@ -251,7 +263,7 @@ pwm_update (pwm_t pwm, pwm_period_t new_period, pwm_period_t new_duty)
         return 0;
     
     /* Check that the duty cycle is okay.  */
-    if (new_duty > new_period)
+    if (duty > period)
         return 0;
 
     mask = pwm_channel_mask (pwm);
@@ -269,7 +281,7 @@ pwm_update (pwm_t pwm, pwm_period_t new_period, pwm_period_t new_duty)
     }
         
     /* Write in the new duty.  */
-    pPWM->PWMC_CUPDR = new_duty;
+    pPWM->PWMC_CUPDR = duty;
         
     /* Read update interrupt.  */
     status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3); 
@@ -284,7 +296,7 @@ pwm_update (pwm_t pwm, pwm_period_t new_period, pwm_period_t new_duty)
     }
         
     /* Write in the new period.  */
-    pPWM->PWMC_CUPDR = new_period;
+    pPWM->PWMC_CUPDR = period;
 
     return 1;
 }
