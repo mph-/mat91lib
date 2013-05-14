@@ -195,7 +195,7 @@ tc_init (const tc_cfg_t *cfg)
         if (pin->pio == cfg->pio)
             break;
     }
-    if (!pin)
+    if (i >= TC_PINS_NUM)
         return 0;
 
     tc = &tc_devices[pin->channel];
