@@ -217,7 +217,6 @@ pwm_channels_stop (pwm_channel_mask_t channel_mask)
         if (pwm->stop_state)
             pio_config_set (pwm->pin->pio, pwm->stop_state);
     }
-
 }
 
 
