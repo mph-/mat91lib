@@ -61,9 +61,15 @@ pwm_t
 pwm_init (const pwm_cfg_t *cfg);
 
 
-/** Update the waveform period and duty.  */
-uint8_t
-pwm_update (pwm_t pwm, pwm_period_t new_period, pwm_period_t new_duty);
+/** Update the waveform period (this changes the prescaler as required). 
+    The period is in terms of CPU clocks.  */
+pwm_period_t
+pwm_period_set (pwm_t pwm, pwm_period_t period);
+
+
+/** Update the waveform duty.  The duty is in terms of CPU clocks.  */
+pwm_period_t
+pwm_duty_set (pwm_t pwm, pwm_period_t duty);
 
 
 /** Start selected channel.  */
@@ -74,11 +80,6 @@ pwm_start (pwm_t pwm);
 /** Stop selected channel.  */
 void
 pwm_stop (pwm_t pwm);
-
-
-/** Updates the waveform period and duty.  */
-uint8_t
-pwm_update (pwm_t pwm, pwm_period_t new_period, pwm_period_t new_duty);
 
 
 /** Start selected channels simultaneously.  */

@@ -13,6 +13,7 @@ struct pwm_dev_struct
 {
     const pinmap_t *pin;
     pio_config_t stop_state;
+    uint8_t prescale;
 };
 
 
@@ -74,6 +75,130 @@ pwm_shutdown (void)
 }
 
 
+static void
+pwm_prescale_set (pwm_t pwm, uint8_t prescale)
+{
+    AT91S_PWMC_CH *pPWM;
+
+    pPWM = pwm_base (pwm);
+    if (!pPWM)
+        return;
+
+    /* Configure prescaler.  */
+    BITS_INSERT (pPWM->PWMC_CMR, prescale, 0, 3);
+    pwm->prescale = prescale;
+}
+
+
+
+pwm_period_t
+pwm_period_set (pwm_t pwm, pwm_period_t period)
+{
+    AT91S_PWMC_CH *pPWM;
+    pwm_channel_mask_t mask;
+    uint8_t prescale;
+
+    pPWM = pwm_base (pwm);
+    if (!pPWM)
+        return 0;
+
+    /* If the period is greater than 16-bits then need to select the
+       appropriate prescaler.  */
+    for (prescale = 0; prescale < 11 && period <= 65535u; prescale++)
+    {
+        period >>= 1;
+    }
+
+    /* TODO: it is possible to configure CLKA and CLKB to have an even
+       lower frequency.  However, these clocks are shared for all
+       channels.  */
+    if (period > 65535u)
+        return 0;
+
+    pwm_prescale_set (pwm, prescale);
+
+    mask = pwm_channel_mask (pwm);
+
+    /* Configure period.  */
+    if (AT91C_BASE_PWMC->PWMC_SR & mask)
+    {
+        uint8_t status;
+
+        /* The PWM is running.  We need to jump through a hoop to
+           update the period register.  This is because the update
+           register is used for the period and for the duty.  */
+
+        /* Read update status.  */
+        status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3); 
+
+        /* Set mode to update period.  */
+        BITS_INSERT (pPWM->PWMC_CMR, 1, 10, 10);
+        
+        /* Wait for a new period.  */
+        while (!(status & mask))
+        {
+            status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3);
+        }
+
+        pPWM->PWMC_CUPDR = period;
+    }
+    else
+    {
+        pPWM->PWMC_CPRDR = period;
+    }
+
+    return period << pwm->prescale;
+}
+
+
+pwm_period_t
+pwm_duty_set (pwm_t pwm, pwm_period_t duty)
+{
+    AT91S_PWMC_CH *pPWM;
+    pwm_channel_mask_t mask;
+
+    pPWM = pwm_base (pwm);
+    if (!pPWM)
+        return 0;
+
+    duty = duty >> pwm->prescale;
+
+    mask = pwm_channel_mask (pwm);
+
+    /* Configure duty.  */
+    if (AT91C_BASE_PWMC->PWMC_SR & mask)
+    {
+        uint8_t status;
+
+        /* The PWM is running.  We need to jump through a hoop to
+           update the duty register.  This is because the update
+           register is used for the period and for the duty.  */
+
+        /* Read update status.  */
+        status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3); 
+
+        /* Set mode to update duty.  */
+        BITS_INSERT (pPWM->PWMC_CMR, 0, 10, 10);
+        
+        /* Wait for a new duty.  */
+        while (!(status & mask))
+        {
+            status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3);
+        }
+
+        pPWM->PWMC_CUPDR = duty;
+    }
+    else
+    {
+        pPWM->PWMC_CDTYR = duty;
+    }
+
+
+    return duty << pwm->prescale;
+}
+
+
+
 /** Configures the PWM output The period of the waveform is in number
     of MCK ticks.  The duty can be any number less than the period.   */
 static uint8_t
@@ -81,7 +206,6 @@ pwm_config (pwm_t pwm, pwm_period_t period, pwm_period_t duty,
             pwm_align_t align, pwm_polarity_t polarity)
 {
     AT91S_PWMC_CH *pPWM;
-    int prescale;
 
     /* Select the channel peripheral base address.  */	
     pPWM = pwm_base (pwm);
@@ -93,28 +217,10 @@ pwm_config (pwm_t pwm, pwm_period_t period, pwm_period_t duty,
     if (duty > period)
         return 0;
 
-    /* If the period is greater than 16-bits then need to select the
-       appropriate prescaler.  */
-    for (prescale = 0; prescale < 11 && period <= 65535u; prescale++)
-    {
-        period >>= 1;
-        duty >> = 1;
-    }
+    /* Configure period first since this sets the prescaler.  */
+    pwm_period_set (pwm, period);
 
-    /* TODO: it is possible to configure CLKA and CLKB to have
-       an even lower frequency.  */
-    if (period > 65535u)
-        return 0;
-
-
-    /* Configure prescaler.  */
-    BITS_INSERT (pPWM->PWMC_CMR, prescale, 0, 3);
-
-    /* Configure period.  */
-    pPWM->PWMC_CPRDR = period;
-    
-    pPWM->PWMC_CDTYR = duty;
-
+    pwm_duty_set (pwm, duty);
 
     /* Polarity and alignment can only be changed when the PWM channel
        is disabled, i.e., is stopped.  */
@@ -211,7 +317,6 @@ pwm_channels_stop (pwm_channel_mask_t channel_mask)
 
     AT91C_BASE_PWMC->PWMC_DIS = channel_mask;
 
-
     /* Switch pins to have desired stop state.  */
     for (i = 0; i < PWM_DEVICES_NUM; i++)
     {
@@ -246,59 +351,3 @@ pwm_stop (pwm_t pwm)
 {
     pwm_channels_stop (pwm_channel_mask (pwm));
 }
-
-
-/** Update the waveform period and duty.  */
-uint8_t
-pwm_update (pwm_t pwm, pwm_period_t period, pwm_period_t duty)
-{
-    AT91S_PWMC_CH *pPWM;
-    uint8_t status;
-    pwm_channel_mask_t mask;
-    
-    /* Select the channel peripheral base address.  */	
-    pPWM = pwm_base (pwm);
-	
-    if (!pPWM)
-        return 0;
-    
-    /* Check that the duty cycle is okay.  */
-    if (duty > period)
-        return 0;
-
-    mask = pwm_channel_mask (pwm);
-    
-    /* Read update interrupt.  */
-    status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3); 
-
-    /* Set mode to update duty.  */
-    BITS_INSERT (pPWM->PWMC_CMR, 0, 10, 10);
-        
-    /* Wait for a new period.  */
-    while (!(status & mask))
-    {
-        status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3);
-    }
-        
-    /* Write in the new duty.  */
-    pPWM->PWMC_CUPDR = duty;
-        
-    /* Read update interrupt.  */
-    status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3); 
-
-    /* Set mode to update period.  */
-    BITS_INSERT (pPWM->PWMC_CMR, 1, 10, 10);
-        
-    /* Wait for a new period.  */
-    while (!(status & mask))
-    {
-        status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3);
-    }
-        
-    /* Write in the new period.  */
-    pPWM->PWMC_CUPDR = period;
-
-    return 1;
-}
-
-
