@@ -16,11 +16,11 @@
 
 
 /** The maximum overrun period (s).  */
-#define PIT_OVERRUN_PERIOD 10
+#define PIT_OVERRUN_PERIOD 100
 
 
 /** The maximum overrun (in ticks).  */
-#define PIT_OVERRUN_MAX (PIT_OVERRUN_PERIOD * PIT_RATE)
+#define PIT_OVERRUN_MAX ((pit_tick_t)(PIT_OVERRUN_PERIOD * PIT_RATE))
 
 
 /** The maximum delay (in ticks).  */
