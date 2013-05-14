@@ -15,7 +15,7 @@
 #define PWM_PERIOD_DIVISOR(FREQ) ((pwm_period_t)(F_CPU / (FREQ)))
 
 #define PWM_DUTY_DIVISOR(FREQ, DUTY_PERCENT) \
-    ((F_CPU * (DUTY_PERCENT)) / ((FREQ) * 100))
+    ((pwm_period_t)((F_CPU * (DUTY_PERCENT)) / ((FREQ) * 100)))
 
 
 typedef enum
@@ -36,7 +36,7 @@ typedef struct pwm_dev_struct pwm_dev_t;
 
 typedef pwm_dev_t *pwm_t;
 
-typedef uint16_t pwm_period_t;
+typedef uint32_t pwm_period_t;
 
 typedef struct pwm_cfg_struct
 {
