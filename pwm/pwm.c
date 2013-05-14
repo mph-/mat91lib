@@ -108,14 +108,14 @@ pwm_config (pwm_t pwm, pwm_period_t period, pwm_period_t duty,
 
 
     /* Configure prescaler.  */
-    BITS_INSERT (pPWM->PWMC_MR, prescale, 8, 11);
-    BITS_INSERT (pPWM->PWMC_MR, prescale, 24, 27);
+    BITS_INSERT (pPWM->PWMC_CMR, prescale, 0, 3);
 
     /* Configure period.  */
     pPWM->PWMC_CPRDR = period;
     
     pPWM->PWMC_CDTYR = duty;
-    
+
+
     /* Polarity and alignment can only be changed when the PWM channel
        is disabled, i.e., is stopped.  */
 
