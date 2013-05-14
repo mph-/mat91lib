@@ -24,26 +24,31 @@ typedef enum
 typedef enum
 {
     /** Active high repetitive pulse.  */
-    TC_PULSE_MODE,
+    TC_MODE_PULSE,
     /** Active low repetitive pulse.  */
-    TC_PULSE_MODE_INVERT,
+    TC_MODE_PULSE_INVERT,
     /** Active high single pulse.  */
-    TC_PULSE_MODE_ONESHOT,
+    TC_MODE_PULSE_ONESHOT,
     /** Active low single pulse.  */
-    TC_PULSE_MODE_ONESHOT_INVERT,
+    TC_MODE_PULSE_ONESHOT_INVERT,
     /** Drive output high after delay.  */
-    TC_DELAY_MODE_ONESHOT,
-} tc_pulse_mode_t;
+    TC_MODE_DELAY_ONESHOT,
+    /** Generate square wave (or close to it).  */
+    TC_MODE_CLOCK,
+} tc_mode_t;
+
+
+typedef uint32_t tc_period_t;
 
 
 /** TC configuration structure.  */
 typedef struct
 {
     pio_t pio;
+    tc_mode_t mode;
+    tc_period_t period;
+    tc_period_t delay;
 } tc_cfg_t;
-
-
-typedef uint32_t tc_period_t;
 
 
 /** Include definition of data structures required for the driver
@@ -55,14 +60,10 @@ typedef uint32_t tc_period_t;
 typedef tc_dev_t *tc_t;
 
 
-/** Configure pulse generation with specified mode.   The delay and period
-    are in terms of the CPU clock.  The pulse width is delay - period.  */
-bool tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, 
-                      tc_period_t delay, tc_period_t period);
-
-
-/** Configure squarewave generation with specified period.  */
-bool tc_squarewave_config (tc_t tc, tc_period_t period);
+/** Configure TC with specified mode.  The delay and period are in
+    terms of the CPU clock.  The pulse width is period - delay.  */
+bool tc_config (tc_t tc, tc_mode_t mode, 
+                tc_period_t period, tc_period_t delay);
 
 
 bool tc_start (tc_t tc);

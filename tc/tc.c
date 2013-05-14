@@ -62,10 +62,12 @@ uint16_t tc_counter_get (tc_t tc)
 }
 
 
-/** Configure pulse generation with specified mode.   The delay and period
-    are in terms of the CPU clock.  The pulse width is delay - period.  */
+
+/** Configure TC with specified mode.  The delay and period are in
+    terms of the CPU clock.  The pulse width is period - delay.  */
 bool
-tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, tc_period_t delay, tc_period_t period)
+tc_config (tc_t tc, tc_mode_t mode, tc_period_t period, 
+           tc_period_t delay)
 {
     /* Many timer counters can only generate a pulse with a single
        timer clock period.  This timer counter allows the pulse width
@@ -76,21 +78,25 @@ tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, tc_period_t delay, tc_period_t p
        driven when RA matches.  */
     switch (mode)
     {
-    case TC_PULSE_MODE:
+    case TC_MODE_CLOCK:
+        if (!delay)
+            delay = period >> 1;
+
+    case TC_MODE_PULSE:
         /* Set TIOAx when RA matches and clear TIOAx when RC matches.  */
         tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
             | AT91C_TC_WAVESEL_UP_AUTO | AT91C_TC_ACPA_SET | AT91C_TC_ACPC_CLEAR
             | AT91C_TC_ASWTRG_CLEAR;
         break;
 
-    case TC_PULSE_MODE_INVERT:
+    case TC_MODE_PULSE_INVERT:
         /* Clear TIOAx when RA matches and set TIOAx when RC matches.  */
         tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
             | AT91C_TC_WAVESEL_UP_AUTO | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET
             | AT91C_TC_ASWTRG_SET;
         break;
 
-    case TC_PULSE_MODE_ONESHOT:
+    case TC_MODE_PULSE_ONESHOT:
         /* Set TIOAx when RA matches and clear TIOAx when RC matches.
            Stop clock when RC matches.   */
         tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
@@ -99,7 +105,7 @@ tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, tc_period_t delay, tc_period_t p
             | AT91C_TC_ASWTRG_CLEAR;
         break;
 
-    case TC_PULSE_MODE_ONESHOT_INVERT:
+    case TC_MODE_PULSE_ONESHOT_INVERT:
         /* Clear TIOAx when RA matches and set TIOAx when RC matches.
            Stop clock when RC matches.  */
         tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
@@ -108,7 +114,7 @@ tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, tc_period_t delay, tc_period_t p
             | AT91C_TC_ASWTRG_SET;
         break;
 
-    case TC_DELAY_MODE_ONESHOT:
+    case TC_MODE_DELAY_ONESHOT:
         /* Don't change TIOAx.  Stop clock when RC matches.   */
         tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
             | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL_UP_AUTO;
@@ -164,13 +170,6 @@ tc_pulse_config (tc_t tc, tc_pulse_mode_t mode, tc_period_t delay, tc_period_t p
 }
 
 
-/** Configure squarewave generation with specified period.  */
-bool tc_squarewave_config (tc_t tc, tc_period_t period)
-{
-    return tc_pulse_config (tc, TC_PULSE_MODE, period >> 1, period);
-}
-
-
 void
 tc_shutdown (tc_t tc)
 {
@@ -218,6 +217,8 @@ tc_init (const tc_cfg_t *cfg)
     /* Enable TCx peripheral clock.  */
     AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_TC0 + pin->channel);
 
+    tc_config (tc, cfg->mode, cfg->period, cfg->delay);
+
     return tc;
 }
 
@@ -240,7 +241,7 @@ tc_clock_sync (tc_t tc, tc_period_t period)
 {
     uint32_t id;
 
-    tc_pulse_config (tc, TC_DELAY_MODE_ONESHOT, period, period);
+    tc_config (tc, TC_MODE_DELAY_ONESHOT, period, period);
 
     id = AT91C_ID_TC0 + TC_CHANNEL (tc);
 
