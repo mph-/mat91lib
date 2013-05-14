@@ -45,6 +45,7 @@ typedef struct pwm_cfg_struct
     pwm_period_t duty;
     pwm_align_t align;
     pwm_polarity_t polarity;
+    pio_config_t stop_state;
 } pwm_cfg_t;
 
 typedef uint8_t pwm_channel_mask_t;
@@ -73,16 +74,6 @@ pwm_start (pwm_t pwm);
 /** Stop selected channel.  */
 void
 pwm_stop (pwm_t pwm);
-
-
-/** Enable PWM to drive pin.  */
-void
-pwm_enable (pwm_t pwm);
-
-
-/* Switch pin back to a PIO.  */
-void
-pwm_disable (pwm_t pwm);
 
 
 /** Updates the waveform period and duty.  */

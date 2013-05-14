@@ -12,6 +12,7 @@
 struct pwm_dev_struct
 {
     const pinmap_t *pin;
+    pio_config_t stop_state;
 };
 
 
@@ -103,6 +104,9 @@ pwm_config (pwm_t pwm, pwm_period_t period, pwm_period_t duty,
     
     pPWM->PWMC_CDTYR = duty;
     
+    /* Polarity and alignment can only be changed when the PWM channel
+       is disabled, i.e., is stopped.  */
+
     /* Configure wave align.  */
     BITS_INSERT (pPWM->PWMC_CMR, align, 8, 8);
     
@@ -118,7 +122,7 @@ pwm_t
 pwm_init (const pwm_cfg_t *cfg)
 {
     const pinmap_t *pin;
-    pwm_dev_t *dev;
+    pwm_dev_t *pwm;
     unsigned int i;
 
     /* Find PWM channel matching selected PIO.  */
@@ -133,15 +137,19 @@ pwm_init (const pwm_cfg_t *cfg)
         return 0;
 
     /* Allow user to override PWM channel.  */
-    dev = &pwm_devices[pin->channel];
-    dev->pin = pin;
+    pwm = &pwm_devices[pin->channel];
+    pwm->pin = pin;
+    pwm->stop_state = cfg->stop_state;
+    if (pwm->stop_state)
+        pio_config_set (pwm->pin->pio, pwm->stop_state);
 
-    /* Enable PWM peripheral clock.  */
+    /* Enable PWM peripheral clock (this is not required to configure
+       the PWM).  */
     AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_PWMC);
 
-    pwm_config (dev, cfg->period, cfg->duty, cfg->align, cfg->polarity);
+    pwm_config (pwm, cfg->period, cfg->duty, cfg->align, cfg->polarity);
 
-    return dev;
+    return pwm;
 }
 
 
@@ -157,6 +165,28 @@ pwm_channel_mask (pwm_t pwm)
 void
 pwm_channels_start (pwm_channel_mask_t channel_mask)
 {
+    int i;
+
+    /* The following code is to handle the case where we want an
+       inverted PWM output to be low when it is not running.  This is
+       achieved by switching the pin from a PIO to a PWM output.  */
+    for (i = 0; i < PWM_DEVICES_NUM; i++)
+    {
+        pwm_dev_t *pwm;        
+
+        if (! (BIT(i) & channel_mask))
+            continue;
+
+        pwm = &pwm_devices[i];
+
+        /* Check if trying to start a channel that has not been init.  */
+        if (!pwm->pin)
+            continue;
+
+        /* Switch PIO so PWM can drive the pin.  */
+        pio_config_set (pwm->pin->pio, pwm->pin->periph);
+    }
+
     AT91C_BASE_PWMC->PWMC_ENA = channel_mask;
 }
 
@@ -165,7 +195,29 @@ pwm_channels_start (pwm_channel_mask_t channel_mask)
 void
 pwm_channels_stop (pwm_channel_mask_t channel_mask)
 {
+    int i;
+
     AT91C_BASE_PWMC->PWMC_DIS = channel_mask;
+
+
+    /* Switch pins to have desired stop state.  */
+    for (i = 0; i < PWM_DEVICES_NUM; i++)
+    {
+        pwm_dev_t *pwm;        
+
+        if (! (BIT(i) & channel_mask))
+            continue;
+
+        pwm = &pwm_devices[i];
+
+        /* Check if trying to start a channel that has not been init.  */
+        if (!pwm->pin)
+            continue;
+
+        if (pwm->stop_state)
+            pio_config_set (pwm->pin->pio, pwm->stop_state);
+    }
+
 }
 
 
@@ -182,24 +234,6 @@ void
 pwm_stop (pwm_t pwm)
 {
     pwm_channels_stop (pwm_channel_mask (pwm));
-}
-
-
-/** Enable PWM to drive pin.  */
-void
-pwm_enable (pwm_t pwm)
-{
-    pio_config_set (pwm->pin->pio, pwm->pin->periph);
-}
-
-
-/** Switch pin back to a PIO.  */
-void
-pwm_disable (pwm_t pwm)
-{
-    /* Return PIO to previous state.  This is a violation of the PIO
-       API.  FIXME.  */
-    PIO_PORT_ (pwm->pin->pio)->PIO_PER = PIO_BITMASK_ (pwm->pin->pio);    
 }
 
 
