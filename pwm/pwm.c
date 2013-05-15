@@ -51,16 +51,16 @@ static inline AT91S_PWMC_CH *pwm_base (pwm_t pwm)
     {
     case 0:
         return AT91C_BASE_PWMC_CH0;
-					
+                    
     case 1:
         return AT91C_BASE_PWMC_CH1;
-					
+                    
     case 2:
         return AT91C_BASE_PWMC_CH2;
         
     case 3:
         return AT91C_BASE_PWMC_CH3;
-			
+            
     default:
         return 0;
     }
@@ -90,7 +90,9 @@ pwm_prescale_set (pwm_t pwm, uint8_t prescale)
 }
 
 
-
+/** Set a new waveform period (in CPU clocks).  This will change the 
+    prescaler as required.  This will block if the PWM is running until 
+    the end of a cycle.  */
 pwm_period_t
 pwm_period_set (pwm_t pwm, pwm_period_t period)
 {
@@ -103,7 +105,8 @@ pwm_period_set (pwm_t pwm, pwm_period_t period)
         return 0;
 
     /* If the period is greater than 16-bits then need to select the
-       appropriate prescaler.  */
+       appropriate prescaler.  This can be from 1 to 1024 in powers 
+       of 2.  */
     for (prescale = 0; prescale < 11 && period <= 65535u; prescale++)
     {
         period >>= 1;
@@ -125,8 +128,9 @@ pwm_period_set (pwm_t pwm, pwm_period_t period)
         uint8_t status;
 
         /* The PWM is running.  We need to jump through a hoop to
-           update the period register.  This is because the update
-           register is used for the period and for the duty.  */
+           update the period register.  This is because the update 
+           register is shared for updating both the period and for 
+           the duty.  */
 
         /* Read update status.  */
         status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3); 
@@ -151,6 +155,8 @@ pwm_period_set (pwm_t pwm, pwm_period_t period)
 }
 
 
+/** Set a new waveform duty (in CPU clocks).  This will block if the 
+    PWM is running until the end of a cycle.  */
 pwm_period_t
 pwm_duty_set (pwm_t pwm, pwm_period_t duty)
 {
@@ -171,8 +177,9 @@ pwm_duty_set (pwm_t pwm, pwm_period_t duty)
         uint8_t status;
 
         /* The PWM is running.  We need to jump through a hoop to
-           update the duty register.  This is because the update
-           register is used for the period and for the duty.  */
+           update the duty register.  This is because the update 
+           register is shared for updating both the period and for 
+           the duty.  */
 
         /* Read update status.  */
         status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3); 
@@ -207,7 +214,7 @@ pwm_config (pwm_t pwm, pwm_period_t period, pwm_period_t duty,
 {
     AT91S_PWMC_CH *pPWM;
 
-    /* Select the channel peripheral base address.  */	
+    /* Select the channel peripheral base address.  */  
     pPWM = pwm_base (pwm);
     
     if (!pPWM)
