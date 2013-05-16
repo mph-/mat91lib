@@ -11,6 +11,7 @@
 
 struct pwm_dev_struct
 {
+    AT91S_PWMC_CH *base;
     const pinmap_t *pin;
     pio_config_t stop_state;
     uint8_t prescale;
@@ -78,19 +79,13 @@ pwm_shutdown (void)
 static void
 pwm_prescale_set (pwm_t pwm, uint8_t prescale)
 {
-    AT91S_PWMC_CH *pPWM;
-
-    pPWM = pwm_base (pwm);
-    if (!pPWM)
-        return;
-
     /* Configure prescaler.  */
-    BITS_INSERT (pPWM->PWMC_CMR, prescale, 0, 3);
+    BITS_INSERT (pwm->base->PWMC_CMR, prescale, 0, 3);
     pwm->prescale = prescale;
 }
 
 
-/** Set a new waveform period (in CPU clocks).  This will change the 
+/** Set  waveform period (in CPU clocks).  This will change the 
     prescaler as required.  This will block if the PWM is running until 
     the end of a cycle.  */
 pwm_period_t
@@ -136,7 +131,7 @@ pwm_period_set (pwm_t pwm, pwm_period_t period)
         status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3); 
 
         /* Set mode to update period.  */
-        BITS_INSERT (pPWM->PWMC_CMR, 1, 10, 10);
+        BITS_INSERT (pwm->base->PWMC_CMR, 1, 10, 10);
         
         /* Wait for a new period.  */
         while (!(status & mask))
@@ -144,28 +139,30 @@ pwm_period_set (pwm_t pwm, pwm_period_t period)
             status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3);
         }
 
-        pPWM->PWMC_CUPDR = period;
+        pwm->base->PWMC_CUPDR = period;
     }
     else
     {
-        pPWM->PWMC_CPRDR = period;
+        pwm->base->PWMC_CPRDR = period;
     }
 
     return period << pwm->prescale;
 }
 
 
-/** Set a new waveform duty (in CPU clocks).  This will block if the 
+pwm_period_t
+pwm_period_get (pwm_t pwm)
+{
+    return pwm->base->PWMC_CPRDR << pwm->prescale;
+}
+
+
+/** Set  waveform duty (in CPU clocks).  This will block if the 
     PWM is running until the end of a cycle.  */
 pwm_period_t
 pwm_duty_set (pwm_t pwm, pwm_period_t duty)
 {
-    AT91S_PWMC_CH *pPWM;
     pwm_channel_mask_t mask;
-
-    pPWM = pwm_base (pwm);
-    if (!pPWM)
-        return 0;
 
     duty = duty >> pwm->prescale;
 
@@ -185,7 +182,7 @@ pwm_duty_set (pwm_t pwm, pwm_period_t duty)
         status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3); 
 
         /* Set mode to update duty.  */
-        BITS_INSERT (pPWM->PWMC_CMR, 0, 10, 10);
+        BITS_INSERT (pwm->base->PWMC_CMR, 0, 10, 10);
         
         /* Wait for a new duty.  */
         while (!(status & mask))
@@ -193,17 +190,40 @@ pwm_duty_set (pwm_t pwm, pwm_period_t duty)
             status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3);
         }
 
-        pPWM->PWMC_CUPDR = duty;
+        pwm->base->PWMC_CUPDR = duty;
     }
     else
     {
-        pPWM->PWMC_CDTYR = duty;
+        pwm->base->PWMC_CDTYR = duty;
     }
-
 
     return duty << pwm->prescale;
 }
 
+
+pwm_period_t
+pwm_duty_get (pwm_t pwm)
+{
+    return pwm->base->PWMC_CDTYR << pwm->prescale;
+}
+
+
+/** Set waveform duty (as a fraction of the period in parts per
+    thousand).  This will block if the PWM is running until the end of
+    a cycle.  */
+unsigned int
+pwm_duty_fraction_set (pwm_t pwm, unsigned int duty_ppt)
+{
+    pwm_period_t duty;
+    pwm_period_t period;
+ 
+    period = pwm_period_get (pwm) >> pwm->prescale;
+    duty = period * duty_ppt / 1000;
+
+    duty = pwm_duty_set (pwm, duty << pwm->prescale) >> pwm->prescale;
+    
+    return duty * 1000 / period;
+}
 
 
 /** Configures the PWM output The period of the waveform is in number
@@ -212,14 +232,6 @@ static uint8_t
 pwm_config (pwm_t pwm, pwm_period_t period, pwm_period_t duty,
             pwm_align_t align, pwm_polarity_t polarity)
 {
-    AT91S_PWMC_CH *pPWM;
-
-    /* Select the channel peripheral base address.  */  
-    pPWM = pwm_base (pwm);
-    
-    if (!pPWM)
-        return 0;
-    
     /* The duty cycle cannot be greater than 100 %.  */
     if (duty > period)
         return 0;
@@ -233,10 +245,10 @@ pwm_config (pwm_t pwm, pwm_period_t period, pwm_period_t duty,
        is disabled, i.e., is stopped.  */
 
     /* Configure wave align.  */
-    BITS_INSERT (pPWM->PWMC_CMR, align, 8, 8);
+    BITS_INSERT (pwm->base->PWMC_CMR, align, 8, 8);
     
     /* Configure polarity.  */
-    BITS_INSERT (pPWM->PWMC_CMR, polarity, 9, 9);
+    BITS_INSERT (pwm->base->PWMC_CMR, polarity, 9, 9);
     
     return 1;
 }
@@ -263,6 +275,7 @@ pwm_init (const pwm_cfg_t *cfg)
 
     /* Allow user to override PWM channel.  */
     pwm = &pwm_devices[pin->channel];
+    pwm->base = pwm_base (pwm);
     pwm->pin = pin;
     pwm->stop_state = cfg->stop_state;
     if (pwm->stop_state)
