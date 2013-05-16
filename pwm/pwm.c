@@ -107,7 +107,7 @@ pwm_period_set (pwm_t pwm, pwm_period_t period)
     /* If the period is greater than 16-bits then need to select the
        appropriate prescaler.  This can be from 1 to 1024 in powers 
        of 2.  */
-    for (prescale = 0; prescale < 11 && period <= 65535u; prescale++)
+    for (prescale = 0; prescale < 11 && period >= 65535u; prescale++)
     {
         period >>= 1;
     }
