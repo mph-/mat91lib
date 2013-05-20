@@ -275,8 +275,8 @@ pwm_init (const pwm_cfg_t *cfg)
 
     /* Allow user to override PWM channel.  */
     pwm = &pwm_devices[pin->channel];
-    pwm->base = pwm_base (pwm);
     pwm->pin = pin;
+    pwm->base = pwm_base (pwm);
     pwm->stop_state = cfg->stop_state;
     if (pwm->stop_state)
         pio_config_set (pwm->pin->pio, pwm->stop_state);
