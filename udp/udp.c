@@ -1644,20 +1644,18 @@ udp_disable (udp_t udp)
 }
 
 
-/**
- * UDP check bus status
- * 
- * This routine enables/disables the UDP module by monitoring
- * the USB power signal.
- * 
- */
-static void
+/** Check UDP bus status.  Return non-zero if attached.  */
+static bool
 udp_bus_status_check (udp_t udp)
 {
-    AT91PS_UDP pUDP = udp->pUDP;
+    bool attached;
 
-    if (udp_attached_p (udp))
+    attached = udp_attached_p (udp);
+
+    if (attached)
     {
+        AT91PS_UDP pUDP = udp->pUDP;
+
         /*  If UDP is deactivated enable it.  */
         if (udp->state == UDP_STATE_NOT_POWERED)
         {
@@ -1695,13 +1693,16 @@ udp_bus_status_check (udp_t udp)
             udp->state = UDP_STATE_NOT_POWERED;
         }         
     }
+    return attached;
 }
 
 
-void
-udp_poll (udp_t udp __unused__)
+/** Return non-zero if configured.  */
+bool
+udp_poll (udp_t udp)
 {
     udp_bus_status_check (udp);
+    return udp_configured_p (udp);
 }
 
 
@@ -1727,12 +1728,8 @@ udp_shutdown (void)
 }
 
 
-/**
- * UDP Protocol reset handler
- *
- * Called when a USB bus reset is received from the host.
- * 
- */
+/** UDP Protocol reset handler.  Called when a USB bus reset is
+    received from the host.  */
 static void 
 udp_bus_reset_handler (udp_t udp)
 {
