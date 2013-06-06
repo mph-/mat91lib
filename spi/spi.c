@@ -223,15 +223,15 @@ spi_channel_bits_set (spi_t spi, uint8_t bits)
 
 
 /* Spi modes:
-Mode 	CPOL 	CPHA  NCPHA
-0 	0 	0     1       clock normally low    read on rising edge
-1 	0 	1     0       clock normally low    read on falling edge
-2 	1 	0     1       clock normally high   read on falling edge
-3 	1 	1     0       clock normally high   read on rising edge
+Mode  CPOL  CPHA  NCPHA
+   0     0     0     1       clock normally low    read on rising edge
+   1     0     1     0       clock normally low    read on falling edge
+   2     1     0     1       clock normally high   read on falling edge
+   3     1     1     0       clock normally high   read on rising edge
 
-However, page 512 of the AT91SAM7Sx datasheet say "Note that in SPI
+However, page 577 of the AT91SAM7Sx datasheet version 6175L says "Note that in SPI
 master mode the ATSAM7S512/256/128/64/321/32 does not sample the data
-(MISO) on the opposite edge where data clocks out (MOSI) but the same
+(MISO) on the opposite edge from where the data clocks out (MOSI) but the same
 edge is used as shown in Figure 36-3 and Figure 36-4."  Figure 36-3
 shows that CPOL=NCPHA=0 or CPOL=NCPHA=1 samples on the rising edge and
 that the data changes sometime after the rising edge (about 2 ns).  To
@@ -240,11 +240,11 @@ that the data changes on the falling edge and should be sampled on the
 rising edge.  Therefore, it appears that NCPHA should be treated the
 same as CPHA.  Thus:
 
-Mode 	CPOL 	CPHA  NCPHA
-0 	0 	0     0       clock normally low    read on rising edge
-1 	0 	1     1       clock normally low    read on falling edge
-2 	1 	0     0       clock normally high   read on falling edge
-3 	1 	1     1       clock normally high   read on rising edge
+Mode  CPOL  CPHA  NCPHA
+   0     0     0     0       clock normally low    read on rising edge
+   1     0     1     1       clock normally low    read on falling edge
+   2     1     0     0       clock normally high   read on falling edge
+   3     1     1     1       clock normally high   read on rising edge
 */
 
 static void
