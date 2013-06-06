@@ -12,11 +12,37 @@
 
 #define PIO_AT91
 
-/** Define ports.  The AT91SAM7X has two PIO ports.  */
+/** Define ports.  */
 #ifdef AT91C_BASE_PIOB
+/* The AT91SAM7X has two PIO ports.  */
 enum {PORT_A, PORT_B};
+
+/* Define a PIO as a structure in terms of a port and a bitmask.
+   The AT91SAM7X does not have PA31 or PB31 so use the MSB to select the port.  */
+#define PIO_DEFINE(PORT, PORTBIT) (((PORT) << 31) + BIT (PORTBIT))
+
+
+/** Private macro to lookup bitmask.  */
+#define PIO_BITMASK_(PIO) (PIO & 0x7fffffff)
+
+
+/** Private macro to lookup port register.  */
+#define PIO_PORT_(PIO) (((PIO) & 0x80000000) ? AT91C_BASE_PIOB : AT91C_BASE_PIOA)
+
 #else
+/* The AT91SAMSX has one PIO port.  */
 enum {PORT_A};
+
+/* Define a PIO as a structure in terms of a bitmask.  */
+#define PIO_DEFINE(PORT, PORTBIT) (BIT (PORTBIT))
+
+
+/** Private macro to lookup bitmask.  */
+#define PIO_BITMASK_(PIO) (PIO)
+
+
+/** Private macro to lookup port register.  */
+#define PIO_PORT_(PIO) (AT91C_BASE_PIOA)
 #endif
 
 typedef uint32_t pio_mask_t;
@@ -38,17 +64,6 @@ typedef enum pio_config_enum
 
 
 typedef uint32_t pio_t;
-
-/* Define a PIO as a structure in terms of a port and a bitmask.  */
-#define PIO_DEFINE(PORT, PORTBIT) ((PORT) * 32 + BIT (PORTBIT))
-
-
-/** Private macro to lookup bitmask.  */
-#define PIO_BITMASK_(PIO) (PIO)
-
-
-/** Private macro to lookup port register.  */
-#define PIO_PORT_(PIO) (AT91C_BASE_PIOA)
 
 
 /** Configure PIO

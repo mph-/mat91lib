@@ -108,7 +108,8 @@ void udp_address_set (void *arg, udp_transfer_t *ptransfer);
 
 void udp_shutdown (void);
 
-void udp_poll (udp_t udp);
+/** Return non-zero if configured.  */
+bool udp_poll (udp_t udp);
 
 udp_t udp_init (udp_request_handler_t handler, void *arg);
 

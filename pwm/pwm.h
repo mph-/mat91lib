@@ -12,10 +12,10 @@
 #include "pio.h"
 
 
-#define PWM_PERIOD_DIVISOR(FREQ) (F_CPU / (FREQ))
+#define PWM_PERIOD_DIVISOR(FREQ) ((pwm_period_t)(F_CPU / (FREQ)))
 
 #define PWM_DUTY_DIVISOR(FREQ, DUTY_PERCENT) \
-    ((F_CPU * (DUTY_PERCENT)) / ((FREQ) * 100))
+    ((pwm_period_t)((F_CPU * (DUTY_PERCENT)) / ((FREQ) * 100)))
 
 
 typedef enum
@@ -36,7 +36,7 @@ typedef struct pwm_dev_struct pwm_dev_t;
 
 typedef pwm_dev_t *pwm_t;
 
-typedef uint16_t pwm_period_t;
+typedef uint32_t pwm_period_t;
 
 typedef struct pwm_cfg_struct
 {
@@ -45,6 +45,7 @@ typedef struct pwm_cfg_struct
     pwm_period_t duty;
     pwm_align_t align;
     pwm_polarity_t polarity;
+    pio_config_t stop_state;
 } pwm_cfg_t;
 
 typedef uint8_t pwm_channel_mask_t;
@@ -60,9 +61,36 @@ pwm_t
 pwm_init (const pwm_cfg_t *cfg);
 
 
-/** Update the waveform period and duty.  */
-uint8_t
-pwm_update (pwm_t pwm, pwm_period_t new_period, pwm_period_t new_duty);
+/** Set waveform period (in CPU clocks).  This will change the 
+    prescaler as required.  This will block if the PWM is running until 
+    the end of a cycle.  */
+pwm_period_t
+pwm_period_set (pwm_t pwm, pwm_period_t period);
+
+
+/** Return the waveform period (in CPU clocks).  */
+pwm_period_t
+pwm_duty_get (pwm_t pwm);
+
+
+/** Set waveform duty (in CPU clocks, not a percentage of the period).
+    This will block if the PWM is running until the end of a
+    cycle.  */
+pwm_period_t
+pwm_duty_set (pwm_t pwm, pwm_period_t duty);
+
+
+/** Return the waveform duty (in CPU clocks).  */
+pwm_period_t
+pwm_duty_get (pwm_t pwm);
+
+
+/** Set waveform duty (as a fraction of the period in parts per
+    thousand).  This will block if the PWM is running until the end of
+    a cycle.  */
+unsigned int
+pwm_duty_fraction_set (pwm_t pwm, unsigned int duty_ppt);
+
 
 
 /** Start selected channel.  */
@@ -73,21 +101,6 @@ pwm_start (pwm_t pwm);
 /** Stop selected channel.  */
 void
 pwm_stop (pwm_t pwm);
-
-
-/** Enable PWM to drive pin.  */
-void
-pwm_enable (pwm_t pwm);
-
-
-/* Switch pin back to a PIO.  */
-void
-pwm_disable (pwm_t pwm);
-
-
-/** Updates the waveform period and duty.  */
-uint8_t
-pwm_update (pwm_t pwm, pwm_period_t new_period, pwm_period_t new_duty);
 
 
 /** Start selected channels simultaneously.  */

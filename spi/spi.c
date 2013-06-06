@@ -7,6 +7,7 @@
 #include "config.h"
 #include "spi.h"
 #include "cpu.h"
+#include "pinmap.h"
 #include "bits.h"
 
 
@@ -283,34 +284,20 @@ spi_channel_mode_set (spi_t spi, spi_mode_t mode)
 }
 
 
-enum {PERIPH_A = 0, PERIPH_B};
-
-typedef struct spi_cs_struct
-{
-    uint8_t channel;
-    pio_t pio;
-    uint8_t periph;
-} spi_cs_t;
-
-
-#define SPI_CS(CHANNEL, PIO, PERIPH) \
-    {.channel = (CHANNEL), .pio = (PIO), .periph = (PERIPH)}
-
-
 /* NB, if you get `error: initializer element is not constant' then
    need to compile without -std=c99 or -std=gnu99  */
 
 #if SPI_CONTROLLERS_NUM == 2
 /* AT91SAM7X  */
-static const spi_cs_t spi_cs[] = 
+static const pinmap_t spi_cs[] = 
 {
-    SPI_CS (0, PIO_DEFINE (PORT_A, 21), PERIPH_B),
-    SPI_CS (1, PIO_DEFINE (PORT_A, 25), PERIPH_B),
-    SPI_CS (2, PIO_DEFINE (PORT_A, 26), PERIPH_B),
-    SPI_CS (3, PIO_DEFINE (PORT_A, 29), PERIPH_B),
-    SPI_CS (1, PIO_DEFINE (PORT_B, 10), PERIPH_B),
-    SPI_CS (2, PIO_DEFINE (PORT_B, 11), PERIPH_B),
-    SPI_CS (3, PIO_DEFINE (PORT_B, 16), PERIPH_B),
+    {0, PIO_DEFINE (PORT_A, 21), PIO_PERIPH_B},
+    {1, PIO_DEFINE (PORT_A, 25), PIO_PERIPH_B},
+    {2, PIO_DEFINE (PORT_A, 26), PIO_PERIPH_B},
+    {3, PIO_DEFINE (PORT_A, 29), PIO_PERIPH_B},
+    {1, PIO_DEFINE (PORT_B, 10), PIO_PERIPH_B},
+    {2, PIO_DEFINE (PORT_B, 11), PIO_PERIPH_B},
+    {3, PIO_DEFINE (PORT_B, 16), PIO_PERIPH_B},
 };
 
 #define SPI0_PINS (AT91C_PA17_MOSI0 | AT91C_PA16_MISO0 | AT91C_PA18_SPCK0)
@@ -318,16 +305,16 @@ static const spi_cs_t spi_cs[] =
 
 #else
 /* AT91SAM7S  */
-static const spi_cs_t spi_cs[] = 
+static const pinmap_t spi_cs[] = 
 {
-    SPI_CS (0, PIO_DEFINE (PORT_A, 11), PERIPH_A),
-    SPI_CS (1, PIO_DEFINE (PORT_A, 9), PERIPH_B),
-    SPI_CS (1, PIO_DEFINE (PORT_A, 31), PERIPH_A),
-    SPI_CS (2, PIO_DEFINE (PORT_A, 10), PERIPH_B),
-    SPI_CS (2, PIO_DEFINE (PORT_A, 30), PERIPH_B),
-    SPI_CS (3, PIO_DEFINE (PORT_A, 3), PERIPH_B),
-    SPI_CS (3, PIO_DEFINE (PORT_A, 5), PERIPH_B),
-    SPI_CS (3, PIO_DEFINE (PORT_A, 22), PERIPH_B)
+    {0, PIO_DEFINE (PORT_A, 11), PIO_PERIPH_A},
+    {1, PIO_DEFINE (PORT_A, 9), PIO_PERIPH_B},
+    {1, PIO_DEFINE (PORT_A, 31), PIO_PERIPH_A},
+    {2, PIO_DEFINE (PORT_A, 10), PIO_PERIPH_B},
+    {2, PIO_DEFINE (PORT_A, 30), PIO_PERIPH_B},
+    {3, PIO_DEFINE (PORT_A, 3), PIO_PERIPH_B},
+    {3, PIO_DEFINE (PORT_A, 5), PIO_PERIPH_B},
+    {3, PIO_DEFINE (PORT_A, 22), PIO_PERIPH_B}
 };
 
 #define SPI0_PINS (AT91C_PA13_MOSI | AT91C_PA12_MISO | AT91C_PA14_SPCK)
@@ -348,7 +335,7 @@ spi_channel_cs_config_get (spi_t spi, pio_t cs)
         if (spi->channel == spi_cs[i].channel
             && cs == spi_cs[i].pio)
         {
-            return spi_cs[i].periph == PERIPH_A ? PIO_PERIPH_A : PIO_PERIPH_B;
+            return spi_cs[i].periph == PIO_PERIPH_A ? PIO_PERIPH_A : PIO_PERIPH_B;
         }
     }
     return PIO_OUTPUT_HIGH;
