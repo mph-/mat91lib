@@ -78,7 +78,6 @@ spi_dma_read_completed_p (spi_t spi)
 {
     AT91S_SPI *pSPI = SPI_BASE_GET (spi);
 
-    // this doesn't seem right!!
     return (pSPI->SPI_SR & AT91C_SPI_RXBUFF) != 0;
 }
 
