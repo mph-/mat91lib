@@ -66,9 +66,9 @@ spi_dma_read_finished_p (spi_t spi)
 bool
 spi_dma_write_completed_p (spi_t spi)
 {
-    AT91S_PDC *pPDC = PDC_BASE_GET (spi);
+    AT91S_SPI *pSPI = SPI_BASE_GET (spi);
 
-    return pPDC->PDC_TNCR == 0;
+    return (pSPI->SPI_SR & AT91C_SPI_TXBUFE) != 0;
 }
 
 
@@ -76,9 +76,9 @@ spi_dma_write_completed_p (spi_t spi)
 bool
 spi_dma_read_completed_p (spi_t spi)
 {
-    AT91S_PDC *pPDC = PDC_BASE_GET (spi);
+    AT91S_SPI *pSPI = SPI_BASE_GET (spi);
 
-    return pPDC->PDC_TNCR == 0;
+    return (pSPI->SPI_SR & AT91C_SPI_RXBUFF) != 0;
 }
 
 
