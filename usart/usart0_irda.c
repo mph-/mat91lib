@@ -10,7 +10,7 @@ void
 usart0_irda_init (void)
 {
     uint16_t filter_period;
-    AT91S_USART *pUSART = AT91C_BASE_US0;
+    AT91S_USART *pUSART = USART0;
 
     /* Reset and disable receiver and transmitter.  */
     pUSART->US_CR = AT91C_US_RSTRX | AT91C_US_RSTTX          
@@ -42,7 +42,7 @@ usart0_irda_init (void)
        be equal to baud_divisor.  The baud_divisor is 16-bit but the
        filter counter is only 8-bit.  */
 
-    filter_period = AT91C_BASE_US0->US_BRGR;
+    filter_period = USART0->US_BRGR;
     if (filter_period > 255)
         filter_period = 255;
 
@@ -59,7 +59,7 @@ usart0_irda_init (void)
 void
 usart0_irda_transmit (void)
 {
-    AT91S_USART *pUSART = AT91C_BASE_US0;
+    AT91S_USART *pUSART = USART0;
 
     pUSART->US_CR = AT91C_US_RXDIS | AT91C_US_TXEN;
 }
@@ -68,7 +68,7 @@ usart0_irda_transmit (void)
 void
 usart0_irda_receive (void)
 {
-    AT91S_USART *pUSART = AT91C_BASE_US0;
+    AT91S_USART *pUSART = USART0;
 
     pUSART->US_CR = AT91C_US_RXEN | AT91C_US_TXDIS;
 }

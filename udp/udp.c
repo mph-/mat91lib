@@ -544,9 +544,9 @@ udp_interrupt_handler (void)
                 // Disable transceiver
                 UDP_REG_SET (pUDP->UDP_TXVC, AT91C_UDP_TXVDIS);
                 // Disable master clock
-                AT91C_BASE_PMC->PMC_PCDR |= (1 << AT91C_ID_UDP);
+                PMC->PMC_PCDR |= (1 << AT91C_ID_UDP);
                 // Disable peripheral clock for UDP
-                AT91C_BASE_PMC->PMC_SCDR |= AT91C_PMC_UDP;
+                PMC->PMC_SCDR |= AT91C_PMC_UDP;
 
                 // TODO, we need to pull less than 500 uA from the 5V VBUS
                 // so need a callback or the user should poll
@@ -565,9 +565,9 @@ udp_interrupt_handler (void)
             //      Transceiver must be enabled
             // Powered state
             // Enable master clock
-            AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_UDP);
+            PMC->PMC_PCER |= (1 << AT91C_ID_UDP);
             // Enable peripheral clock for UDP
-            AT91C_BASE_PMC->PMC_SCER |= AT91C_PMC_UDP;
+            PMC->PMC_SCER |= AT91C_PMC_UDP;
 
             if (udp->prev_state == UDP_STATE_DEFAULT)
             {
@@ -1600,10 +1600,10 @@ udp_enable (udp_t udp)
     unsigned int i;
 
     // Set the PLL USB divider
-    AT91C_BASE_CKGR->CKGR_PLLR |= AT91C_CKGR_USBDIV_1 ;
+    CKGR->CKGR_PLLR |= AT91C_CKGR_USBDIV_1 ;
     // Enables the 48MHz USB clock UDPCK and System Peripheral USB clock
-    AT91C_BASE_PMC->PMC_SCER |= AT91C_PMC_UDP;
-    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_UDP);
+    PMC->PMC_SCER |= AT91C_PMC_UDP;
+    PMC->PMC_PCER |= (1 << AT91C_ID_UDP);
 
     // Init data banks
     for (i = 0; i < UDP_EP_NUM; i++)
@@ -1620,7 +1620,7 @@ static void
 udp_disable (udp_t udp)
 {
     AT91PS_UDP pUDP = udp->pUDP;
-    AT91PS_AIC pAIC = AT91C_BASE_AIC;
+    AT91PS_AIC pAIC = AIC;
 
 #ifdef UDP_PULLUP_PIO
     /* Configure UDP pullup pio and drive high to disable pullup.  */
@@ -1628,8 +1628,8 @@ udp_disable (udp_t udp)
 #endif
 
     // Disable the 48MHz USB clock UDPCK and System Peripheral USB Clock
-    AT91C_BASE_PMC->PMC_SCDR |= AT91C_PMC_UDP;
-    AT91C_BASE_PMC->PMC_PCDR |= (1 << AT91C_ID_UDP);
+    PMC->PMC_SCDR |= AT91C_PMC_UDP;
+    PMC->PMC_PCDR |= (1 << AT91C_ID_UDP);
 
     // Disable the interrupt on the interrupt controller
     pAIC->AIC_IDCR |= 1 << AT91C_ID_UDP;
@@ -1769,7 +1769,7 @@ udp_t udp_init (udp_request_handler_t request_handler, void *arg)
     udp->request_handler_arg = arg;
     udp->setup.request = 0;
 
-    udp->pUDP = AT91C_BASE_UDP;
+    udp->pUDP = UDP;
     udp->configuration = 0;
     udp->connection = 0;
     udp->prev_state = UDP_STATE_NOT_POWERED;

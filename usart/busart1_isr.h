@@ -11,15 +11,15 @@
 #include "usart1_defs.h"
 
 
-#define USART1_TX_IRQ_ENABLED_P() ((AT91C_BASE_US1->US_IMR & AT91C_US_TXEMPTY) != 0)
+#define USART1_TX_IRQ_ENABLED_P() ((USART1->US_IMR & US_TXEMPTY) != 0)
 
-#define USART1_TX_IRQ_DISABLE()  (AT91C_BASE_US1->US_IDR = AT91C_US_TXEMPTY)
+#define USART1_TX_IRQ_DISABLE()  (USART1->US_IDR = US_TXEMPTY)
 
-#define USART1_TX_IRQ_ENABLE() (AT91C_BASE_US1->US_IER = AT91C_US_TXEMPTY)
+#define USART1_TX_IRQ_ENABLE() (USART1->US_IER = US_TXEMPTY)
 
-#define USART1_RX_IRQ_DISABLE() (AT91C_BASE_US1->US_IDR = AT91C_US_RXRDY)
+#define USART1_RX_IRQ_DISABLE() (USART1->US_IDR = US_RXRDY)
 
-#define USART1_RX_IRQ_ENABLE() (AT91C_BASE_US1->US_IER = AT91C_US_RXRDY)
+#define USART1_RX_IRQ_ENABLE() (USART1->US_IER = US_RXRDY)
 
 
 static busart_dev_t busart1_dev;
@@ -87,10 +87,10 @@ busart1_init (uint16_t baud_divisor)
 
     usart1_init (baud_divisor);
 
-    irq_config (AT91C_ID_US1, 1,
-                AT91C_AIC_SRCTYPE_INT_HIGH_LEVEL, busart1_isr);
+    irq_config (ID_USART1, 1,
+                AIC_SRCTYPE_INT_HIGH_LEVEL, busart1_isr);
 
-    irq_enable (AT91C_ID_US1);
+    irq_enable (ID_USART1);
 
     return dev;
 }

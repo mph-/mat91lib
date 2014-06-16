@@ -10,7 +10,7 @@
 
 #include "pio.h"
 
-#ifdef AT91C_BASE_PIOB
+#ifdef PIOB
 #error "TODO for SAM7X"
 #endif
 
@@ -28,7 +28,7 @@ typedef uint64_t piobus_t;
 
 
 /** Private macro to lookup port register.  */
-#define PIOBUS_PORT_(PIOBUS) (AT91C_BASE_PIOA)
+#define PIOBUS_PORT_(PIOBUS) (PIOA)
 
 
 /** Configure PIOBUS

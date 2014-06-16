@@ -24,8 +24,8 @@
 
 #define AIC_FVR_OFFSET 264
 #define AIC_IVR_OFFSET 260
-//#define AIC_FVR_OFFSET ((char *)&AT91C_BASE_AIC->AIC_FVR - (char *)AT91C_BASE_AIC)
-//#define AIC_IVR_OFFSET ((char *)&AT91C_BASE_AIC->AIC_IVR - (char *)AT91C_BASE_AIC)
+//#define AIC_FVR_OFFSET ((char *)&AIC->AIC_FVR - (char *)AIC)
+//#define AIC_IVR_OFFSET ((char *)&AIC->AIC_IVR - (char *)AIC)
 
 
 /** Symbols defined by linker script.  */
@@ -120,7 +120,7 @@ void _reset_handler (void)
 
     /* Initialise the FIQ register to the AIC.  */
     {
-        register uint32_t r8 __asm__ ("r8") = (uint32_t) AT91C_BASE_AIC;
+        register uint32_t r8 __asm__ ("r8") = (uint32_t) AIC;
 
         /* Create a dummy use.  */
         __asm__ ("" : : "r" (r8));
@@ -195,7 +195,7 @@ void _irq_handler (void)
        has no effect in Normal Mode.  */
     {
         /* Use r14 since it is saved.  */
-        register uint32_t r14 __asm__ ("r14") = (uint32_t) AT91C_BASE_AIC;
+        register uint32_t r14 __asm__ ("r14") = (uint32_t) AIC;
 
         __asm__ ("\tldr r0, [%1, %0]" : : "i" (AIC_IVR_OFFSET), "r" (r14));
         __asm__ ("\tstr %1, [%1, %0]" : : "i" (AIC_IVR_OFFSET), "r" (r14));
@@ -220,7 +220,7 @@ void _irq_handler (void)
     /* Mark the End of Interrupt on the AIC.  */
     {
         register uint32_t * r14 __asm__ ("r14") 
-            = (uint32_t *) &AT91C_BASE_AIC->AIC_EOICR;
+            = (uint32_t *) &AIC->AIC_EOICR;
 
         /* Write anything to AIC_EOICR to indicate interrupt handling
            complete.  */

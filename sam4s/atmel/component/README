@@ -1,0 +1,4 @@
+These files define a structure for each peripheral but not their bases
+addresses.  The structures are named Spi, Pwm, etc.
+
+Spi is equivalent to the old AT91PS_SPI.

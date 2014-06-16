@@ -41,22 +41,12 @@ typedef uint8_t bool;
 
 #define __inline static inline
 
-
-#if defined (AT91SAM7S512)
-#include "AT91SAM7S512.h"
-#elif defined (AT91SAM7S256)
-#include "AT91SAM7S256.h"
-#elif defined (AT91SAM7X256)
-#include "AT91SAM7X256.h"
-#elif defined (AT91SAM7S128)
-#include "AT91SAM7S128.h"
-#elif defined (AT91SAM7S64)
-#include "AT91SAM7S64.h"
-#elif defined (AT91SAM7S32)
-#include "AT91SAM7S32.h"
+#if defined (__SAM7__)
+#include "sam7.h"
+#elif defined (__SAM4S__)
+#include "sam4s.h"
 #else
-#error "device type not defined"
+#error "MCU family not defined"
 #endif
-
 
 #endif

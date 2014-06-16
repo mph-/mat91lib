@@ -23,8 +23,23 @@ endif
 
 TARGET_MAP = $(addsuffix .map, $(basename $(TARGET)))
 
+ifneq (, $(findstring SAM7, $(MCU)))
+FAMILY = sam7
+else
+ifneq (, $(findstring SAM4S, $(MCU)))
+FAMILY = sam4s
+else
+$(error unknown family)
+endif
+endif
+
+
+all: $(TARGET)
+
+include $(MAT91LIB_DIR)/$(FAMILY)/$(FAMILY).mk
+
 SCRIPTS = $(MAT91LIB_DIR)/scripts
-LDSCRIPTS = $(MAT91LIB_DIR)/ldscripts
+LDSCRIPTS = $(MAT91LIB_DIR)/$(FAMILY)
 
 
 CC = $(TOOLCHAIN)-gcc
@@ -34,15 +49,11 @@ DEL = rm
 
 INCLUDES += -I.
 
-CFLAGS += -mcpu=arm7tdmi -Wall -Wstrict-prototypes -W -gdwarf-2 -D$(RUN_MODE) $(INCLUDES) $(OPT) -mthumb-interwork -D$(MCU) 
-
-LDFLAGS += -mthumb-interwork -nostartfiles -lm -lc
-
 
 ifeq ($(RUN_MODE), RAM)
-LDFLAGS +=-T$(LDSCRIPTS)/$(MCU)-RAM.ld
+LDFLAGS +=-L$(LDSCRIPTS) -T$(MCU)-RAM.ld
 else 
-LDFLAGS +=-T$(LDSCRIPTS)/$(MCU)-ROM.ld
+LDFLAGS +=-L$(LDSCRIPTS) -T$(MCU)-ROM.ld
 endif
 
 # Hack.  FIXME
@@ -54,16 +65,7 @@ DEPS = $(addprefix deps/, $(sort $(SRC:.c=.d)))
 
 include $(MAT91LIB_DIR)/peripherals.mk
 
-
-all: $(TARGET)
-
-
-# This cannot be compiled in thumb mode.
-objs/crt0.o: crt0.c config.h target.h
-	mkdir -p objs
-	$(CC) -c $(CFLAGS) -O2 $< -o $@
-
-EXTRA_OBJ = objs/crt0.o objs/cpu.o
+EXTRA_OBJ = objs/crt0.o objs/sys.o objs/cpu.o
 
 
 objs:

@@ -11,7 +11,7 @@
 
 struct pwm_dev_struct
 {
-    AT91S_PWMC_CH *base;
+    Pwm *base;
     const pinmap_t *pin;
     pio_config_t stop_state;
     uint8_t prescale;
@@ -46,21 +46,21 @@ static const pinmap_t pwm_pins[] =
 #define PWM_PINS_NUM ARRAY_SIZE (pwm_pins)
 
 
-static inline AT91S_PWMC_CH *pwm_base (pwm_t pwm)
+static inline Pwm *pwm_base (pwm_t pwm)
 {
     switch (pwm->pin->channel)
     {
     case 0:
-        return AT91C_BASE_PWMC_CH0;
+        return PWMC_CH0;
                     
     case 1:
-        return AT91C_BASE_PWMC_CH1;
+        return PWMC_CH1;
                     
     case 2:
-        return AT91C_BASE_PWMC_CH2;
+        return PWMC_CH2;
         
     case 3:
-        return AT91C_BASE_PWMC_CH3;
+        return PWMC_CH3;
             
     default:
         return 0;
@@ -72,7 +72,7 @@ void
 pwm_shutdown (void)
 {
     /* Disable PWM peripheral clock.  */
-    AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_PWMC);
+    PMC->PMC_PCDR = BIT (AT91C_ID_PWMC);
 }
 
 
@@ -91,7 +91,7 @@ pwm_prescale_set (pwm_t pwm, uint8_t prescale)
 pwm_period_t
 pwm_period_set (pwm_t pwm, pwm_period_t period)
 {
-    AT91S_PWMC_CH *pPWM;
+    Pwm *pPWM;
     pwm_channel_mask_t mask;
     uint8_t prescale;
 
@@ -118,7 +118,7 @@ pwm_period_set (pwm_t pwm, pwm_period_t period)
     mask = pwm_channel_mask (pwm);
 
     /* Configure period.  */
-    if (AT91C_BASE_PWMC->PWMC_SR & mask)
+    if (PWMC->PWMC_SR & mask)
     {
         uint8_t status;
 
@@ -128,7 +128,7 @@ pwm_period_set (pwm_t pwm, pwm_period_t period)
            the duty.  */
 
         /* Read update status.  */
-        status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3); 
+        status = BITS_EXTRACT (PWMC->PWMC_ISR, 0, 3); 
 
         /* Set mode to update period.  */
         BITS_INSERT (pwm->base->PWMC_CMR, 1, 10, 10);
@@ -136,7 +136,7 @@ pwm_period_set (pwm_t pwm, pwm_period_t period)
         /* Wait for a new period.  */
         while (!(status & mask))
         {
-            status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3);
+            status = BITS_EXTRACT (PWMC->PWMC_ISR, 0, 3);
         }
 
         pwm->base->PWMC_CUPDR = period;
@@ -169,7 +169,7 @@ pwm_duty_set (pwm_t pwm, pwm_period_t duty)
     mask = pwm_channel_mask (pwm);
 
     /* Configure duty.  */
-    if (AT91C_BASE_PWMC->PWMC_SR & mask)
+    if (PWMC->PWMC_SR & mask)
     {
         uint8_t status;
 
@@ -179,7 +179,7 @@ pwm_duty_set (pwm_t pwm, pwm_period_t duty)
            the duty.  */
 
         /* Read update status.  */
-        status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3); 
+        status = BITS_EXTRACT (PWMC->PWMC_ISR, 0, 3); 
 
         /* Set mode to update duty.  */
         BITS_INSERT (pwm->base->PWMC_CMR, 0, 10, 10);
@@ -187,7 +187,7 @@ pwm_duty_set (pwm_t pwm, pwm_period_t duty)
         /* Wait for a new duty.  */
         while (!(status & mask))
         {
-            status = BITS_EXTRACT (AT91C_BASE_PWMC->PWMC_ISR, 0, 3);
+            status = BITS_EXTRACT (PWMC->PWMC_ISR, 0, 3);
         }
 
         pwm->base->PWMC_CUPDR = duty;
@@ -283,7 +283,7 @@ pwm_init (const pwm_cfg_t *cfg)
 
     /* Enable PWM peripheral clock (this is not required to configure
        the PWM).  */
-    AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_PWMC);
+    PMC->PMC_PCER = BIT (AT91C_ID_PWMC);
 
     pwm_config (pwm, cfg->period, cfg->duty, cfg->align, cfg->polarity);
 
@@ -325,7 +325,7 @@ pwm_channels_start (pwm_channel_mask_t channel_mask)
         pio_config_set (pwm->pin->pio, pwm->pin->periph);
     }
 
-    AT91C_BASE_PWMC->PWMC_ENA = channel_mask;
+    PWMC->PWMC_ENA = channel_mask;
 }
 
 
@@ -335,7 +335,7 @@ pwm_channels_stop (pwm_channel_mask_t channel_mask)
 {
     int i;
 
-    AT91C_BASE_PWMC->PWMC_DIS = channel_mask;
+    PWMC->PWMC_DIS = channel_mask;
 
     /* Switch pins to have desired stop state.  */
     for (i = 0; i < PWM_DEVICES_NUM; i++)

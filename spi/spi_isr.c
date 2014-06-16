@@ -1,6 +1,6 @@
 void SPI_ISR (void)
 {
-    AT91PS_SPI     pSPI = AT91C_BASE_SPI;
+    AT91PS_SPI     pSPI = SPI;
 
     spi_Status = pSPI->SPI_SR;
     

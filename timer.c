@@ -60,13 +60,13 @@ timer_base (uint8_t channel)
     switch (channel)
     {
     case TIMER_CHANNEL_0:
-        return AT91C_BASE_TC0;
+        return TC0;
 					
     case TIMER_CHANNEL_1:
-        return AT91C_BASE_TC1;
+        return TC1;
 	
     case TIMER_CHANNEL_2:
-        return AT91C_BASE_TC2;
+        return TC2;
 			
     default:
         return 0;
@@ -94,7 +94,7 @@ timer_enable (uint8_t channel)
         /* Disable pullups.  */
         *AT91C_PIOA_PPUDR = AT91C_PA0_TIOA0 | AT91C_PA1_TIOB0;
         /* Enable peripheral clock.  */
-        AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_TC0);
+        PMC->PMC_PCER = BIT (AT91C_ID_TC0);
         break;
 	
     case TIMER_CHANNEL_1:
@@ -103,7 +103,7 @@ timer_enable (uint8_t channel)
         /* Disable pullups.  */
         *AT91C_PIOA_PPUDR = AT91C_PA15_TIOA1 | AT91C_PA16_TIOB1;
         /* Enable peripheral clock.  */
-        AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_TC1);
+        PMC->PMC_PCER = BIT (AT91C_ID_TC1);
         break;
 	
     case TIMER_CHANNEL_2:
@@ -112,7 +112,7 @@ timer_enable (uint8_t channel)
         /* Disable pullups.  */
         *AT91C_PIOA_PPUDR = AT91C_PA26_TIOA2 | AT91C_PA27_TIOB2;
         /* Enable peripheral clock.  */
-        AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_TC2);
+        PMC->PMC_PCER = BIT (AT91C_ID_TC2);
         break;
         
     default:
@@ -132,21 +132,21 @@ timer_disable (uint8_t channel)
         /* Disable peripheral pins.  */
         *AT91C_PIOA_PER = AT91C_PA0_TIOA0 | AT91C_PA1_TIOB0;
         /* Disable peripheral clock.  */
-        AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_TC0);
+        PMC->PMC_PCDR = BIT (AT91C_ID_TC0);
         break;
 	
     case TIMER_CHANNEL_1:
         /* Disable peripheral pins.  */
         *AT91C_PIOA_PER = AT91C_PA15_TIOA1 | AT91C_PA16_TIOB1;
         /* Disable peripheral clock.  */
-        AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_TC1);
+        PMC->PMC_PCDR = BIT (AT91C_ID_TC1);
         break;
 	
     case TIMER_CHANNEL_2:
         /* Disable peripheral pins.  */
         *AT91C_PIOA_PER = AT91C_PA26_TIOA2 | AT91C_PA27_TIOB2;
         /* Disable peripheral clock.  */
-        AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_TC2);
+        PMC->PMC_PCDR = BIT (AT91C_ID_TC2);
         break;
         
     default:

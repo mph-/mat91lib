@@ -23,14 +23,14 @@
 */
 
 
-#ifndef AT91C_BASE_SPI0
-#define AT91C_BASE_SPI0 AT91C_BASE_SPI
-#define AT91C_BASE_PDC_SPI0 AT91C_BASE_PDC_SPI
+#ifndef SPI0
+#define SPI0 SPI
+#define PDC_SPI0 PDC_SPI
 #endif
 
-#ifndef AT91C_BASE_SPI1
-#define AT91C_BASE_SPI1 0
-#define AT91C_BASE_PDC_SPI1 0
+#ifndef SPI1
+#define SPI1 0
+#define PDC_SPI1 0
 #endif
 
 
@@ -38,8 +38,8 @@
 #define SPI_CHANNELS_NUM 4
 
 
-#define SPI_BASE_GET(spi) (((spi)->channel < SPI_CHANNELS_NUM) ? AT91C_BASE_SPI0 : AT91C_BASE_SPI1)
-#define PDC_BASE_GET(spi) (((spi)->channel < SPI_CHANNELS_NUM) ? AT91C_BASE_PDC_SPI0 : AT91C_BASE_PDC_SPI1)
+#define SPI_BASE_GET(spi) (((spi)->channel < SPI_CHANNELS_NUM) ? SPI0 : SPI1)
+#define PDC_BASE_GET(spi) (((spi)->channel < SPI_CHANNELS_NUM) ? PDC_SPI0 : PDC_SPI1)
 
 
 /** Return true if DMA has finished writing a buffer.  */
@@ -66,9 +66,9 @@ spi_dma_read_finished_p (spi_t spi)
 bool
 spi_dma_write_completed_p (spi_t spi)
 {
-    AT91S_SPI *pSPI = SPI_BASE_GET (spi);
+    AT91S_PDC *pPDC = PDC_BASE_GET (spi);
 
-    return (pSPI->SPI_SR & AT91C_SPI_TXBUFE) != 0;
+    return pPDC->PDC_TNCR == 0;
 }
 
 
@@ -76,9 +76,9 @@ spi_dma_write_completed_p (spi_t spi)
 bool
 spi_dma_read_completed_p (spi_t spi)
 {
-    AT91S_SPI *pSPI = SPI_BASE_GET (spi);
+    AT91S_PDC *pPDC = PDC_BASE_GET (spi);
 
-    return (pSPI->SPI_SR & AT91C_SPI_RXBUFF) != 0;
+    return pPDC->PDC_TNCR == 0;
 }
 
 

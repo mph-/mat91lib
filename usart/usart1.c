@@ -18,7 +18,7 @@ usart1_baud_divisor_set (uint16_t baud_divisor)
 
 uint8_t usart1_init (uint16_t baud_divisor)
 {
-    AT91S_USART *pUSART = AT91C_BASE_US1;
+    AT91S_USART *pUSART = USART1;
 
     /* Disable interrupts.  */
     pUSART->US_IDR = ~0;
@@ -30,7 +30,7 @@ uint8_t usart1_init (uint16_t baud_divisor)
     *AT91C_PIOA_PPUDR = AT91C_PA21_RXD1 | AT91C_PA22_TXD1;
 
     /* Enable USART1 clock.  */
-    AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_US1);
+    PMC->PMC_PCER = BIT (AT91C_ID_USART1);
     
     /* Reset and disable receiver and transmitter.  */
     pUSART->US_CR = AT91C_US_RSTRX | AT91C_US_RSTTX          
@@ -53,13 +53,13 @@ uint8_t usart1_init (uint16_t baud_divisor)
 void
 usart1_shutdown (void)
 {
-    AT91S_USART *pUSART = AT91C_BASE_US1;
+    AT91S_USART *pUSART = USART1;
 
     /* Disable RxD1 and TxD1 pins.  */
     *AT91C_PIOA_PER = AT91C_PA21_RXD1 | AT91C_PA22_TXD1;
 
     /* Disable USART1 clock.  */
-    AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_US1);
+    PMC->PMC_PCDR = BIT (AT91C_ID_USART1);
     
     /* Reset and disable receiver and transmitter.  */
     pUSART->US_CR = AT91C_US_RSTRX | AT91C_US_RSTTX          

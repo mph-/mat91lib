@@ -1,0 +1,8 @@
+Each MCU defines SPI, PWM, TC0, for example 
+
+#define SPI        ((Spi    *)0x40008000U)
+
+This is equivalent to the old AT91C_BASE_SPI
+
+#define AT91C_BASE_SPI       (AT91_CAST(AT91PS_SPI) 	0xFFFE0000)
+

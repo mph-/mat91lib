@@ -144,18 +144,18 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
     {
     case TC_CHANNEL_0:
         /* Switch to peripheral B and disable pin as PIO.  */
-        AT91C_BASE_PIOA->PIO_BSR = AT91C_PA0_TIOA0;
-        AT91C_BASE_PIOA->PIO_PDR = AT91C_PA0_TIOA0;
+        PIOA->PIO_BSR = AT91C_PA0_TIOA0;
+        PIOA->PIO_PDR = AT91C_PA0_TIOA0;
         break;
 
     case TC_CHANNEL_1:
-        AT91C_BASE_PIOA->PIO_BSR = AT91C_PA15_TIOA1;
-        AT91C_BASE_PIOA->PIO_PDR = AT91C_PA15_TIOA1;
+        PIOA->PIO_BSR = AT91C_PA15_TIOA1;
+        PIOA->PIO_PDR = AT91C_PA15_TIOA1;
         break;
 
     case TC_CHANNEL_2:
-        AT91C_BASE_PIOA->PIO_BSR = AT91C_PA26_TIOA2;
-        AT91C_BASE_PIOA->PIO_PDR = AT91C_PA26_TIOA2;
+        PIOA->PIO_BSR = AT91C_PA26_TIOA2;
+        PIOA->PIO_PDR = AT91C_PA26_TIOA2;
         break;
 
     default:
@@ -174,7 +174,7 @@ void
 tc_shutdown (tc_t tc)
 {
     /* Disable peripheral clock.  */
-    AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_TC0 + TC_CHANNEL (tc));
+    PMC->PMC_PCDR = BIT (AT91C_ID_TC0 + TC_CHANNEL (tc));
 
     /* Perhaps should force TC output pin low?  */
 }
@@ -202,20 +202,20 @@ tc_init (const tc_cfg_t *cfg)
     switch (pin->channel)
     {
     case TC_CHANNEL_0:
-        tc->base = AT91C_BASE_TC0;
+        tc->base = TC0;
         break;
 
     case TC_CHANNEL_1:
-        tc->base = AT91C_BASE_TC1;
+        tc->base = TC1;
         break;
 
     case TC_CHANNEL_2:
-        tc->base = AT91C_BASE_TC2;
+        tc->base = TC2;
         break;
     }
 
     /* Enable TCx peripheral clock.  */
-    AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_TC0 + pin->channel);
+    PMC->PMC_PCER = BIT (AT91C_ID_TC0 + pin->channel);
 
     tc_config (tc, cfg->mode, cfg->period, cfg->delay);
 
@@ -227,9 +227,9 @@ static void
 tc_clock_sync_handler (void)
 {
     /* Read status register to clear interrupt.  */
-    AT91C_BASE_TC0->TC_SR;
-    AT91C_BASE_TC1->TC_SR;
-    AT91C_BASE_TC2->TC_SR;
+    TC0->TC_SR;
+    TC1->TC_SR;
+    TC2->TC_SR;
 }
 
 

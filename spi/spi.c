@@ -66,7 +66,7 @@
 
 
 /* Number of independent SPI controllers.  */
-#ifdef AT91C_BASE_SPI1
+#ifdef SPI1
 #define SPI_CONTROLLERS_NUM 2
 #else
 #define SPI_CONTROLLERS_NUM 1
@@ -96,15 +96,15 @@ enum
 
 /* Macros.  */
 
-#ifndef AT91C_BASE_SPI0
-#define AT91C_BASE_SPI0 AT91C_BASE_SPI
+#ifndef SPI0
+#define SPI0 SPI
 #endif
 
-#ifndef AT91C_BASE_SPI1
-#define AT91C_BASE_SPI1 0
+#ifndef SPI1
+#define SPI1 0
 #endif
 
-#define SPI_BASE_GET(channel) (((channel) < SPI_CHANNELS_NUM) ? AT91C_BASE_SPI0 : AT91C_BASE_SPI1)
+#define SPI_BASE_GET(channel) (((channel) < SPI_CHANNELS_NUM) ? SPI0 : SPI1)
 
 
 #ifdef HOSTED
@@ -224,15 +224,15 @@ spi_channel_bits_set (spi_t spi, uint8_t bits)
 
 
 /* Spi modes:
-Mode  CPOL  CPHA  NCPHA
-   0     0     0     1       clock normally low    read on rising edge
-   1     0     1     0       clock normally low    read on falling edge
-   2     1     0     1       clock normally high   read on falling edge
-   3     1     1     0       clock normally high   read on rising edge
+Mode 	CPOL 	CPHA  NCPHA
+0 	0 	0     1       clock normally low    read on rising edge
+1 	0 	1     0       clock normally low    read on falling edge
+2 	1 	0     1       clock normally high   read on falling edge
+3 	1 	1     0       clock normally high   read on rising edge
 
-However, page 577 of the AT91SAM7Sx datasheet version 6175L says "Note that in SPI
+However, page 512 of the AT91SAM7Sx datasheet say "Note that in SPI
 master mode the ATSAM7S512/256/128/64/321/32 does not sample the data
-(MISO) on the opposite edge from where the data clocks out (MOSI) but the same
+(MISO) on the opposite edge where data clocks out (MOSI) but the same
 edge is used as shown in Figure 36-3 and Figure 36-4."  Figure 36-3
 shows that CPOL=NCPHA=0 or CPOL=NCPHA=1 samples on the rising edge and
 that the data changes sometime after the rising edge (about 2 ns).  To
@@ -241,11 +241,11 @@ that the data changes on the falling edge and should be sampled on the
 rising edge.  Therefore, it appears that NCPHA should be treated the
 same as CPHA.  Thus:
 
-Mode  CPOL  CPHA  NCPHA
-   0     0     0     0       clock normally low    read on rising edge
-   1     0     1     1       clock normally low    read on falling edge
-   2     1     0     0       clock normally high   read on falling edge
-   3     1     1     1       clock normally high   read on rising edge
+Mode 	CPOL 	CPHA  NCPHA
+0 	0 	0     0       clock normally low    read on rising edge
+1 	0 	1     1       clock normally low    read on falling edge
+2 	1 	0     0       clock normally high   read on falling edge
+3 	1 	1     1       clock normally high   read on rising edge
 */
 
 static void
@@ -557,11 +557,11 @@ spi_wakeup (spi_t spi)
     *AT91C_PIOA_PPUDR = SPI0_PINS;
 
     /* Enable SPI peripheral clock.  */
-    AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_SPI);
+    PMC->PMC_PCER = BIT (AT91C_ID_SPI);
    
-    spi_reset (AT91C_BASE_SPI0);
-    spi_setup (AT91C_BASE_SPI0);
-    spi_enable (AT91C_BASE_SPI0);
+    spi_reset (SPI0);
+    spi_setup (SPI0);
+    spi_enable (SPI0);
 
 #if SPI_CONTROLLERS_NUM == 2
     /* Configure PIO for MISO, MOSI, SPCK.    */
@@ -574,11 +574,11 @@ spi_wakeup (spi_t spi)
     *AT91C_PIOB_PPUDR = SPI1_PINS;
 
     /* Enable SPI peripheral clock.  */
-    AT91C_BASE_PMC->PMC_PCER = BIT (AT91C_ID_SPI1);
+    PMC->PMC_PCER = BIT (AT91C_ID_SPI1);
 
-    spi_reset (AT91C_BASE_SPI1);
-    spi_setup (AT91C_BASE_SPI1);
-    spi_enable (AT91C_BASE_SPI1);
+    spi_reset (SPI1);
+    spi_setup (SPI1);
+    spi_enable (SPI1);
 #endif
 }
 
@@ -641,10 +641,10 @@ spi_shutdown (spi_t spi)
     if (spi_devices_enabled)
         return;
            
-    spi_disable (AT91C_BASE_SPI0); 
+    spi_disable (SPI0); 
 
 #if SPI_CONTROLLERS_NUM == 2
-    spi_disable (AT91C_BASE_SPI1); 
+    spi_disable (SPI1); 
 
     /* Enable pins as GPIO.  */
     *AT91C_PIOA_PER = SPI0_PINS;
@@ -655,7 +655,7 @@ spi_shutdown (spi_t spi)
     *AT91C_PIOB_CODR = SPI1_PINS;
 
     /* Disable SPI peripheral clocks.  */
-    AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_SPI0) | BIT (AT91C_ID_SPI1);
+    PMC->PMC_PCDR = BIT (AT91C_ID_SPI0) | BIT (AT91C_ID_SPI1);
 #else
     /* Enable pins as GPIO.  */
     *AT91C_PIOA_PER = SPI0_PINS;
@@ -667,7 +667,7 @@ spi_shutdown (spi_t spi)
     *AT91C_PIOA_CODR = SPI0_PINS;
 
     /* Disable SPI peripheral clock.  */
-    AT91C_BASE_PMC->PMC_PCDR = BIT (AT91C_ID_SPI);
+    PMC->PMC_PCDR = BIT (AT91C_ID_SPI);
 #endif
 
     /* Set all the chip select pins low.  */

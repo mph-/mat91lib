@@ -79,7 +79,7 @@
 static void
 adc_reset (void)
 {
-    AT91C_BASE_ADC->ADC_CR = AT91C_ADC_SWRST;
+    ADC->ADC_CR = ADC_CR_SWRST;
 }
 
 
@@ -93,7 +93,7 @@ adc_sleep (void)
     /*  Errata for SAM7S256:RevisionB states that the ADC will not be
         placed into sleep mode until a conversion has completed. */
     adc_init (0);
-    AT91C_BASE_ADC->ADC_MR |= AT91C_ADC_SLEEP;
+    ADC->ADC_MR |= ADC_MR_SLEEP;
     adc_read_wait (0, &dummy);
 }
 
@@ -107,26 +107,26 @@ adc_resolution_set (uint8_t resolution)
         /* ADC clock has to be 5MHz in high resolution mode, a prescale of 4.  */
         case 10:
 
-            AT91C_BASE_ADC->ADC_MR &= ~AT91C_ADC_LOWRES;
+            ADC->ADC_MR &= ~ADC_MR_LOWRES;
 
             /* ADC clock.  */
-            BITS_INSERT (AT91C_BASE_ADC->ADC_MR, ADC_10BIT_PRESCALE, 8, 13);
+            BITS_INSERT (ADC->ADC_MR, ADC_10BIT_PRESCALE, 8, 13);
             /* Startup time.  */
-            BITS_INSERT (AT91C_BASE_ADC->ADC_MR, ADC_10BIT_STARTUP, 16, 20);
+            BITS_INSERT (ADC->ADC_MR, ADC_10BIT_STARTUP, 16, 20);
             /* Sample and hold time.  */
-            BITS_INSERT (AT91C_BASE_ADC->ADC_MR, ADC_10BIT_SHTIM, 24, 27);
+            BITS_INSERT (ADC->ADC_MR, ADC_10BIT_SHTIM, 24, 27);
             break;
 
         /* ADC clock has to be 8MHz in low resolution mode, a prescale of 2.  */
         case 8:
-            AT91C_BASE_ADC->ADC_MR |= AT91C_ADC_LOWRES;
+            ADC->ADC_MR |= ADC_MR_LOWRES;
 
             /* ADC clock.  */
-            BITS_INSERT (AT91C_BASE_ADC->ADC_MR, ADC_8BIT_PRESCALE, 8, 13);
+            BITS_INSERT (ADC->ADC_MR, ADC_8BIT_PRESCALE, 8, 13);
             /* Startup time.  */
-            BITS_INSERT (AT91C_BASE_ADC->ADC_MR, ADC_8BIT_STARTUP, 16, 20);
+            BITS_INSERT (ADC->ADC_MR, ADC_8BIT_STARTUP, 16, 20);
             /* Sample and hold time.  */
-            BITS_INSERT (AT91C_BASE_ADC->ADC_MR, ADC_8BIT_SHTIM, 24, 27);
+            BITS_INSERT (ADC->ADC_MR, ADC_8BIT_SHTIM, 24, 27);
             break;
 
         default:
@@ -140,7 +140,7 @@ adc_resolution_set (uint8_t resolution)
 static void
 adc_start (void)
 {
-    AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
+    ADC->ADC_CR = ADC_CR_START;
 }
 
 
@@ -170,7 +170,7 @@ adc_conversion_start (adc_channel_t channel)
     if (channel >= ADC_CHANNEL_NUM)
 	return 0;
 
-    AT91C_BASE_ADC->ADC_CHER = BIT (channel);
+    ADC->ADC_CHER = BIT (channel);
 
 #if 0
     /* Check if conversion already in progress.  */
@@ -188,10 +188,8 @@ adc_conversion_start (adc_channel_t channel)
 bool
 adc_ready_p (void)
 {
-    AT91_REG reg;
-
-    reg = AT91C_BASE_ADC->ADC_SR;
-    return (reg & AT91C_ADC_DRDY) != 0;
+    /* FIXME for SAM4S.  */
+    return (ADC->ADC_SR & AT91C_ADC_DRDY) != 0;
 }
 
 
@@ -202,10 +200,10 @@ adc_read (adc_sample_t *pvalue)
     if (!adc_ready_p ())
         return 0;
 
-    *pvalue = AT91C_BASE_ADC->ADC_LCDR;
+    *pvalue = ADC->ADC_LCDR;
     
     /* Disable channel.  */
-    AT91C_BASE_ADC->ADC_CHDR = ~0;
+    ADC->ADC_CHDR = ~0;
     return 1;
 }
 

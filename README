@@ -6,3 +6,4 @@ Tested on AT91 SAM7-H256 board from Olimex.
 TODO
 Convert files to use doxygen markup
 
+Perhaps use CMSIS - Cortex Microcontroller Software Interface Standard

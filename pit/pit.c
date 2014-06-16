@@ -10,10 +10,13 @@
 
    PIVR Periodic Interval Value Register
    PIIR Periodic Interval Image Register
+
+   On the SAM4S this is replaced with SysTick a 24 bit counter
+   that counts down to zero.
 */
 
 
-static AT91S_PITC *pPITC = AT91C_BASE_PITC;
+static AT91S_PITC *pPITC = PITC;
    
 
 void
