@@ -15,8 +15,19 @@
    that counts down to zero.
 */
 
+/** The maximum overrun period (s).  */
+#define PIT_OVERRUN_PERIOD 100
 
-static AT91S_PITC *pPITC = PITC;
+
+/** The maximum overrun (in ticks).  */
+#define PIT_OVERRUN_MAX ((pit_tick_t)(PIT_OVERRUN_PERIOD * PIT_RATE))
+
+
+/** The maximum delay (in ticks).  */
+#define PIT_DELAY_MAX (~0u - PIT_OVERRUN_MAX + 1)
+
+
+static AT91S_PITC *pPITC = AT91C_BASE_PITC;
    
 
 void
@@ -44,8 +55,8 @@ static uint32_t pit_period_set (uint32_t period)
 pit_tick_t pit_get (void)
 {
     /* Read the image register (this has no affect on the counters).
-       Since the maximum period is selected we can use both the CPIV and PICNT fields
-       as a single 32 bit counter.  */
+       Since the maximum period is selected we can use both the CPIV
+       and PICNT fields as a single 32 bit counter.  */
     return pPITC->PITC_PIIR;
 }
 

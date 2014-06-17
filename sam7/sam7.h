@@ -1,6 +1,10 @@
 #ifndef SAM7_H
 #define SAM7_H
 
+/* This is fixed.  */
+#define PIT_CLOCK_DIVISOR 16
+
+
 #if defined (__AT91SAM7S512__)
 #include "AT91SAM7S512.h"
 #elif defined (__AT91SAM7S256__)

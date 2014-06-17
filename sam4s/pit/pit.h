@@ -8,23 +8,12 @@
 
 #include "config.h"
 
-/* This is fixed.  */
-#define PIT_CLOCK_DIVISOR 16
+#ifndef PIT_CLOCK_DIVISOR
+#define PIT_CLOCK_DIVISOR 1
+#endif
 
 /** Rate in Hz that the pit is incremented.  */
 #define PIT_RATE (F_CPU / PIT_CLOCK_DIVISOR)
-
-
-/** The maximum overrun period (s).  */
-#define PIT_OVERRUN_PERIOD 100
-
-
-/** The maximum overrun (in ticks).  */
-#define PIT_OVERRUN_MAX ((pit_tick_t)(PIT_OVERRUN_PERIOD * PIT_RATE))
-
-
-/** The maximum delay (in ticks).  */
-#define PIT_DELAY_MAX (~0u - PIT_OVERRUN_MAX + 1)
 
 
 /** Define pit ticks.  */
