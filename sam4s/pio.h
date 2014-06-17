@@ -12,6 +12,14 @@
 
 #define PIO_SAM4S
 
+/* The SAM4S PIO lines are much more configurable than the SAM7.  They
+   also can be configured open-drain (multi-drive), have optional
+   Schmitt trigger inputs, have internal pulldown resistors, and can
+   share the pin with four peripheral signals.  These options are not
+   supported.  */
+
+
+/* The 64 pin MCUs have two PIO ports; the 100 pin ones have three.  */
 enum {PORT_A, PORT_B, PORT_C};
 
 /* Enumerate all the PIOs.  */
@@ -23,7 +31,7 @@ enum {PORT_A, PORT_B, PORT_C};
 
 
 /** Private macro to lookup port register.  */
-#define PIO_PORT_(PIO) (((PIO) >> 5) == PORT_A : PIOA ? ((PIO) >> 5) == PORT_B : PIOB ? PIOC)
+#define PIO_PORT_(PIO) (((PIO) >> 5) == PORT_A ? PIOA : ((PIO) >> 5) == PORT_B ? PIOB : PIOC)
 
 typedef uint32_t pio_mask_t;
 
@@ -43,6 +51,41 @@ typedef enum pio_config_enum
 } pio_config_t;
 
 
+/** Define the pins.  */
+#define PA0_PIO PIO_DEFINE(PORT_A, 0)
+#define PA1_PIO PIO_DEFINE(PORT_A, 1)
+#define PA2_PIO PIO_DEFINE(PORT_A, 2)
+#define PA3_PIO PIO_DEFINE(PORT_A, 3)
+#define PA4_PIO PIO_DEFINE(PORT_A, 4)
+#define PA5_PIO PIO_DEFINE(PORT_A, 5)
+#define PA6_PIO PIO_DEFINE(PORT_A, 6)
+#define PA7_PIO PIO_DEFINE(PORT_A, 7)
+#define PA8_PIO PIO_DEFINE(PORT_A, 8)
+#define PA9_PIO PIO_DEFINE(PORT_A, 9)
+#define PA10_PIO PIO_DEFINE(PORT_A, 10)
+#define PA11_PIO PIO_DEFINE(PORT_A, 11)
+#define PA12_PIO PIO_DEFINE(PORT_A, 12)
+#define PA13_PIO PIO_DEFINE(PORT_A, 13)
+#define PA14_PIO PIO_DEFINE(PORT_A, 14)
+#define PA15_PIO PIO_DEFINE(PORT_A, 15)
+#define PA16_PIO PIO_DEFINE(PORT_A, 16)
+#define PA17_PIO PIO_DEFINE(PORT_A, 17)
+#define PA18_PIO PIO_DEFINE(PORT_A, 18)
+#define PA19_PIO PIO_DEFINE(PORT_A, 19)
+#define PA20_PIO PIO_DEFINE(PORT_A, 20)
+#define PA21_PIO PIO_DEFINE(PORT_A, 21)
+#define PA22_PIO PIO_DEFINE(PORT_A, 22)
+#define PA23_PIO PIO_DEFINE(PORT_A, 23)
+#define PA24_PIO PIO_DEFINE(PORT_A, 24)
+#define PA25_PIO PIO_DEFINE(PORT_A, 25)
+#define PA26_PIO PIO_DEFINE(PORT_A, 26)
+#define PA27_PIO PIO_DEFINE(PORT_A, 27)
+#define PA28_PIO PIO_DEFINE(PORT_A, 28)
+#define PA29_PIO PIO_DEFINE(PORT_A, 29)
+#define PA30_PIO PIO_DEFINE(PORT_A, 30)
+#define PA31_PIO PIO_DEFINE(PORT_A, 31)
+
+
 typedef uint32_t pio_t;
 
 
@@ -57,50 +100,54 @@ bool pio_config_set (pio_t pio, pio_config_t config)
         PIO_PORT_ (pio)->PIO_SODR = PIO_BITMASK_ (pio);
         PIO_PORT_ (pio)->PIO_PER = PIO_BITMASK_ (pio);
         PIO_PORT_ (pio)->PIO_OER = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PPUDR = PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_OUTPUT_LOW:
         PIO_PORT_ (pio)->PIO_CODR = PIO_BITMASK_ (pio);
         PIO_PORT_ (pio)->PIO_PER = PIO_BITMASK_ (pio);
         PIO_PORT_ (pio)->PIO_OER = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PPUDR = PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_INPUT:
         PIO_PORT_ (pio)->PIO_ODR = PIO_BITMASK_ (pio);
         PIO_PORT_ (pio)->PIO_PER = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PPUDR = PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_PULLUP:
         PIO_PORT_ (pio)->PIO_ODR = PIO_BITMASK_ (pio);
         PIO_PORT_ (pio)->PIO_PER = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PPUER = PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_PUER = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_PERIPH_A:
-        PIO_PORT_ (pio)->PIO_ASR = PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_ABCDSR[0] &= ~PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_ABCDSR[1] &= ~PIO_BITMASK_ (pio);
         PIO_PORT_ (pio)->PIO_PDR = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PPUDR = PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_PERIPH_B:
-        PIO_PORT_ (pio)->PIO_BSR = PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_ABCDSR[0] |= PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_ABCDSR[1] &= ~PIO_BITMASK_ (pio);
         PIO_PORT_ (pio)->PIO_PDR = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PPUDR = PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_PERIPH_A_PULLUP:
-        PIO_PORT_ (pio)->PIO_ASR = PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_ABCDSR[0] &= ~PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_ABCDSR[1] &= ~PIO_BITMASK_ (pio);
         PIO_PORT_ (pio)->PIO_PDR = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PPUER = PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_PUER = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_PERIPH_B_PULLUP:
-        PIO_PORT_ (pio)->PIO_BSR = PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_ABCDSR[0] &= ~PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_ABCDSR[1] |= PIO_BITMASK_ (pio);
         PIO_PORT_ (pio)->PIO_PDR = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PPUER = PIO_BITMASK_ (pio);
+        PIO_PORT_ (pio)->PIO_PUER = PIO_BITMASK_ (pio);
         return 1;
 
     default:
