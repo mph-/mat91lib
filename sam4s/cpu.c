@@ -11,12 +11,16 @@
 
 void cpu_idle (void)
 {
+#if 0
+    /* TODO.  */
+
     /* Turn off CPU clock after current instruction.  It will be
        re-enabled when an interrupt occurs.  */
     PMC->PMC_SCDR = PMC_PCK;
 
     while ((PMC->PMC_SCSR & PMC_PCK) != PMC_PCK)
         continue;
+#endif
 }
 
 
@@ -24,6 +28,6 @@ void
 cpu_reset (void)
 {
     /* Reset processor and peripherals.  */
-    RSTC->RSTC_RCR = RSTC_PROCRST | RSTC_PERRST 
+    RSTC->RSTC_CR = RSTC_CR_PROCRST | RSTC_CR_PERRST 
         | (0xa5 << 24);
 }

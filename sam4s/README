@@ -1,6 +1,9 @@
-Each MCU defines SPI, PWM, TC0, for example 
+Each MCU in sam4sxxxx.h defines SPI, PWM, TC0, for example 
 
 #define SPI        ((Spi    *)0x40008000U)
+
+The data structures are defined in Atmel/components/component_spi.h etc.
+
 
 This is equivalent to the old AT91C_BASE_SPI
 

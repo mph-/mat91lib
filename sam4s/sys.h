@@ -36,33 +36,36 @@
 static void
 sys_flash_init (void)
 {
+#if 0
+    /* TODO  */
     switch (SYS_FLASH_READ_CYCLES)
     {
     case 1:
         /* Set 0 flash wait states for reading, 1 for writing.  */
-        MC->MC_FMR = MC_FWS_0FWS;
+        EEFC->MC_FMR = MC_FWS_0FWS;
         break;
 
     case 2:
         /* Set 1 flash wait state for reading, 2 for writing.  */
-        MC->MC_FMR = MC_FWS_1FWS;
+        EEFC->MC_FMR = MC_FWS_1FWS;
         break;
 
     case 3:
         /* Set 2 flash wait states for reading, 3 for writing.  */
-        MC->MC_FMR = MC_FWS_2FWS;
+        EEFC->MC_FMR = MC_FWS_2FWS;
         break;
 
     default:
         /* Set 3 flash wait states for reading, 4 for writing.  */
-        MC->MC_FMR = MC_FWS_3FWS;
+        EEFC->MC_FMR = MC_FWS_3FWS;
         break;
     }
 
     /* Set number of MCK cycles per microsecond for the Flash
        microsecond cycle number (FMCN) field of the Flash mode
        register (FMR).  */
-    BITS_INSERT (MC->MC_FMR, (uint16_t) (F_CPU / 1e6), 16, 23);
+    BITS_INSERT (EEFC->MC_FMR, (uint16_t) (F_CPU / 1e6), 16, 23);
+#endif
 }
 
 
@@ -100,45 +103,45 @@ sys_clock_init (void)
 
     /* Enable the MAINCK oscillator and wait for it to start up.  The
        start delay is SYS_OS_COUNT * 8 SLCK cycles.  */
-    PMC->PMC_MOR = BITS (SYS_OS_COUNT, 8, 15) | CKGR_MOSCEN;
+    PMC->CKGR_MOR = BITS (SYS_OS_COUNT, 8, 15) | CKGR_MOR_MOSCXTEN;
     
 #ifndef SIM_RUN
     /*  Wait for the oscillator to start up.  */
-    while (!(PMC->PMC_SR & PMC_MOSCS))
+    while (!(PMC->PMC_SR & PMC_SR_MOSCXTS))
         continue;
 #endif
     
     /* The PLL start delay is SYS_PLL_COUNT SLCK cycles.  */
-    PMC->PMC_PLLR = BITS (SYS_PLL_DIV, 0, 7) 
+    PMC->CKGR_PLLAR = BITS (SYS_PLL_DIV, 0, 7) 
         | BITS (SYS_PLL_MUL - 1, 16, 26)
         | BITS (SYS_PLL_COUNT, 8, 13)
         | BITS (SYS_USB_LOG2_DIV, 28, 29);
 
 #ifndef SIM_RUN
     /*  Wait for the PLL to start up.  */
-    while (!(PMC->PMC_SR & PMC_LOCK))
+    while (!(PMC->PMC_SR & PMC_SR_LOCKA))
         continue;
 
     /* Wait for MCK to start up.  */
-    while (!(PMC->PMC_SR & PMC_MCKRDY))
+    while (!(PMC->PMC_SR & PMC_SR_MOSCXTS))
         continue;
 #endif
 
     /* Set prescaler so F_MCK = F_PLLCK / 2.  */
-    PMC->PMC_MCKR = PMC_PRES_CLK_2;
+    PMC->PMC_MCKR = PMC_MCKR_PRES_CLK_2;
 
 #ifndef SIM_RUN
     /* Wait for MCK to start up.  */
-    while (!(PMC->PMC_SR & PMC_MCKRDY))
+    while (!(PMC->PMC_SR & PMC_SR_MOSCXTS))
         continue;
 #endif
  
     /* Switch to PLLCK for MCK.  */
-    PMC->PMC_MCKR |= PMC_CSS_PLL_CLK;
+    PMC->PMC_MCKR |= PMC_MCKR_CSS_PLLA_CLK;
 
 #ifndef SIM_RUN
     /* Wait for MCK to start up.  */
-    while (!(PMC->PMC_SR & PMC_MCKRDY))
+    while (!(PMC->PMC_SR & CKGR_MCFR_MAINFRDY))
         continue;
 #endif
 }
@@ -153,7 +156,7 @@ extern void _irq_spurious_handler (void);
 static inline void
 sys_reset_enable (void)
 {
-    RSTC->RSTC_RMR |= RSTC_URSTEN | (0xa5 << 24);
+    RSTC->RSTC_MR |= RSTC_MR_URSTEN | (0xa5 << 24);
 }
 
 
@@ -161,9 +164,9 @@ sys_reset_enable (void)
 static inline void
 sys_reset_disable (void)
 {
-    /* Enable NRST pin.  */
-    RSTC->RSTC_RMR =
-        (RSTC->RSTC_RMR & ~RSTC_URSTEN) | (0xa5 << 24);
+    /* Disable NRST pin.  */
+    RSTC->RSTC_MR =
+        (RSTC->RSTC_MR & ~RSTC_MR_URSTEN) | (0xa5 << 24);
 }
 
 
@@ -171,7 +174,7 @@ sys_reset_disable (void)
 __inline void
 sys_watchdog_disable (void)
 {
-    WDTC->WDTC_WDMR = WDTC_WDDIS;
+    WDT->WDT_MR = WDT_MR_WDDIS;
 }
 
 
@@ -182,10 +185,11 @@ static inline void
 sys_init (void)
 {
     irq_id_t id;
+    int i;
 
     /* Disable all interrupts to be sure when debugging.  */
-    AIC->AIC_IDCR = ~0;
-    AIC->AIC_FFDR = ~0;
+    for (i = 0; i < 8; i++)
+        NVIC->ICER[i] = ~0;
 
     sys_flash_init ();
 
@@ -195,8 +199,11 @@ sys_init (void)
 
     sys_reset_enable ();
 
+#if 0
     /* Enable protect mode.  */
     AIC->AIC_DCR |= AIC_DCR_PROT;
+    /* Use MATRIX_WPMR ?  */
+#endif
 
 #if 0
     AIC->AIC_SPU = (int) _irq_spurious_handler;

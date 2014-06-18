@@ -66,21 +66,21 @@ cpu_nop (void)
 static inline uint8_t
 cpu_reset_type_get (void)
 {
-    return (RSTC->RSTC_RSR >> 8) & 0x07;
+    return (RSTC->RSTC_SR >> 8) & 0x07;
 }
 
 
 static inline bool
 cpu_brownout_detect_get (void)
 {
-    return (RSTC->RSTC_RSR & RSTC_BODSTS) != 0;
+    return (SUPC->SUPC_SR & SUPC_SR_BODRSTS_PRESENT) != 0;
 }
 
 
 static inline bool
 cpu_reset_detect_get (void)
 {
-    return (RSTC->RSTC_RSR & RSTC_URSTS) != 0;
+    return (RSTC->RSTC_SR & RSTC_SR_URSTS) != 0;
 }
 
 
@@ -88,7 +88,7 @@ cpu_reset_detect_get (void)
 static inline void
 cpu_reset_enable (void)
 {
-    RSTC->RSTC_RMR |= RSTC_URSTEN | (0xa5 << 24);
+    RSTC->RSTC_MR |= RSTC_MR_URSTEN | (0xa5 << 24);
 }
 
 
@@ -96,9 +96,9 @@ cpu_reset_enable (void)
 static inline void
 cpu_reset_disable (void)
 {
-    /* Enable NRST pin.  */
-    RSTC->RSTC_RMR =
-        (RSTC->RSTC_RMR & ~RSTC_URSTEN) | (0xa5 << 24);
+    /* Disable NRST pin.  */
+    RSTC->RSTC_MR =
+        (RSTC->RSTC_MR & ~RSTC_MR_URSTEN) | (0xa5 << 24);
 }
 
 

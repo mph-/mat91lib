@@ -38,7 +38,7 @@ all: $(TARGET)
 
 include $(MAT91LIB_DIR)/$(FAMILY)/$(FAMILY).mk
 
-SCRIPTS = $(MAT91LIB_DIR)/scripts
+SCRIPTS = $(MAT91LIB_DIR)/$(FAMILY)/scripts
 LDSCRIPTS = $(MAT91LIB_DIR)/$(FAMILY)
 
 

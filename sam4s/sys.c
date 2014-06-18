@@ -13,7 +13,7 @@ void
 sys_reset (void)
 {
     /* Reset processor and peripherals.  */
-    RSTC->RSTC_RCR = AT91C_RSTC_PROCRST | AT91C_RSTC_PERRST 
+    RSTC->RSTC_CR = RSTC_CR_PROCRST | RSTC_CR_PERRST 
         | (0xa5 << 24);
 }
 
@@ -34,6 +34,9 @@ sys_power_mode_low (void)
     /* Disabling the UDP saves ??? uA.  Connecting the USB port pins
        to ground also saves about 100 uA.  */
     sys_udp_disable ();
+
+#if 0
+    /* TODO.  */
 
     /* Switch main clock (MCK) from PLLCLK to SLCK.  Note the prescale
        (PRES) and clock source (CSS) fields cannot be changed at the
@@ -61,14 +64,19 @@ sys_power_mode_low (void)
     /* Switch voltage regulator to standby (low-power) mode.
        This reduces its static current requirement from 100 uA to 25 uA.  */
     VREG->VREG_MR |= AT91C_VREG_PSTDBY;
+#endif
 }
 
 
 void
 sys_power_mode_normal (void)
 {
+#if 0
+    /* TODO.  */
     /* Switch voltage regulator to normal mode.  */
     VREG->VREG_MR &= ~AT91C_VREG_PSTDBY;
+
+#endif
 
     sys_clock_init ();
 }
@@ -89,7 +97,7 @@ sys_sleep (void)
 void
 sys_watchdog_reset (void)
 {
-    *AT91C_WDTC_WDCR = 0xA5000000 | AT91C_WDTC_WDRSTT;
+    WDT->WDT_CR = 0xA5000000 | WDT_CR_WDRSTT;
 }
 
 
@@ -97,8 +105,7 @@ void
 sys_watchdog_enable (void)
 {
     /* Enable watchdog with 2s timeout.  */
-    *AT91C_WDTC_WDMR = AT91C_WDTC_WDD | AT91C_WDTC_WDRSTEN
-        | AT91C_WDTC_WDDBGHLT | 0x200;
+    WDT->WDT_MR = WDT_MR_WDD(0x200) | WDT_MR_WDRSTEN | WDT_MR_WDDBGHLT;
     sys_watchdog_reset ();
 }
 
@@ -106,6 +113,9 @@ sys_watchdog_enable (void)
 void
 sys_udp_disable (void)
 {
+#if 0
+    /* TODO.  */
+
     /* The UDP is enabled by default.  To disable the UDP it is
        necessary to turn on the UDP clock, disable the UDP, then turn
        the clock off again.  */
@@ -114,12 +124,16 @@ sys_udp_disable (void)
     UDP->UDP_TXVC |= AT91C_UDP_TXVDIS;
 
     PMC->PMC_PCDR |= (1 << AT91C_ID_UDP);
+#endif
 }
 
 
 void
 sys_udp_enable (void)
 {
+#if 0
+    /* TODO.  */
     PMC->PMC_PCER |= (1 << AT91C_ID_UDP);
     UDP->UDP_TXVC &= ~AT91C_UDP_TXVDIS;
+#endif
 }

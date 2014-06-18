@@ -49,6 +49,7 @@ static inline void irq_enable (irq_id_t id)
 static inline bool irq_enabled_p (irq_id_t id)
 {
     /* TODO.  */
+    return 0;
 }
 
 
