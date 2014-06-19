@@ -37,6 +37,7 @@ void _nmi_handler (void)
 
 void _hardfault_handler (void)
 {
+    /* This is due to an error during exception processing.  */
     _unexpected_handler ();
 }
 
