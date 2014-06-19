@@ -2,7 +2,10 @@
 #include "bits.h"
 
 /* SysTick is a 24 bit down counter that resets
-   to the preloaded value in the SYST_RVR register.  */
+   to the preloaded value in the SYST_RVR register. 
+   
+   We pretend it is a 32 bit counter by shifting it by 8 bits.
+ */
 
 /** The maximum overrun period (s).  */
 #define PIT_OVERRUN_PERIOD 100
@@ -32,10 +35,7 @@ pit_stop (void)
 
 static uint32_t pit_period_set (uint32_t period)
 {
-    if (period >= (1 << 24))
-        return 0;
-
-    SysTick->LOAD = period;
+    SysTick->LOAD = period >> 8;
 
     return period;
 }
@@ -43,8 +43,8 @@ static uint32_t pit_period_set (uint32_t period)
 
 pit_tick_t pit_get (void)
 {
-    /* Pretend the counter counts up.  */
-    return SysTick->LOAD - SysTick->VAL;
+    /* Pretend the counter counts up and convert to 32-bit value.  */
+    return (SysTick->LOAD - SysTick->VAL) << 8;
 }
 
 
@@ -81,7 +81,7 @@ int
 pit_init (void)
 {
     /* Set maximum period.  */
-    pit_period_set (0xffffff);
+    pit_period_set (~0u);
     pit_start ();
     return 1;
 }
