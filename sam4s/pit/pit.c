@@ -1,10 +1,11 @@
 #include "pit.h"
 #include "bits.h"
 
-/* SysTick is a 24 bit down counter that resets
-   to the preloaded value in the SYST_RVR register. 
+/* SysTick is a 24 bit down counter that resets to the preloaded value
+   in the SYST_RVR register.
    
-   We pretend it is a 32 bit counter by shifting it by 8 bits.
+   We pretend it is a 32 bit upcounter counter by shifting it by 8
+   bits.
  */
 
 /** The maximum overrun period (s).  */

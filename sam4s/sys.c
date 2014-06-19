@@ -169,7 +169,7 @@ extern void _irq_spurious_handler (void);
 
 
 /* Enable NRST pin.  */
-static void
+void
 sys_reset_enable (void)
 {
     RSTC->RSTC_MR |= RSTC_MR_URSTEN | (0xa5 << 24);
@@ -177,12 +177,19 @@ sys_reset_enable (void)
 
 
 /* Disable NRST pin.  */
-static void
+void
 sys_reset_disable (void)
 {
     /* Disable NRST pin.  */
     RSTC->RSTC_MR =
         (RSTC->RSTC_MR & ~RSTC_MR_URSTEN) | (0xa5 << 24);
+}
+
+
+uint8_t
+cpu_reset_type_get (void)
+{
+    return (RSTC->RSTC_SR >> 8) & 0x07;
 }
 
 
@@ -305,13 +312,28 @@ sys_power_mode_normal (void)
 }
 
 
+void sys_cpu_idle (void)
+{
+#if 0
+    /* TODO.  */
+
+    /* Turn off CPU clock after current instruction.  It will be
+       re-enabled when an interrupt occurs.  */
+    PMC->PMC_SCDR = PMC_PCK;
+
+    while ((PMC->PMC_SCSR & PMC_PCK) != PMC_PCK)
+        continue;
+#endif
+}
+
+
 void
 sys_sleep (void)
 {
     sys_power_mode_low ();
 
     /* Disable processor clock and wait for interrupt.  */
-    cpu_idle ();
+    sys_cpu_idle ();
 
     sys_power_mode_normal ();
 }
