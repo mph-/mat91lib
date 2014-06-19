@@ -9,3 +9,49 @@ This is equivalent to the old AT91C_BASE_SPI
 
 #define AT91C_BASE_SPI       (AT91_CAST(AT91PS_SPI) 	0xFFFE0000)
 
+
+
+Info : JTAG tap: sam4.cpu tap/device found: 0x4ba00477 (mfg: 0x23b, part: 0xba00, ver: 0x4)
+Warn : Timeout (1000ms) waiting for ACK=OK/FAULT in JTAG-DP transaction - aborting
+
+Disconnect then reconnect JTAG and restart openocd
+
+adapter speed: 5000 kHz
+adapter_nsrst_assert_width: 100
+adapter_nsrst_delay: 1
+adapter speed: 500 kHz
+adapter_nsrst_delay: 100
+jtag_ntrst_delay: 100
+cortex_m3 reset_config sysresetreq
+Info : clock speed 500 kHz
+Info : JTAG tap: sam4.cpu tap/device found: 0x4ba00477 (mfg: 0x23b, part: 0xba00, ver: 0x4)
+Info : sam4.cpu: hardware has 6 breakpoints, 4 watchpoints
+
+
+1: x/i $pc
+=> 0x400252 <pacer_init+10>:	blx	0x400b84 <__floatsidf>
+(gdb) 
+_hardfault_handler () at ../../mmculib/../mat91lib/sam4s/crt0.c:39
+39	{
+1: x/i $pc
+=> 0x400644 <_hardfault_handler>:	push	{r3, lr}
+(gdb) p $sp
+$1 = (void *) 0x20000758
+(gdb) 
+
+
+
+
+hard_fault
+
+(gdb) p/x *0xE000Ed2c
+$1 = 0x40000000
+
+forced bit set -> fault escalated to hard fault
+
+
+Need -mthumb and -mcpu=cortex-m4 for LDFLAGS otherwise get blx
+instruction that causes hard fault since tries to switch to ARM
+instructions.
+
+

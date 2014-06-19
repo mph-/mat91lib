@@ -29,6 +29,36 @@ void _reset_handler (void);
 void _unexpected_handler (void);
 
 
+void _nmi_handler (void)
+{
+    _unexpected_handler ();
+}
+
+
+void _hardfault_handler (void)
+{
+    _unexpected_handler ();
+}
+
+
+void _memmanage_handler (void)
+{
+    _unexpected_handler ();
+}
+
+
+void _busfault_handler (void)
+{
+    _unexpected_handler ();
+}
+
+
+void _usagefault_handler (void)
+{
+    _unexpected_handler ();
+}
+
+
 /* Exception Table */
 __attribute__ ((section(".vectors")))
 irq_handler_t exception_table[] =
@@ -36,11 +66,11 @@ irq_handler_t exception_table[] =
     (irq_handler_t) (&__stack_start__),
     _reset_handler,
     
-    _unexpected_handler,
-    _unexpected_handler,
-    _unexpected_handler,
-    _unexpected_handler,
-    _unexpected_handler,
+    _nmi_handler,
+    _hardfault_handler,
+    _memmanage_handler,
+    _busfault_handler,
+    _usagefault_handler,
     0, 0, 0, 0,        /* Reserved */
     _unexpected_handler,
     _unexpected_handler,
@@ -98,6 +128,12 @@ void _reset_handler (void)
     char *src;
     char *dst;
 
+    /* There's not much frigging around to set things up; the initial
+       stack pointer is loaded from the vector table.  At this point
+       we are running on the slow clock?  We could crank things up
+       before initialising variables etc but this will put constraints
+       on the code to set up the clock, etc.  */
+
     /* Initialise initialised global variables in .data and relocate
        .ramtext function for functions in the ROM model that need
        to execute out of RAM for speed.  */
@@ -110,12 +146,13 @@ void _reset_handler (void)
     
     /* Set the vector table base address.  */
     src = &__vectors_start__;
-    SCB->VTOR = ((uint32_t) src & SCB_VTOR_TBLOFF_Msk);
+    SCB->VTOR = (uint32_t) src & SCB_VTOR_TBLOFF_Msk;
 
     if (((uint32_t) src >= IRAM_ADDR) && ((uint32_t) src < IRAM_ADDR + IRAM_SIZE)) {
-        SCB->VTOR |= 1 << SCB_VTOR_TBLBASE_Pos;
+        SCB->VTOR |= BIT (SCB_VTOR_TBLBASE_Pos);
     }
 
+    /* Set up clocks, etc.  */
     sys_init ();
     
     main ();
