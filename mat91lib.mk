@@ -65,7 +65,7 @@ DEPS = $(addprefix deps/, $(sort $(SRC:.c=.d)))
 
 include $(MAT91LIB_DIR)/peripherals.mk
 
-EXTRA_OBJ = objs/crt0.o objs/sys.o objs/cpu.o
+EXTRA_OBJ = objs/crt0.o objs/sys.o
 
 
 objs:
