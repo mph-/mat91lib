@@ -16,12 +16,6 @@
 #define SYS_FLASH_READ_CYCLES 2
 #endif
 
-#define PLL_OUTPUT_MIN_HZ   80000000
-#define PLL_OUTPUT_MAX_HZ   240000000
-
-#define PLL_INPUT_MIN_HZ    3000000
-#define PLL_INPUT_MAX_HZ    32000000
-
 
 #ifdef CPU_PLL_DIV
 #define SYS_PLL_DIV CPU_PLL_DIV
@@ -31,15 +25,36 @@
 #define SYS_PLL_MUL CPU_PLL_MUL
 #endif
 
+#if SYS_PLL_MUL > 80
+#error SYS_PLL_MUL must be less than 80
+#endif
+
+
+#define F_PLL_IN = F_XTAL / SYS_PLL_DIV
+#define F_PLL_OUT = F_PLL_IN * SYS_PLL_MUL
+
+/* The PLL input frequency needs to be between 3 and 32 MHz.  This is
+   the frequency after the divider and before the frequency
+   multiplier.  */
+#define F_PLL_IN_MIN    3000000
+#define F_PLL_IN_MAX   32000000
+
+
+/* The PLL output frequency needs to be between 80 and 240 MHz.   */
+#define F_PLL_OUT_MIN  80000000
+#define F_PLL_OUT_MAX 240000000
+
 
 /* Internal slow clock frequency.  */
-#define F_SLCK 32768
+#define F_SLCK 32678
 
 #define SYS_OS_DELAY 1.5e-3
-#define SYS_OS_COUNT ((uint16_t) (SYS_OS_DELAY * F_SLCK + 7)) / 8
+#define SYS_OS_COUNT ((uint16_t) ((SYS_OS_DELAY * F_SLCK + 7)) / 8)
 
-#define SYS_PLL_DELAY 0.9e-3
-#define SYS_PLL_COUNT (uint16_t) (SYS_PLL_DELAY * F_SLCK)
+#define SYS_PLL_COUNT 0x3fu
+
+/* TODO: the requried number of slow clock cycles divided by 8.  */
+#define SYS_MAINCK_COUNT 100
 
 #define SYS_USB_LOG2_DIV 0
 
@@ -88,8 +103,41 @@ sys_flash_init (void)
 }
 
 
-/** Set up the main clock (MAINCK), PLL clock, and master clock (MCK).   */
 static void
+sys_xtal_mainck_start (void)
+{
+    PMC->CKGR_MOR = (PMC->CKGR_MOR & ~CKGR_MOR_MOSCXTBY) |
+        CKGR_MOR_KEY (0x37) | CKGR_MOR_MOSCXTEN |
+        CKGR_MOR_MOSCXTST (SYS_MAINCK_COUNT);
+    
+    /* Wait for the xtal oscillator to stabilize.  */
+    while (! (PMC->PMC_SR & PMC_SR_MOSCXTS))
+        continue;
+    
+    PMC->CKGR_MOR |= CKGR_MOR_KEY (0x37) | CKGR_MOR_MOSCSEL;
+
+    /* Could check if xtal oscillator fails to start; say if xtal
+       not connected.  */
+}
+
+
+static bool
+sys_mck_ready_wait (void)
+{
+    int timeout;
+
+    /* Whenever PMC_MCKR is written then PMC_SR_MCKRDY is cleared; it
+       gets set when the mck is established.  */
+
+    for (timeout = 1000; timeout && ! (PMC->PMC_SR & PMC_SR_MCKRDY); timeout--)
+        continue;
+ 
+    return timeout != 0;
+}
+
+
+/** Set up the main clock (MAINCK), PLL clock, and master clock (MCK).   */
+static int
 sys_clock_init (void)
 {
     /* To minimize the power required to start up the system, the main
@@ -114,52 +162,40 @@ sys_clock_init (void)
        Initially MCK is driven from the 4 MHZ internal fast RC oscillator.
     */
 
-#if 0
-
-    /* Enable the MAINCK oscillator and wait for it to start up.  The
-       start delay is SYS_OS_COUNT * 8 SLCK cycles.  */
-    PMC->CKGR_MOR = BITS (SYS_OS_COUNT, 8, 15) | CKGR_MOR_MOSCXTEN;
+    /* Start xtal oscillator and select as MAINCK.  */
+    sys_xtal_mainck_start ();
     
-#ifndef SIM_RUN
-    /*  Wait for the oscillator to start up.  */
-    while (!(PMC->PMC_SR & PMC_SR_MOSCXTS))
+    /* Select MAINCK for MCK (this should already be selected).  */
+    PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_CSS_Msk)) | PMC_MCKR_CSS_MAIN_CLK;
+    if (!sys_mck_ready_wait ())
+        return 0;
+
+    /* Set prescaler to 2.  */
+    PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_PRES_Msk)) | PMC_MCKR_PRES_CLK_2;
+    if (!sys_mck_ready_wait ())
+        return 0;
+
+    /* Could disable internal fast RC oscillator here.  */
+
+
+    /* Disable PLLA if it is running and reset fields.  */
+    PMC->CKGR_PLLAR = CKGR_PLLAR_ONE | CKGR_PLLAR_MULA (0);
+
+    /* Configure and start PLLA.  The PLL start delay is SYS_PLL_COUNT SLCK cycles.  
+       Note, PLLA (but not PLBB) needs the mysterious bit CKGR_PLLAR_ONE set.  */
+    PMC->CKGR_PLLAR = CKGR_PLLAR_MULA (SYS_PLL_MUL - 1) | CKGR_PLLAR_DIVA (SYS_PLL_DIV) 
+        | CKGR_PLLAR_PLLACOUNT (SYS_PLL_COUNT) | CKGR_PLLAR_ONE;
+
+    /* Wait for PLLA to start up.  */
+    while (! (PMC->PMC_SR & PMC_SR_LOCKA))
         continue;
-#endif
+
+    /* Switch to PLLA_CLCK for MCK.  */
+    PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_CSS_Msk)) | PMC_MCKR_CSS_PLLA_CLK;
+    if (!sys_mck_ready_wait ())
+        return 0;
     
-    /* The PLL start delay is SYS_PLL_COUNT SLCK cycles.  */
-    PMC->CKGR_PLLAR = BITS (SYS_PLL_DIV, 0, 7) 
-        | BITS (SYS_PLL_MUL - 1, 16, 26)
-        | BITS (SYS_PLL_COUNT, 8, 13)
-        | BITS (SYS_USB_LOG2_DIV, 28, 29);
-
-#ifndef SIM_RUN
-    /*  Wait for the PLL to start up.  */
-    while (!(PMC->PMC_SR & PMC_SR_LOCKA))
-        continue;
-
-    /* Wait for MCK to start up.  */
-    while (!(PMC->PMC_SR & PMC_SR_MOSCXTS))
-        continue;
-#endif
-
-    /* Set prescaler so F_MCK = F_PLLCK / 2.  */
-    PMC->PMC_MCKR = PMC_MCKR_PRES_CLK_2;
-
-#ifndef SIM_RUN
-    /* Wait for MCK to start up.  */
-    while (!(PMC->PMC_SR & PMC_SR_MOSCXTS))
-        continue;
-#endif
- 
-    /* Switch to PLLCK for MCK.  */
-    PMC->PMC_MCKR |= PMC_MCKR_CSS_PLLA_CLK;
-
-#ifndef SIM_RUN
-    /* Wait for MCK to start up.  */
-    while (!(PMC->PMC_SR & CKGR_MCFR_MAINFRDY))
-        continue;
-#endif
-#endif
+    return 1;
 }
 
 
