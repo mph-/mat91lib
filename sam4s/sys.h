@@ -9,6 +9,11 @@
 #include "config.h"
 
 
+#ifndef SYS_FLASH_READ_CYCLES 
+#define SYS_FLASH_READ_CYCLES 2
+#endif
+
+
 void
 sys_init (void);
 

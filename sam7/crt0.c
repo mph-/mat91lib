@@ -7,9 +7,9 @@
 
 #include "config.h"
 #include "cpu.h"
-#include "sys.h"
+#include "mcu.h"
 
-/* This requires cpu.h, irq.h, and sys.h of mat91lib. 
+/* This requires cpu.h, irq.h, and mcu.h of mat91lib. 
 
    The user application is run in Supervisor Mode.  This allows full
    privileges.  The top 72 bytes of SRAM are used as the IRQ Mode
@@ -282,7 +282,7 @@ void _reset_handler (void)
 #endif
 
     /* Start clocks, map SRAM, etc.  */
-    sys_init ();
+    mcu_init ();
 
     /* Select FIQ Mode and disable interrupts.  */
     cpu_cpsr_c_set_const (CPU_I_BIT | CPU_F_BIT | CPU_MODE_FIQ);

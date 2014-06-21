@@ -17,7 +17,7 @@
 // Generated           : AT91 SW Application Group  05/20/2005 (16:22:29)
 // 
 // CVS Reference       : /AT91SAM7X256.pl/1.11/Tue May 10 12:15:32 2005//
-// CVS Reference       : /SYS_SAM7X.pl/1.3/Tue Feb  1 17:01:43 2005//
+// CVS Reference       : /MCU_SAM7X.pl/1.3/Tue Feb  1 17:01:43 2005//
 // CVS Reference       : /MC_SAM7X.pl/1.2/Fri May 20 14:13:04 2005//
 // CVS Reference       : /PMC_SAM7X.pl/1.4/Tue Feb  8 13:58:10 2005//
 // CVS Reference       : /RSTC_SAM7X.pl/1.1/Tue Feb  1 16:16:26 2005//

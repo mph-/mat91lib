@@ -8,11 +8,13 @@
 
 #include "config.h"
 #include "cpu.h"
+#include "mcu.h"
+
 
 #ifdef RAM_RUN
 #define DELAY_LOOP_CYCLES 4
 #else
-#define DELAY_LOOP_CYCLES (4 * CPU_FLASH_READ_CYCLES)
+#define DELAY_LOOP_CYCLES (4 * MCU_FLASH_READ_CYCLES)
 #endif
 
 

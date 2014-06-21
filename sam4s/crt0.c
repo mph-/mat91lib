@@ -1,6 +1,14 @@
+/** @file   crt0.c
+    @author M. P. Hayes, UCECE
+    @date   10 July 2014
+    @brief  C run time initialisation for the Atmel AT91SAM4S series 
+            of microcontrollers. 
+*/
+
 #include "config.h"
 #include "sam4s.h"
-#include "sys.h"
+#include "mcu.h"
+#include "irq.h"
 
 /** Symbols defined by linker script.  These are all VMAs except those
     with a _load__ suffix which are LMAs.  */
@@ -17,9 +25,6 @@ extern char __bss_end__;        /** End of uninitialised variables.  */
 
 
 extern int main (void);
-
-typedef void (*irq_handler_t) (void);
-
 
 void reset (void)
     __attribute__ ((alias ("_reset_handler")));
@@ -154,7 +159,7 @@ void _reset_handler (void)
     }
 
     /* Set up clocks, etc.  */
-    sys_init ();
+    mcu_init ();
     
     main ();
     

@@ -17,6 +17,10 @@ typedef uint32_t irq_type_t;
 
 typedef uint32_t irq_priority_t;
 
+typedef void (*irq_handler_t) (void);
+
+extern irq_handler_t exception_table[];
+
 
 /* NB, The first interrupt vector is for FIQ.  */
 enum {IRQ_ID_MIN = 0, IRQ_ID_MAX = 31};
@@ -36,38 +40,37 @@ static inline void irq_priority_set (irq_id_t id, irq_priority_t priority)
 
 static inline void irq_clear (irq_id_t id)
 {
-    /* TODO.  */
+    NVIC->ICPR[id >> 5] = BIT (id & 0x1f);
 }
 
 
 static inline void irq_enable (irq_id_t id)
 {
-    /* TODO.  */
+    NVIC->ICER[id >> 5] = BIT (id & 0x1f);
 }
 
 
 static inline bool irq_enabled_p (irq_id_t id)
 {
-    /* TODO.  */
-    return 0;
+    return (NVIC->ISER[id >> 5] & BIT (id & 0x1f)) != 0;
 }
 
 
 static inline void irq_disable (irq_id_t id)
 {
-    /* TODO.  */
+    NVIC->ISER[id >> 5] = BIT (id & 0x1f);
 }
 
 
 static inline void irq_trigger (irq_id_t id)
 {
-    /* TODO.  */
+    NVIC->ISPR[id >> 5] = BIT (id & 0x1f);
 }
 
 
 static inline void irq_vector_set (irq_id_t id, irq_vector_t isr)
 {
-    /* TODO.  */
+    exception_table[id + 16] = isr;
 }
 
 
