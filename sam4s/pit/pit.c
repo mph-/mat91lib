@@ -4,16 +4,10 @@
 /* SysTick is a 24 bit down counter that resets to the preloaded value
    in the SYST_RVR register.
    
-   We pretend it is a 32 bit upcounter counter by shifting it by 8
-   bits.
- */
-
-/** The maximum overrun period (s).  */
-#define PIT_OVERRUN_PERIOD 100
-
+   We pretend it is an upcounter counter.  */
 
 /** The maximum overrun (in ticks).  */
-#define PIT_OVERRUN_MAX ((pit_tick_t)(PIT_OVERRUN_PERIOD * PIT_RATE))
+#define PIT_OVERRUN_MAX 100000
 
 
 /** The maximum delay (in ticks).  */
@@ -36,7 +30,7 @@ pit_stop (void)
 
 static uint32_t pit_period_set (uint32_t period)
 {
-    SysTick->LOAD = period >> 8;
+    SysTick->LOAD = period;
 
     return period;
 }
@@ -44,8 +38,8 @@ static uint32_t pit_period_set (uint32_t period)
 
 pit_tick_t pit_get (void)
 {
-    /* Pretend the counter counts up and convert to 32-bit value.  */
-    return (SysTick->LOAD - SysTick->VAL) << 8;
+    /* Pretend the counter counts up.  */
+    return SysTick->LOAD - SysTick->VAL;
 }
 
 
@@ -54,12 +48,14 @@ pit_tick_t pit_get (void)
     @return current time.  */
 pit_tick_t pit_wait_until (pit_tick_t when)
 {
+    when <<= 8;
+
     while (1)
     {
         pit_tick_t diff;
         pit_tick_t now;
         
-        now = pit_get ();
+        now = pit_get () << 8;
         
         diff = now - when;
 
@@ -82,7 +78,7 @@ int
 pit_init (void)
 {
     /* Set maximum period.  */
-    pit_period_set (~0u);
+    pit_period_set (0x00ffffff);
     pit_start ();
     return 1;
 }
