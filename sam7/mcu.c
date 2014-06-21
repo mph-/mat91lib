@@ -6,6 +6,7 @@
 
 #include "config.h"
 #include "mcu.h"
+#include "cpu.h"
 #include "irq.h"
 
 

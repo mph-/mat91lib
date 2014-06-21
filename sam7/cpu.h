@@ -224,32 +224,16 @@ void irq_global_enable (void)
 }
 
 
-void
-cpu_idle (void);
+static inline void
+cpu_idle (void)
+{
+    /* Turn off CPU clock after current instruction.  It will be
+       re-enabled when an interrupt occurs.  */
+    AT91C_BASE_PMC->PMC_SCDR = AT91C_PMC_PCK;
 
-
-void
-cpu_reset (void);
-
-
-void
-cpu_power_mode_low (void);
-
-
-void
-cpu_power_mode_normal (void);
-
-
-void
-cpu_sleep (void);
-
-
-void
-cpu_udp_disable (void);
-
-
-void
-cpu_udp_enable (void);
+    while ((AT91C_BASE_PMC->PMC_SCSR & AT91C_PMC_PCK) != AT91C_PMC_PCK)
+        continue;
+}
 
 
 #endif /* CPU_H  */
