@@ -65,8 +65,23 @@ void _usagefault_handler (void)
 }
 
 
-/* Exception Table */
+/* Exception table this needs to be mapped into flash.  This table
+   does not contain the interrupt vectors.  These are allocated dynamically 
+   in the array exception_table.  */
 __attribute__ ((section(".vectors")))
+irq_handler_t static_exception_table[] =
+{
+    (irq_handler_t) (&__stack_start__),
+    _reset_handler,
+    
+    _nmi_handler,
+    _hardfault_handler,
+    _memmanage_handler,
+    _busfault_handler,
+    _usagefault_handler,
+};
+
+
 irq_handler_t exception_table[] =
 {
     (irq_handler_t) (&__stack_start__),
@@ -150,11 +165,11 @@ void _reset_handler (void)
     for (dst = &__bss_start__; dst < &__bss_end__; )
         *dst++ = 0;
     
-    /* Set the vector table base address.  */
-    src = &__vectors_start__;
-    SCB->VTOR = (uint32_t) src & SCB_VTOR_TBLOFF_Msk;
+    /* Remap the exception table into SRAM to allow dynamic allocation.  */
+    SCB->VTOR = (uint32_t) &exception_table & SCB_VTOR_TBLOFF_Msk;
 
-    if (((uint32_t) src >= IRAM_ADDR) && ((uint32_t) src < IRAM_ADDR + IRAM_SIZE)) {
+    if (((uint32_t) src >= IRAM_ADDR) && ((uint32_t) src < IRAM_ADDR + IRAM_SIZE)) 
+    {
         SCB->VTOR |= BIT (SCB_VTOR_TBLBASE_Pos);
     }
 
