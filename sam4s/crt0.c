@@ -82,6 +82,8 @@ irq_handler_t static_exception_table[] =
 };
 
 
+/* This needs to be carefully aligned.   */
+__attribute__ ((section(".dynamic_vectors")))
 irq_handler_t exception_table[] =
 {
     (irq_handler_t) (&__stack_start__),
@@ -165,13 +167,9 @@ void _reset_handler (void)
     for (dst = &__bss_start__; dst < &__bss_end__; )
         *dst++ = 0;
     
-    /* Remap the exception table into SRAM to allow dynamic allocation.  */
+    /* Remap the exception table into SRAM to allow dynamic allocation. 
+       This register is zero on reset.  */
     SCB->VTOR = (uint32_t) &exception_table & SCB_VTOR_TBLOFF_Msk;
-
-    if (((uint32_t) src >= IRAM_ADDR) && ((uint32_t) src < IRAM_ADDR + IRAM_SIZE)) 
-    {
-        SCB->VTOR |= BIT (SCB_VTOR_TBLBASE_Pos);
-    }
 
     /* Set up clocks, etc.  */
     mcu_init ();
