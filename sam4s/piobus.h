@@ -1,7 +1,7 @@
 /** @file   piobus.h
     @author M. P. Hayes, UCECE
     @date   2 Jun 2007
-    @brief  PIOBUS abstraction for AT91 ARM7 microcontroller.
+    @brief  PIOBUS abstraction for AT91SAM4S microcontroller.
     @note   Macros and inline functions are used to avoid function
             call overhead and to allow compile-time constant folding. 
 */
@@ -10,25 +10,21 @@
 
 #include "pio.h"
 
-#ifdef PIOB
-#error "TODO for SAM7X"
-#endif
-
 
 typedef uint64_t piobus_t;
 
 
-#define PIOBUS_DEFINE(PORT, LSB, MSB) (((piobus_t)(LSB) << 32) | (BIT (MSB + 1) - BIT (LSB)))
+#define PIOBUS_DEFINE(PORT, LSB, MSB) (((piobus_t)(LSB) << 32) | (BIT ((MSB) + 1) - BIT (LSB)) | ((PORT) << 40))
 
 /** Private macro to lookup bitmask.  */
 #define PIOBUS_BITMASK_(PIOBUS) ((PIOBUS) & 0xffffffff)
 
 /** Private macro to lookup shift.  */
-#define PIOBUS_SHIFT_(PIOBUS) ((PIOBUS) >> 32)
+#define PIOBUS_SHIFT_(PIOBUS) (((PIOBUS) >> 32) & 0xff)
 
 
 /** Private macro to lookup port register.  */
-#define PIOBUS_PORT_(PIOBUS) (PIOA)
+#define PIOBUS_PORT_(PIOBUS) (((PIOBUS) >> 40) & 0xff) == PORT_A ? PIOA : ((PIOBUS) >> 40) & 0xff) == PORT_B ? PIOB : PIOC)
 
 
 /** Configure PIOBUS
