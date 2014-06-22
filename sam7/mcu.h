@@ -278,5 +278,18 @@ void
 mcu_watchdog_enable (void);
 
 
+static inline void
+mcu_pmc_enable (uint8_t id)
+{
+    PMC->PMC_PCER = BIT (id);
+}
+
+
+static inline void
+mcu_pmc_disable (uint8_t id)
+{
+    PMC->PMC_PCDR = BIT (id);
+}
+
 
 #endif /* MCU_H  */

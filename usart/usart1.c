@@ -24,8 +24,8 @@ usart1_init (uint16_t baud_divisor)
     USART1->US_IDR = ~0;
 
     /* Enable RxD1 and TxD1 pins and disable pullups.  */
-    pio_config_set (PIO_PA21, PIO_PERIPH_A);
-    pio_config_set (PIO_PA22, PIO_PERIPH_A);
+    pio_config_set (PA21_PIO, PIO_PERIPH_A);
+    pio_config_set (PA22_PIO, PIO_PERIPH_A);
 
     /* Enable USART1 clock.  */
     mcu_pmc_enable (ID_USART1);
@@ -51,8 +51,8 @@ void
 usart1_shutdown (void)
 {
     /* Disable RxD1 and TxD1 pins.  */
-    pio_config_set (PIO_PA21, PIO_PULLUP);
-    pio_config_set (PIO_PA22, PIO_OUTPUT_LOW);
+    pio_config_set (PA21_PIO, PIO_PULLUP);
+    pio_config_set (PA22_PIO, PIO_OUTPUT_LOW);
 
     /* Disable USART1 clock.  */
     mcu_pmc_disable (ID_USART1);
