@@ -4,7 +4,8 @@
     @brief  Routines for interfacing with the usart0 on an AT91 ARM
 */
 
-
+#include "mcu.h"
+#include "pio.h"
 #include "usart0.h"
 #include "usart0_defs.h"
 
@@ -19,33 +20,28 @@ usart0_baud_divisor_set (uint16_t baud_divisor)
 uint8_t
 usart0_init (uint16_t baud_divisor)
 {
-    AT91S_USART *pUSART = USART0;
-
     /* Disable interrupts.  */
-    pUSART->US_IDR = ~0;
+    USART0->US_IDR = ~0;
 
-    /* Enable RxD0 and TxD0 pins.  */
-    *AT91C_PIOA_PDR = AT91C_PA5_RXD0 | AT91C_PA6_TXD0;
-
-    /* Disable pullups.  */
-    *AT91C_PIOA_PPUDR = AT91C_PA5_RXD0 | AT91C_PA6_TXD0;
+    /* Enable RxD0 and TxD0 pins and disable pullups.  */
+    pio_config_set (PIO_PA5, PIO_PERIPH_A);
+    pio_config_set (PIO_PA6, PIO_PERIPH_A);
 
     /* Enable USART0 clock.  */
-    PMC->PMC_PCER = BIT (AT91C_ID_USART0);
+    mcu_pmc_enable (ID_USART0);
     
     /* Reset and disable receiver and transmitter.  */
-    pUSART->US_CR = AT91C_US_RSTRX | AT91C_US_RSTTX          
-        | AT91C_US_RXDIS | AT91C_US_TXDIS;           
+    USART0->US_CR = US_CR_RSTRX | US_CR_RSTTX          
+        | US_CR_RXDIS | US_CR_TXDIS;           
 
     /* Set normal mode, clock = MCK, 8-bit data, no parity, 1 stop bit.  */
-    pUSART->US_MR = AT91C_US_USMODE_NORMAL
-        | AT91C_US_CLKS_CLOCK | AT91C_US_CHRL_8_BITS
-        | AT91C_US_PAR_NONE | AT91C_US_NBSTOP_1_BIT;
+    USART0->US_MR = US_MR_USART_MODE_NORMAL
+        | US_MR_CHRL_8_BIT | US_MR_PAR_NO | US_MR_NBSTOP_1_BIT;
 
     usart0_baud_divisor_set (baud_divisor);
 
     /* Enable receiver and transmitter.  */
-    pUSART->US_CR = AT91C_US_RXEN | AT91C_US_TXEN; 
+    USART0->US_CR = US_CR_RXEN | US_CR_TXEN; 
     
     return 1;
 }
@@ -54,17 +50,16 @@ usart0_init (uint16_t baud_divisor)
 void
 usart0_shutdown (void)
 {
-    AT91S_USART *pUSART = USART0;
-
     /* Disable RxD0 and TxD0 pins.  */
-    *AT91C_PIOA_PER = AT91C_PA5_RXD0 | AT91C_PA6_TXD0;
+    pio_config_set (PIO_PA21, PIO_PULLUP);
+    pio_config_set (PIO_PA22, PIO_OUTPUT_LOW);
 
     /* Disable USART0 clock.  */
-    PMC->PMC_PCDR = BIT (AT91C_ID_USART0);
+    mcu_pmc_disable (ID_USART0);
     
     /* Reset and disable receiver and transmitter.  */
-    pUSART->US_CR = AT91C_US_RSTRX | AT91C_US_RSTTX          
-        | AT91C_US_RXDIS | AT91C_US_TXDIS;           
+    USART0->US_CR = US_CR_RSTRX | US_CR_RSTTX          
+        | US_CR_RXDIS | US_CR_TXDIS;           
 }
 
 

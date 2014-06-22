@@ -245,9 +245,7 @@ tc_clock_sync (tc_t tc, tc_period_t period)
 
     id = AT91C_ID_TC0 + TC_CHANNEL (tc);
 
-    irq_config (id, 7, 
-                AT91C_AIC_SRCTYPE_INT_LEVEL_SENSITIVE, 
-                tc_clock_sync_handler);
+    irq_config (id, 7, tc_clock_sync_handler);
             
     irq_enable (id);
 

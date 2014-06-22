@@ -11,15 +11,15 @@
 #include "usart1_defs.h"
 
 
-#define USART1_TX_IRQ_ENABLED_P() ((USART1->US_IMR & US_TXEMPTY) != 0)
+#define USART1_TX_IRQ_ENABLED_P() ((USART1->US_IMR & US_CSR_TXEMPTY) != 0)
 
-#define USART1_TX_IRQ_DISABLE()  (USART1->US_IDR = US_TXEMPTY)
+#define USART1_TX_IRQ_DISABLE()  (USART1->US_IDR = US_CSR_TXEMPTY)
 
-#define USART1_TX_IRQ_ENABLE() (USART1->US_IER = US_TXEMPTY)
+#define USART1_TX_IRQ_ENABLE() (USART1->US_IER = US_CSR_TXEMPTY)
 
-#define USART1_RX_IRQ_DISABLE() (USART1->US_IDR = US_RXRDY)
+#define USART1_RX_IRQ_DISABLE() (USART1->US_IDR = US_CSR_RXRDY)
 
-#define USART1_RX_IRQ_ENABLE() (USART1->US_IER = US_RXRDY)
+#define USART1_RX_IRQ_ENABLE() (USART1->US_IER = US_CSR_RXRDY)
 
 
 static busart_dev_t busart1_dev;
@@ -87,8 +87,7 @@ busart1_init (uint16_t baud_divisor)
 
     usart1_init (baud_divisor);
 
-    irq_config (ID_USART1, 1,
-                AIC_SRCTYPE_INT_HIGH_LEVEL, busart1_isr);
+    irq_config (ID_USART1, 1, busart1_isr);
 
     irq_enable (ID_USART1);
 

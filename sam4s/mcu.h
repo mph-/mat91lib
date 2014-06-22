@@ -46,5 +46,24 @@ void
 mcu_watchdog_enable (void);
 
 
+static inline void
+mcu_pmc_enable (uint8_t id)
+{
+    if (id < 32)
+        PMC->PMC_PCER0 = BIT (id);
+    else
+        PMC->PMC_PCER1 = BIT (id - 32);
+}
+
+
+static inline void
+mcu_pmc_disable (uint8_t id)
+{
+    if (id < 32)
+        PMC->PMC_PCDR0 = BIT (id);
+    else
+        PMC->PMC_PCDR1 = BIT (id - 32);
+}
+
 
 #endif /* MCU_H  */

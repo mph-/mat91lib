@@ -9,6 +9,8 @@
 #define PIO_H
 
 #include "config.h"
+#include "mcu.h"
+
 
 #define PIO_SAM4S
 
@@ -214,13 +216,27 @@ void pio_output_toggle (pio_t pio)
 
 
 /** Enable the clock for the port.  This is required for input
-    operations.  FIXME for PIOB.  */
-#define pio_init(pio) \
-    PMC->PMC_PCER = BIT (AT91C_ID_PIOA)
+    operations.  */
+static inline
+void pio_init (pio_t pio)
+{
+    mcu_pmc_enable (ID_PIOA);
+    mcu_pmc_enable (ID_PIOB);
+#ifdef PIOC
+    mcu_pmc_enable (ID_PIOC);
+#endif
+}
 
 
-/** Disable the clock for the port.  FIXME for PIOB.  */
-#define pio_shutdown(pio) \
-    PMC->PMC_PCDR = BIT (AT91C_ID_PIOA)
+/** Disable the clock for the port.  */
+static inline
+void pio_shutdown (pio_t pio)
+{
+    mcu_pmc_disable (ID_PIOA);
+    mcu_pmc_disable (ID_PIOB);
+#ifdef PIOC
+    mcu_pmc_disable (ID_PIOC);
+#endif
+}
 
 #endif

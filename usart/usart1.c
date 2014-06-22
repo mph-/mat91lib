@@ -4,7 +4,8 @@
     @brief  Routines for interfacing with the usart1 on an AT91 ARM
 */
 
-
+#include "mcu.h"
+#include "pio.h"
 #include "usart1.h"
 #include "usart1_defs.h"
 
@@ -16,35 +17,31 @@ usart1_baud_divisor_set (uint16_t baud_divisor)
 }
 
 
-uint8_t usart1_init (uint16_t baud_divisor)
+uint8_t 
+usart1_init (uint16_t baud_divisor)
 {
-    AT91S_USART *pUSART = USART1;
-
     /* Disable interrupts.  */
-    pUSART->US_IDR = ~0;
+    USART1->US_IDR = ~0;
 
-    /* Enable RxD1 and TxD1 pins.  */
-    *AT91C_PIOA_PDR = AT91C_PA21_RXD1 | AT91C_PA22_TXD1;
-
-    /* Disable pullups.  */
-    *AT91C_PIOA_PPUDR = AT91C_PA21_RXD1 | AT91C_PA22_TXD1;
+    /* Enable RxD1 and TxD1 pins and disable pullups.  */
+    pio_config_set (PIO_PA21, PIO_PERIPH_A);
+    pio_config_set (PIO_PA22, PIO_PERIPH_A);
 
     /* Enable USART1 clock.  */
-    PMC->PMC_PCER = BIT (AT91C_ID_USART1);
+    mcu_pmc_enable (ID_USART1);
     
     /* Reset and disable receiver and transmitter.  */
-    pUSART->US_CR = AT91C_US_RSTRX | AT91C_US_RSTTX          
-        | AT91C_US_RXDIS | AT91C_US_TXDIS;           
+    USART1->US_CR = US_CR_RSTRX | US_CR_RSTTX          
+        | US_CR_RXDIS | US_CR_TXDIS;           
 
     /* Set normal mode, clock = MCK, 8-bit data, no parity, 1 stop bit.  */
-    pUSART->US_MR = AT91C_US_USMODE_NORMAL
-        | AT91C_US_CLKS_CLOCK | AT91C_US_CHRL_8_BITS
-        | AT91C_US_PAR_NONE | AT91C_US_NBSTOP_1_BIT;
+    USART1->US_MR = US_MR_USART_MODE_NORMAL
+        | US_MR_CHRL_8_BIT | US_MR_PAR_NO | US_MR_NBSTOP_1_BIT;
 
     usart1_baud_divisor_set (baud_divisor);
 
     /* Enable receiver and transmitter.  */
-    pUSART->US_CR = AT91C_US_RXEN | AT91C_US_TXEN; 
+    USART1->US_CR = US_CR_RXEN | US_CR_TXEN; 
     
     return 1;
 }
@@ -53,17 +50,16 @@ uint8_t usart1_init (uint16_t baud_divisor)
 void
 usart1_shutdown (void)
 {
-    AT91S_USART *pUSART = USART1;
-
     /* Disable RxD1 and TxD1 pins.  */
-    *AT91C_PIOA_PER = AT91C_PA21_RXD1 | AT91C_PA22_TXD1;
+    pio_config_set (PIO_PA21, PIO_PULLUP);
+    pio_config_set (PIO_PA22, PIO_OUTPUT_LOW);
 
     /* Disable USART1 clock.  */
-    PMC->PMC_PCDR = BIT (AT91C_ID_USART1);
+    mcu_pmc_disable (ID_USART1);
     
     /* Reset and disable receiver and transmitter.  */
-    pUSART->US_CR = AT91C_US_RSTRX | AT91C_US_RSTTX          
-        | AT91C_US_RXDIS | AT91C_US_TXDIS;           
+    USART1->US_CR = US_CR_RSTRX | US_CR_RSTTX          
+        | US_CR_RXDIS | US_CR_TXDIS;           
 }
 
 
