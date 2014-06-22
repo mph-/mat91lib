@@ -9,10 +9,6 @@
 #include "config.h"
 #include "bits.h"
 
-#ifndef AT91C_AIC_SRCTYPE_INT_LEVEL_SENSITIVE
-#define AT91C_AIC_SRCTYPE_INT_LEVEL_SENSITIVE AT91C_AIC_SRCTYPE_INT_HIGH_LEVEL
-#endif
-
 typedef void (* irq_vector_t) (void);
 
 typedef uint32_t irq_id_t;
@@ -78,12 +74,12 @@ static inline void irq_vector_set (irq_id_t id, irq_vector_t isr)
    vectors are stored in special memory-mapped registers and thus do
    not depend on RAM or ROM model.  */
 static inline void irq_config (irq_id_t id, irq_priority_t priority,
-                               uint32_t type, irq_vector_t isr)
+                               irq_vector_t isr)
 {
     irq_disable (id);
     /* Priority is 0 (lowest) to 7 (highest).  */
     irq_priority_set (id, priority);
-    irq_type_set (id, type);
+    irq_type_set (id, AT91C_AIC_SRCTYPE_INT_HIGH_LEVEL);
     irq_vector_set (id, isr);
     irq_clear (id);
 }
