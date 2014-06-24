@@ -28,20 +28,20 @@ static pwm_dev_t pwm_devices[PWM_DEVICES_NUM];
 /* Define known PWM pins.  */
 static const pinmap_t pwm_pins[] = 
 {
-    {0, PIO_DEFINE (PORT_A, 0), PIO_PERIPH_A},
-    {0, PIO_DEFINE (PORT_A, 11), PIO_PERIPH_B},
-    {0, PIO_DEFINE (PORT_A, 23), PIO_PERIPH_B},
+    {0, PA0_PIO, PIO_PERIPH_A},
+    {0, PA11_PIO, PIO_PERIPH_B},
+    {0, PA23_PIO, PIO_PERIPH_B},
 
-    {1, PIO_DEFINE (PORT_A, 1), PIO_PERIPH_A},
-    {1, PIO_DEFINE (PORT_A, 12), PIO_PERIPH_B},
-    {1, PIO_DEFINE (PORT_A, 24), PIO_PERIPH_B},
+    {1, PA1_PIO, PIO_PERIPH_A},
+    {1, PA12_PIO, PIO_PERIPH_B},
+    {1, PA24_PIO, PIO_PERIPH_B},
 
-    {2, PIO_DEFINE (PORT_A, 2), PIO_PERIPH_A},
-    {2, PIO_DEFINE (PORT_A, 13), PIO_PERIPH_B},
-    {2, PIO_DEFINE (PORT_A, 25), PIO_PERIPH_B},
+    {2, PA2_PIO, PIO_PERIPH_A},
+    {2, PA13_PIO, PIO_PERIPH_B},
+    {2, PA25_PIO, PIO_PERIPH_B},
 
-    {3, PIO_DEFINE (PORT_A, 7), PIO_PERIPH_B},
-    {3, PIO_DEFINE (PORT_A, 14), PIO_PERIPH_B},
+    {3, PA7_PIO, PIO_PERIPH_B},
+    {3, PA14_PIO, PIO_PERIPH_B},
 };
 
 
