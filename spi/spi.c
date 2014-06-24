@@ -291,13 +291,13 @@ spi_channel_mode_set (spi_t spi, spi_mode_t mode)
 /* AT91SAM7X  */
 static const pinmap_t spi_cs[] = 
 {
-    {0, PIO_DEFINE (PORT_A, 21), PIO_PERIPH_B},
-    {1, PIO_DEFINE (PORT_A, 25), PIO_PERIPH_B},
-    {2, PIO_DEFINE (PORT_A, 26), PIO_PERIPH_B},
-    {3, PIO_DEFINE (PORT_A, 29), PIO_PERIPH_B},
-    {1, PIO_DEFINE (PORT_B, 10), PIO_PERIPH_B},
-    {2, PIO_DEFINE (PORT_B, 11), PIO_PERIPH_B},
-    {3, PIO_DEFINE (PORT_B, 16), PIO_PERIPH_B},
+    {0, PA21_PIO, PIO_PERIPH_B},
+    {1, PA25_PIO, PIO_PERIPH_B},
+    {2, PA26_PIO, PIO_PERIPH_B},
+    {3, PA29_PIO, PIO_PERIPH_B},
+    {1, PA10_PIO, PIO_PERIPH_B},
+    {2, PA11_PIO, PIO_PERIPH_B},
+    {3, PA16_PIO, PIO_PERIPH_B},
 };
 
 #define SPI0_PINS (AT91C_PA17_MOSI0 | AT91C_PA16_MISO0 | AT91C_PA18_SPCK0)
@@ -307,14 +307,14 @@ static const pinmap_t spi_cs[] =
 /* AT91SAM7S  */
 static const pinmap_t spi_cs[] = 
 {
-    {0, PIO_DEFINE (PORT_A, 11), PIO_PERIPH_A},
-    {1, PIO_DEFINE (PORT_A, 9), PIO_PERIPH_B},
-    {1, PIO_DEFINE (PORT_A, 31), PIO_PERIPH_A},
-    {2, PIO_DEFINE (PORT_A, 10), PIO_PERIPH_B},
-    {2, PIO_DEFINE (PORT_A, 30), PIO_PERIPH_B},
-    {3, PIO_DEFINE (PORT_A, 3), PIO_PERIPH_B},
-    {3, PIO_DEFINE (PORT_A, 5), PIO_PERIPH_B},
-    {3, PIO_DEFINE (PORT_A, 22), PIO_PERIPH_B}
+    {0, PA11_PIO, PIO_PERIPH_A},
+    {1, PA9_PIO, PIO_PERIPH_B},
+    {1, PA31_PIO, PIO_PERIPH_A},
+    {2, PA10_PIO, PIO_PERIPH_B},
+    {2, PA30_PIO, PIO_PERIPH_B},
+    {3, PA3_PIO, PIO_PERIPH_B},
+    {3, PA5_PIO, PIO_PERIPH_B},
+    {3, PA22_PIO, PIO_PERIPH_B}
 };
 
 #define SPI0_PINS (AT91C_PA13_MOSI | AT91C_PA12_MISO | AT91C_PA14_SPCK)
