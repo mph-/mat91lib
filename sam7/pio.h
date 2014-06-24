@@ -101,6 +101,20 @@ typedef uint32_t pio_t;
 #define PA31_PIO PIO_DEFINE(PORT_A, 31)
 
 
+#ifdef SPI1
+#define MOSI0_PIO PA17_PIO
+#define MISO0_PIO PA16_PIO
+#define SPCK0_PIO PA18_PIO
+#define MOSI1_PIO PA23_PIO
+#define MISO1_PIO PA24_PIO
+#define SPCK1_PIO PA22_PIO
+#else
+#define MOSI0_PIO PA13_PIO
+#define MISO0_PIO PA12_PIO
+#define SPCK0_PIO PA14_PIO
+#endif
+
+
 
 /** Configure PIO
     @param pio  */

@@ -119,4 +119,7 @@
 #define ID_IRQ1 AT91C_ID_IRQ1
 
 
+#define ID_SPI AT91C_ID_SPI
+#define ID_SPI1 AT91C_ID_SPI1
+
 #endif

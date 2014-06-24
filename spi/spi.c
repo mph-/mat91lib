@@ -300,9 +300,6 @@ static const pinmap_t spi_cs[] =
     {3, PA16_PIO, PIO_PERIPH_B},
 };
 
-#define SPI0_PINS (AT91C_PA17_MOSI0 | AT91C_PA16_MISO0 | AT91C_PA18_SPCK0)
-#define SPI1_PINS (AT91C_PA23_MOSI1 | AT91C_PA24_MISO1 | AT91C_PA22_SPCK1)
-
 #else
 /* AT91SAM7S  */
 static const pinmap_t spi_cs[] = 
@@ -316,8 +313,6 @@ static const pinmap_t spi_cs[] =
     {3, PA5_PIO, PIO_PERIPH_B},
     {3, PA22_PIO, PIO_PERIPH_B}
 };
-
-#define SPI0_PINS (AT91C_PA13_MOSI | AT91C_PA12_MISO | AT91C_PA14_SPCK)
 
 #endif
 
@@ -548,16 +543,12 @@ spi_wakeup (spi_t spi)
         return;
 
     /* Configure PIO for MISO, MOSI, SPCK.    */
-    *AT91C_PIOA_ASR = SPI0_PINS;
-
-    /* Disable pins as GPIO.  */
-    *AT91C_PIOA_PDR = SPI0_PINS;
-
-    /* Disable pullups.  */
-    *AT91C_PIOA_PPUDR = SPI0_PINS;
+    pio_config_set (MISO0_PIO, PIO_PERIPH_A);
+    pio_config_set (MOSI0_PIO, PIO_PERIPH_A);
+    pio_config_set (SPCK0_PIO, PIO_PERIPH_A);
 
     /* Enable SPI peripheral clock.  */
-    PMC->PMC_PCER = BIT (AT91C_ID_SPI);
+    mcu_pmc_enable (ID_SPI);
    
     spi_reset (SPI0);
     spi_setup (SPI0);
@@ -565,16 +556,12 @@ spi_wakeup (spi_t spi)
 
 #if SPI_CONTROLLERS_NUM == 2
     /* Configure PIO for MISO, MOSI, SPCK.    */
-    *AT91C_PIOB_ASR = SPI1_PINS;
-
-    /* Disable pins as GPIO.  */
-    *AT91C_PIOB_PDR = SPI1_PINS;
-
-    /* Disable pullups.  */
-    *AT91C_PIOB_PPUDR = SPI1_PINS;
+    pio_config_set (MISO1_PIO, PIO_PERIPH_A);
+    pio_config_set (MOSI1_PIO, PIO_PERIPH_A);
+    pio_config_set (SPCK1_PIO, PIO_PERIPH_A);
 
     /* Enable SPI peripheral clock.  */
-    PMC->PMC_PCER = BIT (AT91C_ID_SPI1);
+    mcu_pmc_enable (ID_SPI1);
 
     spi_reset (SPI1);
     spi_setup (SPI1);
@@ -646,28 +633,22 @@ spi_shutdown (spi_t spi)
 #if SPI_CONTROLLERS_NUM == 2
     spi_disable (SPI1); 
 
-    /* Enable pins as GPIO.  */
-    *AT91C_PIOA_PER = SPI0_PINS;
-    *AT91C_PIOB_PER = SPI1_PINS;
-
     /* Force lines low to prevent powering devices.  */
-    *AT91C_PIOA_CODR = SPI0_PINS;
-    *AT91C_PIOB_CODR = SPI1_PINS;
+    pio_config_set (MISO1_PIO, PIO_OUTPUT_LOW);
+    pio_config_set (MOSI1_PIO, PIO_OUTPUT_LOW);
+    pio_config_set (SPCK1_PIO, PIO_OUTPUT_LOW);
 
     /* Disable SPI peripheral clocks.  */
-    PMC->PMC_PCDR = BIT (AT91C_ID_SPI0) | BIT (AT91C_ID_SPI1);
+    mcu_pmc_disable (ID_SPI);
+    mcu_pmc_disable (ID_SPI1);
 #else
-    /* Enable pins as GPIO.  */
-    *AT91C_PIOA_PER = SPI0_PINS;
-
-    /* Disable pullups.  */
-    *AT91C_PIOA_PPUDR = SPI0_PINS;
-
     /* Force lines low to prevent powering devices.  */
-    *AT91C_PIOA_CODR = SPI0_PINS;
+    pio_config_set (MISO0_PIO, PIO_OUTPUT_LOW);
+    pio_config_set (MOSI0_PIO, PIO_OUTPUT_LOW);
+    pio_config_set (SPCK0_PIO, PIO_OUTPUT_LOW);
 
     /* Disable SPI peripheral clock.  */
-    PMC->PMC_PCDR = BIT (AT91C_ID_SPI);
+    mcu_pmc_disable (ID_SPI);
 #endif
 
     /* Set all the chip select pins low.  */

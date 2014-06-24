@@ -87,6 +87,10 @@ typedef enum pio_config_enum
 #define PA30_PIO PIO_DEFINE(PORT_A, 30)
 #define PA31_PIO PIO_DEFINE(PORT_A, 31)
 
+#define MOSI0_PIO PA13_PIO
+#define MISO0_PIO PA12_PIO
+#define SPCK0_PIO PA14_PIO
+
 
 typedef uint32_t pio_t;
 
