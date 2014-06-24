@@ -1,7 +1,7 @@
 /** @file   mcu.h
     @author M. P. Hayes, UCECE
     @date   13 July 2013
-    @brief  System routines for AT91SAM47 processors
+    @brief  System routines for AT91SAM4S processors
 */
 #ifndef MCU_H
 #define MCU_H
@@ -290,6 +290,9 @@ mcu_pmc_disable (uint8_t id)
 {
     PMC->PMC_PCDR = BIT (id);
 }
+
+void
+mcu_cpu_idle ();
 
 
 #endif /* MCU_H  */

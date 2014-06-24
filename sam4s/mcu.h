@@ -66,4 +66,8 @@ mcu_pmc_disable (uint8_t id)
 }
 
 
+void
+mcu_cpu_idle (void);
+
+
 #endif /* MCU_H  */

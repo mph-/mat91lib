@@ -11,7 +11,7 @@
 
 typedef struct
 {
-    AT91S_TC *base;
+    TcChannel *base;
 } tc_dev_t;
 
 #endif

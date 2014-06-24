@@ -45,5 +45,4 @@ void irq_global_enable (void)
     /* TODO.  */
 }
 
-
 #endif /* CPU_H  */

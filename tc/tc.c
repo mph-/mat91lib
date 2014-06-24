@@ -1,36 +1,54 @@
 /** @file   tc.c
     @author M. P. Hayes
     @date   30 November 2010
-    @brief  Timer counter routines for AT91SAM7
+    @brief  Timer counter routines for AT91SAM7 and SAM4S
     @note   There is no support for capture modes.  Only TIOAx can be
             driven at present.  
 */
 
 
 #include "tc.h"
-#include "cpu.h"
 #include "irq.h"
+#include "pio.h"
+#include "mcu.h"
 #include "bits.h"
 #include "pinmap.h"
 
 
-/* Each of the three TCs has a 16 bit counter with 3 16 bit registers
-   (RA, RB,and RC).  In waveform mode, RA and RB are used to drive
-   TIOA and TIOB, respectively.  RC can be used to stop the timer
-   clock to provide a one-shot.
+/* The SAM7 has one timer/counter controller that supports three timer
+   counter channels.  Each of the three TCs has a 16 bit counter with
+   3 16 bit registers (RA, RB,and RC).  In waveform mode, RA and RB
+   are used to drive TIOA and TIOB, respectively.  RC can be used to
+   stop the timer clock to provide a one-shot.
    
    The counter can be clocked with MCK divided by 2, 8, 32, 128, and 1024.
+
+   The 100-pin SAM4S MCUs have two timer/counter controllers.  The
+   channels are enumerated TC0, TC1, TC2..., TC5 but perversely the
+   controllers are also named TC0 and TC1.  This driver only supports
+   TC0, TC1, and TC2.
  */
 
 #define TC_CHANNEL(TC) ((TC) - tc_devices)
 
 
+#ifdef __SAM4S__
+#define TC0_BASE (TC0->TC_CHANNEL)
+#define TC1_BASE (TC0->TC_CHANNEL + 1)
+#define TC2_BASE (TC0->TC_CHANNEL + 2)
+#else
+#define TC0_BASE TC0
+#define TC1_BASE TC1
+#define TC2_BASE TC2
+#endif
+
+
 /* Define known TC pins.  */
 static const pinmap_t tc_pins[] = 
 {
-    {0, PIO_DEFINE (PORT_A, 0), PIO_PERIPH_B},
-    {1, PIO_DEFINE (PORT_A, 15), PIO_PERIPH_B},
-    {2, PIO_DEFINE (PORT_A, 26), PIO_PERIPH_B},
+    {0, PA0_PIO, PIO_PERIPH_B},  /* TIOA0 */
+    {1, PA15_PIO, PIO_PERIPH_B}, /* TIOA1 */
+    {2, PA26_PIO, PIO_PERIPH_B}, /* TIOA2 */
 };
 
 
@@ -44,14 +62,14 @@ static tc_dev_t tc_devices[TC_DEVICES_NUM];
 bool tc_start (tc_t tc)
 {
     /* The TC_CCR register is write only.  */
-    tc->base->TC_CCR |= (AT91C_TC_CLKEN | AT91C_TC_SWTRG); 
+    tc->base->TC_CCR |= TC_CCR_CLKEN | TC_CCR_SWTRG; 
     return 1;
 }
 
 
 bool tc_stop (tc_t tc)
 {
-    tc->base->TC_CCR |= AT91C_TC_CLKDIS; 
+    tc->base->TC_CCR |= TC_CCR_CLKDIS; 
     return 1;
 }
 
@@ -73,7 +91,7 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
        timer clock period.  This timer counter allows the pulse width
        to be varied.  It is specified by period - delay. 
 
-       We configure the TC in mode WAVESEL_UP_AUTO.  Here the counter
+       We configure the TC in mode WAVSEL_UP_RC.  Here the counter
        is incremented and is reset when RC matches.  The output is
        driven when RA matches.  */
     switch (mode)
@@ -84,40 +102,40 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
 
     case TC_MODE_PULSE:
         /* Set TIOAx when RA matches and clear TIOAx when RC matches.  */
-        tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
-            | AT91C_TC_WAVESEL_UP_AUTO | AT91C_TC_ACPA_SET | AT91C_TC_ACPC_CLEAR
-            | AT91C_TC_ASWTRG_CLEAR;
+        tc->base->TC_CMR = TC_CMR_BURST_NONE | TC_CMR_WAVE
+            | TC_CMR_WAVSEL_UP_RC | TC_CMR_ACPA_SET | TC_CMR_ACPC_CLEAR
+            | TC_CMR_ASWTRG_CLEAR;
         break;
 
     case TC_MODE_PULSE_INVERT:
         /* Clear TIOAx when RA matches and set TIOAx when RC matches.  */
-        tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
-            | AT91C_TC_WAVESEL_UP_AUTO | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET
-            | AT91C_TC_ASWTRG_SET;
+        tc->base->TC_CMR = TC_CMR_BURST_NONE | TC_CMR_WAVE
+            | TC_CMR_WAVSEL_UP_RC | TC_CMR_ACPA_CLEAR | TC_CMR_ACPC_SET
+            | TC_CMR_ASWTRG_SET;
         break;
 
     case TC_MODE_PULSE_ONESHOT:
         /* Set TIOAx when RA matches and clear TIOAx when RC matches.
            Stop clock when RC matches.   */
-        tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
-            | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL_UP_AUTO
-            | AT91C_TC_ACPA_SET | AT91C_TC_ACPC_CLEAR
-            | AT91C_TC_ASWTRG_CLEAR;
+        tc->base->TC_CMR = TC_CMR_BURST_NONE | TC_CMR_WAVE
+            | TC_CMR_CPCSTOP | TC_CMR_WAVSEL_UP_RC
+            | TC_CMR_ACPA_SET | TC_CMR_ACPC_CLEAR
+            | TC_CMR_ASWTRG_CLEAR;
         break;
 
     case TC_MODE_PULSE_ONESHOT_INVERT:
         /* Clear TIOAx when RA matches and set TIOAx when RC matches.
            Stop clock when RC matches.  */
-        tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
-            | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL_UP_AUTO
-            | AT91C_TC_ACPA_CLEAR | AT91C_TC_ACPC_SET
-            | AT91C_TC_ASWTRG_SET;
+        tc->base->TC_CMR = TC_CMR_BURST_NONE | TC_CMR_WAVE
+            | TC_CMR_CPCSTOP | TC_CMR_WAVSEL_UP_RC
+            | TC_CMR_ACPA_CLEAR | TC_CMR_ACPC_SET
+            | TC_CMR_ASWTRG_SET;
         break;
 
     case TC_MODE_DELAY_ONESHOT:
         /* Don't change TIOAx.  Stop clock when RC matches.   */
-        tc->base->TC_CMR = AT91C_TC_BURST_NONE | AT91C_TC_WAVE
-            | AT91C_TC_CPCSTOP | AT91C_TC_WAVESEL_UP_AUTO;
+        tc->base->TC_CMR = TC_CMR_BURST_NONE | TC_CMR_WAVE
+            | TC_CMR_CPCSTOP | TC_CMR_WAVSEL_UP_RC;
         break;
 
     default:
@@ -127,7 +145,7 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
     /* TODO: If period > 65536 then need to select a slower timer
        clock.  For now use MCK / 2.  Other prescale factors are 8, 32,
        128, and 1024.  */
-    tc->base->TC_CMR |= AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
+    tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK1;
 
     /* These registers are read only when not in wave mode.  */
     tc->base->TC_RA = delay >> 1;
@@ -135,7 +153,7 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
 
     /* Generate a software trigger with the clock stopped to set TIOAx
        to desired state.  */
-    tc->base->TC_CCR |= (AT91C_TC_CLKDIS | AT91C_TC_SWTRG); 
+    tc->base->TC_CCR |= TC_CCR_CLKDIS | TC_CCR_SWTRG; 
 
     /* Make timer pin TIOAx a timer output.  Perhaps we could use
        different logical timer channels to generate pulses on TIOBx
@@ -144,18 +162,15 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
     {
     case TC_CHANNEL_0:
         /* Switch to peripheral B and disable pin as PIO.  */
-        PIOA->PIO_BSR = AT91C_PA0_TIOA0;
-        PIOA->PIO_PDR = AT91C_PA0_TIOA0;
+        pio_config_set (PA0_PIO, PIO_PERIPH_B);
         break;
 
     case TC_CHANNEL_1:
-        PIOA->PIO_BSR = AT91C_PA15_TIOA1;
-        PIOA->PIO_PDR = AT91C_PA15_TIOA1;
+        pio_config_set (PA15_PIO, PIO_PERIPH_B);
         break;
 
     case TC_CHANNEL_2:
-        PIOA->PIO_BSR = AT91C_PA26_TIOA2;
-        PIOA->PIO_PDR = AT91C_PA26_TIOA2;
+        pio_config_set (PA26_PIO, PIO_PERIPH_B);
         break;
 
     default:
@@ -174,7 +189,7 @@ void
 tc_shutdown (tc_t tc)
 {
     /* Disable peripheral clock.  */
-    PMC->PMC_PCDR = BIT (AT91C_ID_TC0 + TC_CHANNEL (tc));
+    mcu_pmc_disable (ID_TC0 + TC_CHANNEL (tc));
 
     /* Perhaps should force TC output pin low?  */
 }
@@ -202,20 +217,20 @@ tc_init (const tc_cfg_t *cfg)
     switch (pin->channel)
     {
     case TC_CHANNEL_0:
-        tc->base = TC0;
+        tc->base = TC0_BASE;
         break;
 
     case TC_CHANNEL_1:
-        tc->base = TC1;
+        tc->base = TC1_BASE;
         break;
 
     case TC_CHANNEL_2:
-        tc->base = TC2;
+        tc->base = TC2_BASE;
         break;
     }
 
     /* Enable TCx peripheral clock.  */
-    PMC->PMC_PCER = BIT (AT91C_ID_TC0 + pin->channel);
+    mcu_pmc_enable (ID_TC0 + pin->channel);
 
     tc_config (tc, cfg->mode, cfg->period, cfg->delay);
 
@@ -227,9 +242,9 @@ static void
 tc_clock_sync_handler (void)
 {
     /* Read status register to clear interrupt.  */
-    TC0->TC_SR;
-    TC1->TC_SR;
-    TC2->TC_SR;
+    TC0_BASE->TC_SR;
+    TC1_BASE->TC_SR;
+    TC2_BASE->TC_SR;
 }
 
 
@@ -243,23 +258,23 @@ tc_clock_sync (tc_t tc, tc_period_t period)
 
     tc_config (tc, TC_MODE_DELAY_ONESHOT, period, period);
 
-    id = AT91C_ID_TC0 + TC_CHANNEL (tc);
+    id = ID_TC0 + TC_CHANNEL (tc);
 
     irq_config (id, 7, tc_clock_sync_handler);
             
     irq_enable (id);
 
     /* Enable interrupt when have compare on A.  */
-    tc->base->TC_IER = AT91C_TC_CPAS;
+    tc->base->TC_IER = TC_IER_CPAS;
 
     tc_start (tc);
     
     /* Stop CPU clock until interrupt.  FIXME, should disable other
        interrrupts first. */
-    cpu_idle ();
+    mcu_cpu_idle ();
 
     /* Disable interrupt when have compare on A.  */
-    tc->base->TC_IDR = AT91C_TC_CPAS;
+    tc->base->TC_IDR = TC_IDR_CPAS;
 
     irq_disable (id);
 
