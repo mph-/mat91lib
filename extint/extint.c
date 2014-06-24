@@ -6,7 +6,7 @@
 
 #include "extint.h"
 #include "pio.h"
-#include "cpu.h"
+#include "mcu.h"
 #include "irq.h"
 
 
@@ -21,13 +21,13 @@ struct extint_dev_struct
 static extint_dev_t extints[] =
 {
     {
-        .pio = PIO_DEFINE (PORT_A, 20),
-        .irq_id = AT91C_ID_IRQ0,
+        .pio = PA20_PIO,
+        .irq_id = ID_IRQ0,
         .periph = PIO_PERIPH_B_PULLUP,
     },
     {
-        .pio = PIO_DEFINE (PORT_A, 30),
-        .irq_id = AT91C_ID_IRQ1,
+        .pio = PA30_PIO,
+        .irq_id = ID_IRQ1,
         .periph = PIO_PERIPH_A_PULLUP,
     }
 };
@@ -60,7 +60,7 @@ void extint_sleep (extint_t extint)
     
     /* Turn off main oscillator, PLL, and master clock, switch to slow
        clock, and sleep until get an external interrupt.  */
-    cpu_sleep ();
+    mcu_sleep ();
     
     extint_disable (extint);
 }
