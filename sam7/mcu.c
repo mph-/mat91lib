@@ -124,3 +124,14 @@ mcu_udp_enable (void)
     PMC->PMC_PCER |= (1 << AT91C_ID_UDP);
     UDP->UDP_TXVC &= ~AT91C_UDP_TXVDIS;
 }
+
+
+void mcu_cpu_idle (void)
+{
+    /* Turn off CPU clock after current instruction.  It will be
+       re-enabled when an interrupt occurs.  */
+    PMC->PMC_SCDR = AT91C_PMC_PCK;
+
+    while ((PMC->PMC_SCSR & AT91C_PMC_PCK) != AT91C_PMC_PCK)
+        continue;
+}
