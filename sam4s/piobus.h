@@ -24,7 +24,7 @@ typedef uint64_t piobus_t;
 
 
 /** Private macro to lookup port register.  */
-#define PIOBUS_PORT_(PIOBUS) (((PIOBUS) >> 40) & 0xff) == PORT_A ? PIOA : ((PIOBUS) >> 40) & 0xff) == PORT_B ? PIOB : PIOC)
+#define PIOBUS_PORT_(PIOBUS) ((((PIOBUS) >> 40) & 0xff) == PORT_A ? PIOA : (((PIOBUS) >> 40) & 0xff) == PORT_B ? PIOB : PIOC)
 
 
 /** Configure PIOBUS
@@ -38,26 +38,26 @@ bool piobus_config_set (piobus_t piobus, pio_config_t config)
         PIOBUS_PORT_ (piobus)->PIO_SODR = PIOBUS_BITMASK_ (piobus);
         PIOBUS_PORT_ (piobus)->PIO_PER = PIOBUS_BITMASK_ (piobus);
         PIOBUS_PORT_ (piobus)->PIO_OER = PIOBUS_BITMASK_ (piobus);
-        PIOBUS_PORT_ (piobus)->PIO_PPUDR = PIOBUS_BITMASK_ (piobus);
+        PIOBUS_PORT_ (piobus)->PIO_PUDR = PIOBUS_BITMASK_ (piobus);
         return 1;
 
     case PIO_OUTPUT_LOW:
         PIOBUS_PORT_ (piobus)->PIO_CODR = PIOBUS_BITMASK_ (piobus);
         PIOBUS_PORT_ (piobus)->PIO_PER = PIOBUS_BITMASK_ (piobus);
         PIOBUS_PORT_ (piobus)->PIO_OER = PIOBUS_BITMASK_ (piobus);
-        PIOBUS_PORT_ (piobus)->PIO_PPUDR = PIOBUS_BITMASK_ (piobus);
+        PIOBUS_PORT_ (piobus)->PIO_PUDR = PIOBUS_BITMASK_ (piobus);
         return 1;
 
     case PIO_INPUT:
         PIOBUS_PORT_ (piobus)->PIO_ODR = PIOBUS_BITMASK_ (piobus);
         PIOBUS_PORT_ (piobus)->PIO_PER = PIOBUS_BITMASK_ (piobus);
-        PIOBUS_PORT_ (piobus)->PIO_PPUDR = PIOBUS_BITMASK_ (piobus);
+        PIOBUS_PORT_ (piobus)->PIO_PUDR = PIOBUS_BITMASK_ (piobus);
         return 1;
 
     case PIO_PULLUP:
         PIOBUS_PORT_ (piobus)->PIO_ODR = PIOBUS_BITMASK_ (piobus);
         PIOBUS_PORT_ (piobus)->PIO_PER = PIOBUS_BITMASK_ (piobus);
-        PIOBUS_PORT_ (piobus)->PIO_PPUER = PIOBUS_BITMASK_ (piobus);
+        PIOBUS_PORT_ (piobus)->PIO_PUER = PIOBUS_BITMASK_ (piobus);
         return 1;
 
     default:
