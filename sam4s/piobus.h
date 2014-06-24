@@ -14,7 +14,7 @@
 typedef uint64_t piobus_t;
 
 
-#define PIOBUS_DEFINE(PORT, LSB, MSB) (((piobus_t)(LSB) << 32) | (BIT ((MSB) + 1) - BIT (LSB)) | ((PORT) << 40))
+#define PIOBUS_DEFINE(PORT, LSB, MSB) (((piobus_t)(LSB) << 32) | (BIT ((MSB) + 1) - BIT (LSB)) | ((piobus_t)(PORT) << 40))
 
 /** Private macro to lookup bitmask.  */
 #define PIOBUS_BITMASK_(PIOBUS) ((PIOBUS) & 0xffffffff)
@@ -22,9 +22,11 @@ typedef uint64_t piobus_t;
 /** Private macro to lookup shift.  */
 #define PIOBUS_SHIFT_(PIOBUS) (((PIOBUS) >> 32) & 0xff)
 
+/** Private macro to lookup PIO controller.  */
+#define PIOBUS_C_(PIOBUS) (((PIOBUS) >> 40) & 0xff)
 
 /** Private macro to lookup port register.  */
-#define PIOBUS_PORT_(PIOBUS) ((((PIOBUS) >> 40) & 0xff) == PORT_A ? PIOA : (((PIOBUS) >> 40) & 0xff) == PORT_B ? PIOB : PIOC)
+#define PIOBUS_PORT_(PIOBUS) (PIOBUS_C_ (PIOBUS) == PORT_A ? PIOA : PIOBUS_C_ (PIOBUS) == PORT_B ? PIOB : PIOC)
 
 
 /** Configure PIOBUS
