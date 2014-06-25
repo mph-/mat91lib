@@ -8,7 +8,7 @@
 
 #include "config.h"
 
-#define PIT_CLOCK_DIVISOR 8
+#define PIT_CLOCK_DIVISOR 1
 
 /** Rate in Hz that the pit is incremented.  */
 #define PIT_RATE (F_CPU / PIT_CLOCK_DIVISOR)

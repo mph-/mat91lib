@@ -7,11 +7,14 @@
    We pretend it is an upcounter counter.  */
 
 /** The maximum overrun (in ticks).  */
-#define PIT_OVERRUN_MAX 100000
+#define PIT_OVERRUN_TICKS_MAX 4000000
+
+
+#define PIT_PERIOD_TICKS_MAX 0x00ffffffu
 
 
 /** The maximum delay (in ticks).  */
-#define PIT_DELAY_MAX (~0u - PIT_OVERRUN_MAX + 1)
+#define PIT_DELAY_TICKS_MAX (PIT_PERIOD_TICKS_MAX - PIT_OVERRUN_TICKS_MAX + 1)
 
 
 void
@@ -59,7 +62,7 @@ pit_tick_t pit_wait_until (pit_tick_t when)
         
         diff = now - when;
 
-        if (diff < PIT_OVERRUN_MAX)
+        if (diff < (PIT_OVERRUN_TICKS_MAX << 8))
             return now;
     }
 }
@@ -78,7 +81,7 @@ int
 pit_init (void)
 {
     /* Set maximum period.  */
-    pit_period_set (0x00ffffff);
+    pit_period_set (PIT_PERIOD_TICKS_MAX);
     pit_start ();
     return 1;
 }
