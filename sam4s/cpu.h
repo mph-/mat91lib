@@ -34,7 +34,7 @@ cpu_nop (void)
 __inline __attribute__ ((always_inline)) 
 void irq_global_disable (void)
 {
-    /* TODO.  */
+    __asm__ ("\tcpsie f");
 }
 
 
@@ -42,7 +42,7 @@ void irq_global_disable (void)
 __inline __attribute__ ((always_inline)) 
 void irq_global_enable (void)
 {
-    /* TODO.  */
+    __asm__ ("\tcpsie i");
 }
 
 #endif /* CPU_H  */

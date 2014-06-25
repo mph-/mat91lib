@@ -46,7 +46,7 @@ static inline void irq_clear (irq_id_t id)
 
 static inline void irq_enable (irq_id_t id)
 {
-    NVIC->ICER[id >> 5] = BIT (id & 0x1f);
+    NVIC->ISER[id >> 5] = BIT (id & 0x1f);
 }
 
 
@@ -58,7 +58,7 @@ static inline bool irq_enabled_p (irq_id_t id)
 
 static inline void irq_disable (irq_id_t id)
 {
-    NVIC->ISER[id >> 5] = BIT (id & 0x1f);
+    NVIC->ICER[id >> 5] = BIT (id & 0x1f);
 }
 
 

@@ -265,12 +265,7 @@ mcu_init (void)
     /* Use MATRIX_WPMR ?  */
 #endif
 
-#if 0
-    AIC->AIC_SPU = (int) _irq_spurious_handler;
-
-    for (id = IRQ_ID_MIN; id <= IRQ_ID_MAX; id++) 
-        irq_vector_set (id, _irq_unexpected_handler);
-#endif
+    irq_global_enable ();
 }
 
 
