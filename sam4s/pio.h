@@ -125,6 +125,14 @@ typedef enum pio_config_enum
 #define MISO0_PIO PA12_PIO
 #define SPCK0_PIO PA14_PIO
 
+#define RD_PIO PA18_PIO
+#define RK_PIO PA19_PIO
+#define RF_PIO PA20_PIO
+
+#define TD_PIO PA17_PIO
+#define TK_PIO PA16_PIO
+#define TF_PIO PA15_PIO
+
 
 typedef uint32_t pio_t;
 
