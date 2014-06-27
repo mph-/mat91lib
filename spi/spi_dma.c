@@ -46,9 +46,9 @@
 bool
 spi_dma_write_finished_p (spi_t spi)
 {
-    AT91S_SPI *pSPI = SPI_BASE_GET (spi);
+    Spi *pSPI = SPI_BASE_GET (spi);
 
-    return (pSPI->SPI_SR & AT91C_SPI_ENDTX) != 0;
+    return (pSPI->SPI_SR & SPI_SR_ENDTX) != 0;
 }
 
 
@@ -56,9 +56,9 @@ spi_dma_write_finished_p (spi_t spi)
 bool
 spi_dma_read_finished_p (spi_t spi)
 {
-    AT91S_SPI *pSPI = SPI_BASE_GET (spi);
+    Spi *pSPI = SPI_BASE_GET (spi);
 
-    return (pSPI->SPI_SR & AT91C_SPI_ENDRX) != 0;
+    return (pSPI->SPI_SR & SPI_SR_ENDRX) != 0;
 }
 
 
@@ -66,7 +66,7 @@ spi_dma_read_finished_p (spi_t spi)
 bool
 spi_dma_write_completed_p (spi_t spi)
 {
-    AT91S_PDC *pPDC = PDC_BASE_GET (spi);
+    Pdc *pPDC = PDC_BASE_GET (spi);
 
     return pPDC->PDC_TNCR == 0;
 }
@@ -76,7 +76,7 @@ spi_dma_write_completed_p (spi_t spi)
 bool
 spi_dma_read_completed_p (spi_t spi)
 {
-    AT91S_PDC *pPDC = PDC_BASE_GET (spi);
+    Pdc *pPDC = PDC_BASE_GET (spi);
 
     return pPDC->PDC_TNCR == 0;
 }
@@ -85,58 +85,58 @@ spi_dma_read_completed_p (spi_t spi)
 bool
 spi_dma_write_enable_p (spi_t spi)
 {
-    AT91S_PDC *pPDC = PDC_BASE_GET (spi);
+    Pdc *pPDC = PDC_BASE_GET (spi);
 
-    return (pPDC->PDC_PTCR & AT91C_PDC_TXTEN) != 0;
+    return (pPDC->PERIPH_PTCR & PERIPH_PTCR_TXTEN) != 0;
 }
 
 
 bool
 spi_dma_read_enable_p (spi_t spi)
 {
-    AT91S_PDC *pPDC = PDC_BASE_GET (spi);
+    Pdc *pPDC = PDC_BASE_GET (spi);
 
-    return (pPDC->PDC_PTCR & AT91C_PDC_RXTEN) != 0;
+    return (pPDC->PERIPH_PTCR & PERIPH_PTCR_RXTEN) != 0;
 }
 
 
 void
 spi_dma_write_enable (spi_t spi)
 {
-    AT91S_PDC *pPDC = PDC_BASE_GET (spi);
+    Pdc *pPDC = PDC_BASE_GET (spi);
 
     /* Enable receiver.  */
-    pPDC->PDC_PTCR = AT91C_PDC_TXTEN;
+    pPDC->PERIPH_PTCR = PERIPH_PTCR_TXTEN;
 }
 
 
 void
 spi_dma_write_disable (spi_t spi)
 {
-    AT91S_PDC *pPDC = PDC_BASE_GET (spi);
+    Pdc *pPDC = PDC_BASE_GET (spi);
 
     /* Disable receiver.  */
-    pPDC->PDC_PTCR = AT91C_PDC_TXTDIS;
+    pPDC->PERIPH_PTCR = PERIPH_PTCR_TXTDIS;
 }
 
 
 void
 spi_dma_read_enable (spi_t spi)
 {
-    AT91S_PDC *pPDC = PDC_BASE_GET (spi);
+    Pdc *pPDC = PDC_BASE_GET (spi);
 
     /* Enable receiver.  */
-    pPDC->PDC_PTCR = AT91C_PDC_RXTEN;
+    pPDC->PERIPH_PTCR = PERIPH_PTCR_RXTEN;
 }
 
 
 void
 spi_dma_read_disable (spi_t spi)
 {
-    AT91S_PDC *pPDC = PDC_BASE_GET (spi);
+    Pdc *pPDC = PDC_BASE_GET (spi);
 
     /* Disable receiver.  */
-    pPDC->PDC_PTCR = AT91C_PDC_RXTDIS;
+    pPDC->PERIPH_PTCR = PERIPH_PTCR_RXTDIS;
 }
 
 
@@ -144,9 +144,9 @@ spi_dma_read_disable (spi_t spi)
 static void
 spi_dma_multichannel_select (spi_t spi)
 {
-    AT91S_SPI *pSPI = SPI_BASE_GET (spi);
+    Spi *pSPI = SPI_BASE_GET (spi);
 
-    pSPI->SPI_MR |= AT91C_SPI_PS_VARIABLE;
+    pSPI->SPI_MR |= SPI_MR_PS;
 }
 
 
@@ -155,7 +155,7 @@ spi_dma_multichannel_select (spi_t spi)
 static void
 spi_dma_multichannel_deselect (spi_t spi)
 {
-    AT91S_SPI *pSPI = SPI_BASE_GET (spi);
+    Spi *pSPI = SPI_BASE_GET (spi);
 
     BITS_INSERT (pSPI->SPI_MR, 0x0f, 16, 19);
 }
@@ -165,7 +165,7 @@ spi_dma_multichannel_deselect (spi_t spi)
 void
 spi_dma_write_init (spi_t spi, void *buffer, uint16_t size)
 {
-    AT91S_PDC *pPDC = PDC_BASE_GET (spi);
+    Pdc *pPDC = PDC_BASE_GET (spi);
 
     spi_dma_multichannel_select (spi);
     spi_dma_write_disable (spi);
@@ -181,7 +181,7 @@ spi_dma_write_init (spi_t spi, void *buffer, uint16_t size)
 void
 spi_dma_read_init (spi_t spi, void *buffer, uint16_t size)
 {
-    AT91S_PDC *pPDC = PDC_BASE_GET (spi);
+    Pdc *pPDC = PDC_BASE_GET (spi);
 
     spi_dma_multichannel_select (spi);
     spi_dma_read_disable (spi);
@@ -197,7 +197,7 @@ spi_dma_read_init (spi_t spi, void *buffer, uint16_t size)
 void
 spi_dma_write_next (spi_t spi, void *buffer, uint16_t size)
 {
-    AT91S_PDC *pPDC = PDC_BASE_GET (spi);
+    Pdc *pPDC = PDC_BASE_GET (spi);
 
     pPDC->PDC_TNPR = (uint32_t) buffer;
     pPDC->PDC_TNCR = size;
@@ -207,7 +207,7 @@ spi_dma_write_next (spi_t spi, void *buffer, uint16_t size)
 void
 spi_dma_read_next (spi_t spi, void *buffer, uint16_t size)
 {
-    AT91S_PDC *pPDC = PDC_BASE_GET (spi);
+    Pdc *pPDC = PDC_BASE_GET (spi);
 
     pPDC->PDC_RNPR = (uint32_t) buffer;
     pPDC->PDC_RNCR = size;
