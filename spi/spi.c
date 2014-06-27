@@ -331,7 +331,7 @@ spi_channel_cs_config_get (spi_t spi, pio_t cs)
         if (spi->channel == spi_cs[i].channel
             && cs == spi_cs[i].pio)
         {
-            return spi_cs[i].periph == PIO_PERIPH_A ? PIO_PERIPH_A : PIO_PERIPH_B;
+            return spi_cs[i].periph;
         }
     }
     return PIO_OUTPUT_HIGH;

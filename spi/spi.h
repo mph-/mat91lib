@@ -118,7 +118,10 @@ typedef enum
 /** SPI configuration structure.  */
 typedef struct
 {
-    /* Logical channel number.  */
+    /* Logical channel number.  For automatic chip-select (CS) driving
+       this must correspond to the specified CS.  This field could be
+       determined from the CS field except when the specified CS
+       cannot be automatically driven.  */
     uint8_t channel;
     /* Clock speed in kHz (maximum).  */
     spi_clock_speed_t clock_speed_kHz;
