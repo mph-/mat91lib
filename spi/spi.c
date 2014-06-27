@@ -108,15 +108,15 @@ enum
 
 
 #ifdef HOSTED
-#define SPI_READY_P(BASE) (HOSTED || ((BASE)->SPI_SR & AT91C_SPI_RDRF))
+#define SPI_READY_P(BASE) (HOSTED || ((BASE)->SPI_SR & SPI_SR_RDRF))
 #else
-#define SPI_READY_P(BASE) ((BASE)->SPI_SR & AT91C_SPI_RDRF)
+#define SPI_READY_P(BASE) ((BASE)->SPI_SR & SPI_SR_RDRF)
 #endif
 
-#define SPI_TXEMPTY_P(BASE) ((BASE)->SPI_SR & AT91C_SPI_TXEMPTY)
+#define SPI_TXEMPTY_P(BASE) ((BASE)->SPI_SR & SPI_SR_TXEMPTY)
 
 /* Set lastxfer bit for use in fixed mode.  */
-#define SPI_LASTXFER(BASE) ((BASE)->SPI_CR = AT91C_SPI_LASTXFER)
+#define SPI_LASTXFER(BASE) ((BASE)->SPI_CR = SPI_CR_LASTXFER)
 
 
 /* Read SPI and then send new data.  Blocks while the new data is
@@ -396,37 +396,37 @@ spi_bits_set (spi_t spi, uint8_t bits)
 /* This performs a software reset for the specified controller (not an
    individual channel).  It puts the peripheral in slave mode.  */
 static void
-spi_reset (AT91S_SPI *pSPI)
+spi_reset (Spi *pSPI)
 {
-    pSPI->SPI_CR = AT91C_SPI_SWRST;
+    pSPI->SPI_CR = SPI_CR_SWRST;
 }
 
 
 /* This enables the specified controller (not an individual
    channel).  */
 static void
-spi_enable (AT91S_SPI *pSPI)
+spi_enable (Spi *pSPI)
 {
-    pSPI->SPI_CR = AT91C_SPI_SPIEN;
+    pSPI->SPI_CR = SPI_CR_SPIEN;
 }
 
 
 static void 
-spi_disable (AT91S_SPI *pSPI)
+spi_disable (Spi *pSPI)
 {
-    pSPI->SPI_CR = AT91C_SPI_SPIDIS;
+    pSPI->SPI_CR = SPI_CR_SPIDIS;
 }
 
 
 static void 
-spi_setup (AT91S_SPI *pSPI)
+spi_setup (Spi *pSPI)
 {
     /* Desire PS = 0 (fixed peripheral select)
        PCSDEC = 0 (no decoding of chip selects)
        MSTR = 1 (master mode)
        MODFDIS = 1 (mode fault detection disabled)
        CSAAT = 0 (chip select rises after transmission)   */
-    pSPI->SPI_MR = AT91C_SPI_MSTR | AT91C_SPI_MODFDIS;
+    pSPI->SPI_MR = SPI_MR_MSTR | SPI_MR_MODFDIS;
 }
 
 
@@ -452,7 +452,7 @@ spi_cs_mode_set (spi_t spi, spi_cs_mode_t mode)
 static void
 spi_channel_select (spi_t spi)
 {
-    spi->base->SPI_MR &= ~AT91C_SPI_PS_VARIABLE;
+    spi->base->SPI_MR &= ~SPI_MR_PS;
 
     /* Insert bit pattern to specify which CSR to use and which NPCS
        to drive.  Note, if a value of 0xf is used then the SPI controller

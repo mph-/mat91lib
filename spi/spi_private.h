@@ -10,7 +10,7 @@
 /* The fields in this structure are private.  Do not use.  */
 typedef struct spi_dev_struct
 {
-    AT91S_SPI *base;
+    Spi *base;
     uint8_t channel;
     uint8_t bits;
     uint16_t clock_divisor;
