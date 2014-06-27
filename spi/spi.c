@@ -6,6 +6,7 @@
 
 #include "config.h"
 #include "spi.h"
+#include "mcu.h"
 #include "cpu.h"
 #include "pinmap.h"
 #include "bits.h"
