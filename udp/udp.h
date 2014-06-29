@@ -16,7 +16,8 @@ typedef enum
 } udp_ep_t;
 
 
-/* There are 4 on the AT91SAM7 but we only use the first three.  */
+/* There are 4 on the AT91SAM7 and 8 on the SAM4s but we only use the
+   first three.  */
 #define UDP_EP_NUM 3
 
 enum {UDP_EP_DIR_OUT = 0, UDP_EP_DIR_IN = 0x80};

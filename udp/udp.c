@@ -9,6 +9,11 @@
 /* 
    UDP USB device port.
 
+   UDP USB device port
+   ZLP zero length packet
+   EP  endpoint
+
+
    This driver is overly complicated.  It could be simplified by using
    only EP0 for control, EP1 for bulk OUT, and EP2 for bulk IN.
 
@@ -271,18 +276,66 @@
 /** Poll the status of flags in a register.  */
 #define UDP_REG_ISCLR(REG, FLAGS) (((REG) & (FLAGS)) == 0)
 
-/** Clear flags of UDP UDP_CSR register and wait for synchronization.  */
-#define UDP_CSR_CLR(REG, FLAGS) { \
-while ((REG) & (FLAGS))           \
-    (REG) &= ~(FLAGS);            \
+
+
+/* When setting or clearing bits in the CSR of and endpoint we need to jump
+   through some hoops to ensure synchronisation since the UDP and MCU
+   are on different clock domains.  */
+#ifdef __SAM7__
+static inline void 
+UDP_CSR_SET (udp_ep_t endpoint, uint32_t flags)
+{
+    int i;
+
+    while (UDP->UDP_CSR[endpoint] & flags != flags)
+        UDP->UDP_CSR[endpoint] |= flags;
 }
 
-/** Set flags of UDP UDP_CSR register and wait for synchronization.  */
-#define UDP_CSR_SET(REG, FLAGS) {      \
-while (((REG) & (FLAGS)) != (FLAGS))   \
-    (REG) |= (FLAGS);                  \
+
+static inline void
+UDP_CSR_CLR(udp_ep_t endpoint, uint32_t flags)
+{
+    int i;
+
+    while (UDP->UDP_CSR[endpoint] & flags)
+        UDP->UDP_CSR[endpoint] &= ~flags;
 }
 
+#else
+
+// Bitmap for all status bits in CSR that are not effected by a value 1.
+#define REG_NO_EFFECT_1_ALL UDP_CSR_RX_DATA_BK0 | UDP_CSR_RX_DATA_BK1 | UDP_CSR_STALLSENT | UDP_CSR_RXSETUP | UDP_CSR_TXCOMP
+
+
+static inline void 
+UDP_CSR_SET (udp_ep_t endpoint, uint32_t flags)
+{
+    int i;
+    volatile uint32_t reg; 
+
+    reg = UDP->UDP_CSR[endpoint]; 
+    reg |= REG_NO_EFFECT_1_ALL; 
+    reg |= flags; 
+    UDP->UDP_CSR[endpoint] = reg; 
+    for (i = 0; i < 15; i++)
+        cpu_nop ();
+}
+
+
+static inline void 
+UDP_CSR_CLR (udp_ep_t endpoint, uint32_t flags)
+{
+    int i;
+    volatile uint32_t reg; 
+
+    reg = UDP->UDP_CSR[endpoint]; 
+    reg |= REG_NO_EFFECT_1_ALL; 
+    reg &= ~flags; 
+    UDP->UDP_CSR[endpoint] = reg; 
+    for (i = 0; i < 15; i++)
+        cpu_nop ();
+}
+#endif
 
 
 #ifndef MIN
@@ -392,6 +445,8 @@ typedef struct
     uint16_t fifo_size;
     uint8_t num_fifo;
     uint8_t bank;
+
+    /* Errors.  */
     uint16_t timeouts;
     uint16_t spurious;
     uint16_t fishy;
@@ -425,68 +480,14 @@ static void udp_bus_reset_handler (udp_t udp);
 
 static void udp_endpoint_handler (udp_t udp, udp_ep_t endpoint);
 
-/**
- * Returns the index of the last set (1) bit in an integer
- * 
- * \param  value Integer value to parse
- * \return Position of the leftmost set bit in the integer
- * 
- */
-static inline signed char 
-last_set_bit (unsigned int value)
-{
-    signed char locindex = -1;
-
-    if (value & 0xFFFF0000)
-    {
-        locindex += 16;
-        value >>= 16;
-    }
-
-    if (value & 0xFF00)
-    {
-        locindex += 8;
-        value >>= 8;
-    }
-
-    if (value & 0xF0)
-    {
-        locindex += 4;
-        value >>= 4;
-    }
-
-    if (value & 0xC)
-    {
-        locindex += 2;
-        value >>= 2;
-    }
-
-    if (value & 0x2)
-    {
-        locindex += 1;
-        value >>= 1;
-    }
-
-    if (value & 0x1)
-    {
-        locindex++;
-    }
-
-    return locindex;
-}
-
 
 /* Possible interrupts:
-   EP0INT: Endpoint 0 Interrupt
-   EP1INT: Endpoint 1 Interrupt
-   EP2INT: Endpoint 2Interrupt
-   EP3INT: Endpoint 3 Interrupt
+   EPxINT: Endpoint x Interrupt
    RXSUSP: UDP Suspend Interrupt
    RXRSM:  UDP Resume Interrupt
    SOFINT: Start Of Frame Interrupt
    WAKEUP: UDP bus Wakeup Interrupt
    ENDBUSRES: End of BUS Reset Interrupt
-   
    
    Several signals can generate an endpoint interupt:
    RXSETUP set to 1 (incoming setup request)
@@ -510,7 +511,7 @@ udp_interrupt_handler (void)
     while (status != 0)
     {
         // Start of frame (SOF)
-        if (UDP_REG_ISSET (status, UDP_IER_SOFINT))
+        if (status & UDP_IER_SOFINT)
         {
             // TRACE_INFO (UDP, "UDP:SOF\n");
             // Acknowledge interrupt
@@ -519,7 +520,7 @@ udp_interrupt_handler (void)
         }        
 
         // Suspend
-        if (UDP_REG_ISSET (status, UDP_IER_RXSUSP))
+        if (status & UDP_IER_RXSUSP)
         {
             // TRACE_INFO (UDP, "UDP:Susp\n");
            
@@ -553,16 +554,11 @@ udp_interrupt_handler (void)
             }            
         }
         // Resume
-        else if (UDP_REG_ISSET (status, UDP_IER_WAKEUP) 
-                 || UDP_REG_ISSET (status, UDP_IER_RXRSM))
+        else if (status & UDP_IER_WAKEUP 
+                 || status & UDP_IER_RXRSM)
         {
             // TRACE_INFO (UDP, "UDP:Resm\n");
 
-            // The device enters configured state
-            //      MCK + UDPCK must be on
-            //      Pull-Up must be connected
-            //      Transceiver must be enabled
-            // Powered state
             // Enable master clock
             mcu_pmc_enable (ID_UDP);
             // Enable peripheral clock for UDP
@@ -581,7 +577,7 @@ udp_interrupt_handler (void)
             UDP_REG_SET (UDP->UDP_IDR, UDP_IER_WAKEUP | UDP_IER_RXRSM);
         }        
         // End of bus reset (non maskable)
-        else if (UDP_REG_ISSET (status, UDP_ISR_ENDBUSRES))
+        else if (status & UDP_ISR_ENDBUSRES)
         {
             // TRACE_INFO (UDP, "UDP:EoBres\n");
 
@@ -601,12 +597,10 @@ udp_interrupt_handler (void)
         // Endpoint interrupts
         else 
         {
-            while (status != 0)
+            for (endpoint = 0; endpoint < UDP_EP_NUM; endpoint++)
             {
-                // Get endpoint index
-                endpoint = last_set_bit (status);
-                udp_endpoint_handler (&udp_dev, endpoint);
-                UDP_REG_CLR (status, 1 << endpoint);
+                if (status & BIT (endpoint))
+                    udp_endpoint_handler (&udp_dev, endpoint);
             }
         }          
 
@@ -637,8 +631,7 @@ void udp_endpoint_complete (udp_t udp, udp_ep_t endpoint, udp_status_t status)
 
     if ((pep->state == UDP_EP_STATE_WRITE) || (pep->state == UDP_EP_STATE_READ)) 
     {
-        TRACE_DEBUG (UDP, "UDP:EoT%d %d\n",
-                     endpoint, pep->transferred);
+        TRACE_DEBUG (UDP, "UDP:EoT%d %d\n", endpoint, pep->transferred);
 
         pep->status = status;
         
@@ -660,10 +653,10 @@ void udp_endpoint_complete (udp_t udp, udp_ep_t endpoint, udp_status_t status)
 static void
 udp_endpoint_reset (udp_t udp, udp_ep_t endpoint)
 {
-    /* Reset endpoint FIFOs.  Thie clears RXBYTECNT.  It does not clear
+    /* Reset endpoint FIFOs.  This clears RXBYTECNT.  It does not clear
        the other CSR flags.  */
-    UDP_REG_SET (UDP->UDP_RST_EP, 1 << endpoint);
-    UDP_REG_CLR (UDP->UDP_RST_EP, 1 << endpoint);
+    UDP_REG_SET (UDP->UDP_RST_EP, BIT (endpoint));
+    UDP_REG_CLR (UDP->UDP_RST_EP, BIT (endpoint));
 }
 
 
@@ -696,14 +689,14 @@ udp_endpoint_error (udp_t udp, udp_ep_t endpoint, udp_error_t error)
 static void
 udp_endpoint_interrupt_disable (udp_t udp, udp_ep_t endpoint)
 {
-    UDP_REG_SET (UDP->UDP_IDR, 1 << endpoint);
+    UDP_REG_SET (UDP->UDP_IDR, BIT (endpoint));
 }
 
 
 static void
 udp_endpoint_interrupt_enable (udp_t udp, udp_ep_t endpoint)
 {
-    UDP_REG_SET (UDP->UDP_IER, 1 << endpoint);
+    UDP_REG_SET (UDP->UDP_IER, BIT (endpoint));
 }
 
 
@@ -719,8 +712,7 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
 
     /* Abort the current transfer if the endpoint was configured and
        in read or write state.  */
-    if ((pep->state == UDP_EP_STATE_READ)
-        || (pep->state == UDP_EP_STATE_WRITE))
+    if ((pep->state == UDP_EP_STATE_READ) || (pep->state == UDP_EP_STATE_WRITE))
     {
         udp_endpoint_complete (udp, endpoint, UDP_STATUS_RESET);
     }
@@ -757,7 +749,7 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
         break;
     }
 
-    UDP_CSR_CLR (UDP->UDP_CSR[endpoint], 
+    UDP_CSR_CLR (endpoint, 
                  UDP_CSR_RX_DATA_BK0 | UDP_CSR_RX_DATA_BK1);
 
     TRACE_DEBUG (UDP, "UDP:Cfg%d\n", endpoint);
@@ -776,7 +768,7 @@ udp_rx_flag_clear (udp_t udp, udp_ep_t endpoint)
     /* Clear previous bank flag, BK0 or BK1.  When we set this zero we
        tell the controller that we have read all the data in the
        specified bank.  */
-    UDP_CSR_CLR (UDP->UDP_CSR[endpoint], pep->bank);
+    UDP_CSR_CLR (endpoint, pep->bank);
 
     // Swap banks
     if (pep->bank == UDP_CSR_RX_DATA_BK0) 
@@ -860,12 +852,12 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     pep->requested_prev = pep->requested;
     pep->requested = len;
 
-    if (UDP_REG_ISSET (UDP->UDP_CSR[endpoint], UDP_CSR_TXCOMP))
+    if (UDP->UDP_CSR[endpoint] & UDP_CSR_TXCOMP)
         udp_endpoint_error (udp, endpoint, UDP_ERROR_FISHY);
     
-    /* This should be automatically cleared when a FIFO contents are
+    /* This should be automatically cleared when a FIFO's contents are
        sent to the host.  */
-    if (UDP_REG_ISSET (UDP->UDP_CSR[endpoint], UDP_CSR_TXPKTRDY))
+    if (UDP->UDP_CSR[endpoint] & UDP_CSR_TXPKTRDY)
         udp_endpoint_error (udp, endpoint, UDP_ERROR_WEIRD);
     
     udp_endpoint_interrupt_disable (udp, endpoint);
@@ -876,7 +868,7 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     udp_endpoint_fifo_write (udp, endpoint);
     
     /* Tell the controller there is data ready to send.  */
-    UDP_CSR_SET (UDP->UDP_CSR[endpoint], UDP_CSR_TXPKTRDY);
+    UDP_CSR_SET (endpoint, UDP_CSR_TXPKTRDY);
     
     /* If there is data remaining and if double buffering is enabled
        then load the other FIFO with a packet.  */
@@ -903,8 +895,7 @@ udp_endpoint_read_ready_p (udp_t udp, udp_ep_t endpoint)
     udp_ep_info_t *pep = &udp->eps[endpoint];
 
     /* Check if have some data in the FIFO.  */
-    return UDP_REG_ISSET (UDP->UDP_CSR[endpoint],
-                          pep->bank);
+    return UDP->UDP_CSR[endpoint] & pep->bank;
 }
 
 
@@ -925,8 +916,7 @@ udp_endpoint_fifo_read (udp_t udp, udp_ep_t endpoint)
 
     /* Assume that something in buffer.  */
 
-    if (pep->buffered == 0
-        && udp_endpoint_read_ready_p (udp, endpoint))
+    if (pep->buffered == 0 && udp_endpoint_read_ready_p (udp, endpoint))
         pep->buffered = udp_endpoint_read_bytes (udp, endpoint);
 
     /* Get number of bytes to retrieve.  */
@@ -1023,10 +1013,10 @@ udp_setup_read (udp_t udp, udp_ep_t endpoint)
     
     // Set the DIR bit before clearing RXSETUP in Control IN sequence.
     if (setup->type & 0x80)
-        UDP_CSR_SET (UDP->UDP_CSR[endpoint], UDP_CSR_DIR);
+        UDP_CSR_SET (endpoint, UDP_CSR_DIR);
     
     // Acknowledge that setup data packet has been read from FIFO.
-    UDP_CSR_CLR (UDP->UDP_CSR[endpoint], UDP_CSR_RXSETUP);
+    UDP_CSR_CLR (endpoint, UDP_CSR_RXSETUP);
 }
 
 
@@ -1058,7 +1048,7 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
             pep->transferred += pep->buffered;
             pep->buffered = 0;
             
-            UDP_CSR_CLR (UDP->UDP_CSR[endpoint], UDP_CSR_TXCOMP);
+            UDP_CSR_CLR (endpoint, UDP_CSR_TXCOMP);
 
             /* Terminate transfer and call callback.  */
             udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
@@ -1075,11 +1065,11 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
                    ready.  */
                 udp_endpoint_fifo_write (udp, endpoint);
 
-                UDP_CSR_SET (UDP->UDP_CSR[endpoint], UDP_CSR_TXPKTRDY);
+                UDP_CSR_SET (endpoint, UDP_CSR_TXPKTRDY);
 
                 /* Acknowledge TXCOMP interrupt.  The datasheet says
                  * this must be cleared adfter TXPKTRDY is set. */
-                UDP_CSR_CLR (UDP->UDP_CSR[endpoint], UDP_CSR_TXCOMP);
+                UDP_CSR_CLR (endpoint, UDP_CSR_TXCOMP);
             }
             else
             {
@@ -1108,7 +1098,7 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
                     pep->transferred += pep->buffered;
                     pep->buffered = 0;
             
-                    UDP_CSR_CLR (UDP->UDP_CSR[endpoint], UDP_CSR_TXCOMP);
+                    UDP_CSR_CLR (endpoint, UDP_CSR_TXCOMP);
 
                     /* Terminate transfer and call callback.  */
                     udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
@@ -1119,7 +1109,7 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
     else
     {
         /* Hmmm, how did we get here?  */
-        UDP_CSR_CLR (UDP->UDP_CSR[endpoint], UDP_CSR_TXCOMP);
+        UDP_CSR_CLR (endpoint, UDP_CSR_TXCOMP);
         pep->spurious++;
     }
 }
@@ -1156,21 +1146,21 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
     }
     else
     {
-        /* Endpoint is not in read state so check the endpoint
-           type to see if it is a control endpoint.  */
+        /* Endpoint is not in read state so check the endpoint type to
+           see if it is a control endpoint with zero bytes
+           received.  */
         if (((status & UDP_CSR_EPTYPE_Msk) == UDP_CSR_EPTYPE_CTRL)
-            && UDP_REG_ISCLR (status, 0xFFFF0000))
+            && (status >> 16 == 0))
         {
-            /* Control endpoint, 0 bytes received.  This is the
-               host sending an Ack in response to us sending a
-               ZLP.  Acknowledge the data and finish the
+            /* This is the host sending an Ack in response to us
+               sending a ZLP.  Acknowledge the data and finish the
                current transfer.  */
             TRACE_INFO (UDP, "UDP:Ack%d\n", endpoint);
             udp_rx_flag_clear (udp, endpoint);
             
             udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
         }
-        else if (UDP_REG_ISSET (status, UDP_CSR_FORCESTALL))
+        else if (status & UDP_CSR_FORCESTALL)
         {
             /* Non-control endpoint so discard stalled data.  */
             TRACE_INFO (UDP, "UDP:Disc%d\n", endpoint);
@@ -1180,6 +1170,8 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
         else
         {
             pep->spurious++;
+            /* Pretend read data?  */
+            udp_rx_flag_clear (udp, endpoint);
         }
     }
 }
@@ -1225,11 +1217,11 @@ udp_endpoint_stall_handler (udp_t udp, udp_ep_t endpoint)
     TRACE_INFO (UDP, "UDP:Stallsent%d\n", endpoint);
     
     /* Acknowledge interrupt.  */
-    UDP_CSR_CLR (UDP->UDP_CSR[endpoint], UDP_CSR_STALLSENT);
+    UDP_CSR_CLR (endpoint, UDP_CSR_STALLSENT);
     
     /* If the endpoint is not halted, clear the stall condition.  */
     if (pep->state != UDP_EP_STATE_HALTED)
-        UDP_CSR_CLR (UDP->UDP_CSR[endpoint], UDP_CSR_FORCESTALL);
+        UDP_CSR_CLR (endpoint, UDP_CSR_FORCESTALL);
 }
 
 
@@ -1246,26 +1238,26 @@ udp_endpoint_handler (udp_t udp, udp_ep_t endpoint)
     unsigned int status = UDP->UDP_CSR[endpoint];
     
     /* IN packet sent.  */
-    if (UDP_REG_ISSET (status, UDP_CSR_TXCOMP))
+    if (status & UDP_CSR_TXCOMP)
     {
         udp_endpoint_write_handler (udp, endpoint);
     }
 
     /* OUT packet received.  */
-    if (UDP_REG_ISSET (status, UDP_CSR_RX_DATA_BK0) 
-        || UDP_REG_ISSET (status, UDP_CSR_RX_DATA_BK1))
+    if (status & UDP_CSR_RX_DATA_BK0 
+        || status & UDP_CSR_RX_DATA_BK1)
     {
         udp_endpoint_read_handler (udp, endpoint);
     }
 
     /* Setup packet received.  */
-    if (UDP_REG_ISSET (status, UDP_CSR_RXSETUP))
+    if (status & UDP_CSR_RXSETUP)
     {
         udp_endpoint_setup_handler (udp, endpoint);
     }
 
     /* Stall sent.  */
-    if (UDP_REG_ISSET (status, UDP_CSR_STALLSENT))
+    if (status & UDP_CSR_STALLSENT)
     {
         udp_endpoint_stall_handler (udp, endpoint);
     }
@@ -1287,7 +1279,7 @@ udp_stall (udp_t udp, udp_ep_t endpoint)
 
     TRACE_INFO (UDP, "UDP:Stall%d\n", endpoint);
 
-    UDP_CSR_SET (UDP->UDP_CSR[endpoint], UDP_CSR_FORCESTALL);
+    UDP_CSR_SET (endpoint, UDP_CSR_FORCESTALL);
 }
 
 
@@ -1306,9 +1298,11 @@ udp_halt (udp_t udp, udp_ep_t endpoint, bool halt)
 {
     udp_ep_info_t *pep;
 
+#ifdef __SAM7__
     // Mask endpoint number, direction bit is not used
     // see UDP v2.0 chapter 9.3.4
     endpoint &= 0x0F;  
+#endif
 
     pep = &udp->eps[endpoint];  
     
@@ -1320,11 +1314,11 @@ udp_halt (udp_t udp, udp_ep_t endpoint, bool halt)
         pep->state = UDP_EP_STATE_IDLE;
 
         // Clear FORCESTALL flag
-        UDP_CSR_CLR (UDP->UDP_CSR[endpoint], UDP_CSR_FORCESTALL);
+        UDP_CSR_CLR (endpoint, UDP_CSR_FORCESTALL);
 
         // Reset endpoint FIFOs, beware this is a 2 step operation
-        UDP_REG_SET (UDP->UDP_RST_EP, 1 << endpoint);
-        UDP_REG_CLR (UDP->UDP_RST_EP, 1 << endpoint);
+        UDP_REG_SET (UDP->UDP_RST_EP, BIT (endpoint));
+        UDP_REG_CLR (UDP->UDP_RST_EP, BIT (endpoint));
     }
     // Set the halt feature on the endpoint if it is not already enabled
     // and the endpoint is not disabled
@@ -1337,7 +1331,7 @@ udp_halt (udp_t udp, udp_ep_t endpoint, bool halt)
         udp_endpoint_complete (udp, endpoint, UDP_STATUS_ABORTED);
 
         // Put endpoint into halt state
-        UDP_CSR_SET (UDP->UDP_CSR[endpoint], UDP_CSR_FORCESTALL);
+        UDP_CSR_SET (endpoint, UDP_CSR_FORCESTALL);
         pep->state = UDP_EP_STATE_HALTED;
 
         // Enable the endpoint interrupt
@@ -1419,7 +1413,7 @@ udp_configuration_set (void *arg, udp_transfer_t *ptransfer __unused__)
 {
     udp_t udp = arg;
     unsigned int config = udp->setup.value;
-    unsigned int ep;
+    udp_ep_t endpoint;
 
     TRACE_DEBUG (UDP, "UDP:SetCfg %d\n", config);
 
@@ -1432,9 +1426,9 @@ udp_configuration_set (void *arg, udp_transfer_t *ptransfer __unused__)
         udp->state = UDP_STATE_CONFIGURED;
         UDP_REG_SET (UDP->UDP_GLB_STAT, UDP_GLB_STAT_CONFG);
 
-        // Configure endpoints
-        for (ep = 1; ep < UDP_EP_NUM; ep++)
-            udp_endpoint_configure (udp, ep);
+        // Configure other endpoints
+        for (endpoint = 1; endpoint < UDP_EP_NUM; endpoint++)
+            udp_endpoint_configure (udp, endpoint);
     }
     else
     {
@@ -1443,10 +1437,10 @@ udp_configuration_set (void *arg, udp_transfer_t *ptransfer __unused__)
         UDP_REG_SET (UDP->UDP_GLB_STAT, UDP_GLB_STAT_FADDEN);
 
         // For each endpoint, if it is enabled, disable it
-        for (ep = 1; ep < UDP_EP_NUM; ep++)
+        for (endpoint = 1; endpoint < UDP_EP_NUM; endpoint++)
         {
-            udp_endpoint_complete (udp, ep, UDP_STATUS_RESET);
-            udp->eps[ep].state = UDP_EP_STATE_DISABLED;
+            udp_endpoint_complete (udp, endpoint, UDP_STATUS_RESET);
+            udp->eps[endpoint].state = UDP_EP_STATE_DISABLED;
         }
     }
 }
@@ -1469,14 +1463,14 @@ udp_read_ready_p (udp_t udp)
 }
 
 
+/* Blocking read from endpoint (with timeout).  */
 udp_size_t
 udp_endpoint_read (udp_t udp, udp_ep_t endpoint, void *buffer, udp_size_t len)
 {
     unsigned int timeout;
     udp_ep_info_t *pep = &udp->eps[endpoint];
 
-    if (udp_read_async (udp, endpoint, buffer, len, 0, 0)
-        != UDP_STATUS_SUCCESS)
+    if (udp_read_async (udp, endpoint, buffer, len, 0, 0) != UDP_STATUS_SUCCESS)
         return 0;
 
     /* We may have a race condition if someone else grabs the endpoint
