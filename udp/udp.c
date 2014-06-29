@@ -264,20 +264,6 @@
 #define UDP_TIMEOUT_US 500000
 
 
-/** Set flag(s) in a register.  */
-#define UDP_REG_SET(REG, FLAGS) ((REG) = (REG) | (FLAGS))
-
-/** Clear flag(s) in a register.  */
-#define UDP_REG_CLR(REG, FLAGS) ((REG) &= ~(FLAGS))
-
-/** Poll the status of flags in a register.  */
-#define UDP_REG_ISSET(REG, FLAGS) (((REG) & (FLAGS)) == (FLAGS))
-
-/** Poll the status of flags in a register.  */
-#define UDP_REG_ISCLR(REG, FLAGS) (((REG) & (FLAGS)) == 0)
-
-
-
 /* When setting or clearing bits in the CSR of and endpoint we need to jump
    through some hoops to ensure synchronisation since the UDP and MCU
    are on different clock domains.  */
@@ -472,7 +458,7 @@ struct udp_dev_struct
 
 static udp_dev_t udp_dev;
 
-/** Interrupt mask */
+/** Interrupt mask.  */
 #define ISR_MASK 0x00003FFF
 
 
@@ -515,8 +501,8 @@ udp_interrupt_handler (void)
         {
             // TRACE_INFO (UDP, "UDP:SOF\n");
             // Acknowledge interrupt
-            UDP_REG_SET (UDP->UDP_ICR, UDP_IER_SOFINT);
-            UDP_REG_CLR (status, UDP_IER_SOFINT);
+            UDP->UDP_ICR |= UDP_IER_SOFINT;
+            status &= ~UDP_IER_SOFINT;
         }        
 
         // Suspend
@@ -532,17 +518,17 @@ udp_interrupt_handler (void)
                 //      Transceiver must be disabled
 
                 // Enable wakeup
-                UDP_REG_SET (UDP->UDP_IER, UDP_IER_WAKEUP | UDP_IER_RXRSM);
+                UDP->UDP_IER |= UDP_IER_WAKEUP | UDP_IER_RXRSM;
 
                 // Acknowledge interrupt
-                UDP_REG_SET (UDP->UDP_ICR, UDP_IER_RXSUSP);
+                UDP->UDP_ICR |= UDP_IER_RXSUSP;
 
                 // Set suspended state
                 udp->prev_state = udp->state;
                 udp->state = UDP_STATE_SUSPENDED;
 
                 // Disable transceiver
-                UDP_REG_SET (UDP->UDP_TXVC, UDP_TXVC_TXVDIS);
+                UDP->UDP_TXVC |= UDP_TXVC_TXVDIS;
                 // Disable peripheral clock
                 mcu_pmc_disable (ID_UDP);
                 // Disable UDPCK
@@ -567,14 +553,13 @@ udp_interrupt_handler (void)
             if (udp->prev_state == UDP_STATE_DEFAULT)
             {
                 // Enable transceiver
-                UDP_REG_CLR (UDP->UDP_TXVC, UDP_TXVC_TXVDIS);
+                UDP->UDP_TXVC &= ~UDP_TXVC_TXVDIS;
             }
 
             udp->state = udp->prev_state;
 
-            UDP_REG_SET (UDP->UDP_ICR, UDP_IER_WAKEUP | UDP_IER_RXRSM
-                 | UDP_IER_RXSUSP);
-            UDP_REG_SET (UDP->UDP_IDR, UDP_IER_WAKEUP | UDP_IER_RXRSM);
+            UDP->UDP_ICR |= UDP_IER_WAKEUP | UDP_IER_RXRSM | UDP_IER_RXSUSP;
+            UDP->UDP_IDR |= UDP_IER_WAKEUP | UDP_IER_RXRSM;
         }        
         // End of bus reset (non maskable)
         else if (status & UDP_ISR_ENDBUSRES)
@@ -587,12 +572,11 @@ udp_interrupt_handler (void)
             udp->state = UDP_STATE_DEFAULT;
 
             // Flush and enable the suspend interrupt
-            UDP_REG_SET (UDP->UDP_ICR, UDP_IER_WAKEUP 
-                 | UDP_IER_RXRSM | UDP_IER_RXSUSP);
+            UDP->UDP_ICR |= UDP_IER_WAKEUP | UDP_IER_RXRSM | UDP_IER_RXSUSP;
 
             // Acknowledge end of bus reset interrupt.  Is this
             // required since it is done in udp_bus_reset_handler?
-            UDP_REG_SET (UDP->UDP_ICR, UDP_ISR_ENDBUSRES);
+            UDP->UDP_ICR |= UDP_ISR_ENDBUSRES;
         }
         // Endpoint interrupts
         else 
@@ -655,8 +639,8 @@ udp_endpoint_reset (udp_t udp, udp_ep_t endpoint)
 {
     /* Reset endpoint FIFOs.  This clears RXBYTECNT.  It does not clear
        the other CSR flags.  */
-    UDP_REG_SET (UDP->UDP_RST_EP, BIT (endpoint));
-    UDP_REG_CLR (UDP->UDP_RST_EP, BIT (endpoint));
+    UDP->UDP_RST_EP |= BIT (endpoint);
+    UDP->UDP_RST_EP &= ~BIT (endpoint);
 }
 
 
@@ -689,14 +673,14 @@ udp_endpoint_error (udp_t udp, udp_ep_t endpoint, udp_error_t error)
 static void
 udp_endpoint_interrupt_disable (udp_t udp, udp_ep_t endpoint)
 {
-    UDP_REG_SET (UDP->UDP_IDR, BIT (endpoint));
+    UDP->UDP_IDR |= BIT (endpoint);
 }
 
 
 static void
 udp_endpoint_interrupt_enable (udp_t udp, udp_ep_t endpoint)
 {
-    UDP_REG_SET (UDP->UDP_IER, BIT (endpoint));
+    UDP->UDP_IER |= BIT (endpoint);
 }
 
 
@@ -749,8 +733,7 @@ udp_endpoint_configure (udp_t udp, udp_ep_t endpoint)
         break;
     }
 
-    UDP_CSR_CLR (endpoint, 
-                 UDP_CSR_RX_DATA_BK0 | UDP_CSR_RX_DATA_BK1);
+    UDP_CSR_CLR (endpoint, UDP_CSR_RX_DATA_BK0 | UDP_CSR_RX_DATA_BK1);
 
     TRACE_DEBUG (UDP, "UDP:Cfg%d\n", endpoint);
 }
@@ -1091,8 +1074,7 @@ udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
                     /* The transfer will terminate soon since
                        there is only pep->buffered samples to send.
                        So just poll for TXCOMP going high.  */
-                    while (UDP_REG_ISCLR (UDP->UDP_CSR[endpoint],
-                                          UDP_CSR_TXCOMP))
+                    while ((UDP->UDP_CSR[endpoint] & UDP_CSR_TXCOMP) == 0)
                         continue;
 
                     pep->transferred += pep->buffered;
@@ -1298,12 +1280,6 @@ udp_halt (udp_t udp, udp_ep_t endpoint, bool halt)
 {
     udp_ep_info_t *pep;
 
-#ifdef __SAM7__
-    // Mask endpoint number, direction bit is not used
-    // see UDP v2.0 chapter 9.3.4
-    endpoint &= 0x0F;  
-#endif
-
     pep = &udp->eps[endpoint];  
     
     // Clear the halt feature of the endpoint if it is enabled
@@ -1317,8 +1293,8 @@ udp_halt (udp_t udp, udp_ep_t endpoint, bool halt)
         UDP_CSR_CLR (endpoint, UDP_CSR_FORCESTALL);
 
         // Reset endpoint FIFOs, beware this is a 2 step operation
-        UDP_REG_SET (UDP->UDP_RST_EP, BIT (endpoint));
-        UDP_REG_CLR (UDP->UDP_RST_EP, BIT (endpoint));
+        UDP->UDP_RST_EP |= BIT (endpoint);
+        UDP->UDP_RST_EP &= ~BIT (endpoint);
     }
     // Set the halt feature on the endpoint if it is not already enabled
     // and the endpoint is not disabled
@@ -1375,12 +1351,12 @@ udp_address_set (void *arg, udp_transfer_t *ptransfer __unused__)
     TRACE_DEBUG (UDP, "UDP:SetAddr 0x%2x\n", address);
 
     // Set address
-    UDP_REG_SET (UDP->UDP_FADDR, UDP_FADDR_FEN | address);
+    UDP->UDP_FADDR |= UDP_FADDR_FEN | address;
 
     if (address == 0) 
     {
         // Inform UDP that out of address state
-        UDP_REG_SET (UDP->UDP_GLB_STAT, 0);
+        UDP->UDP_GLB_STAT |= 0;
 
         // Device returns to the Default state.  Is this a valid
         // transition?
@@ -1392,7 +1368,7 @@ udp_address_set (void *arg, udp_transfer_t *ptransfer __unused__)
         // the Status IN transaction of the control transfer before
         // doing this, i.e., once the TXCOMP flag in the UDP_CSR[0] register
         // has been received and cleared.
-        UDP_REG_SET (UDP->UDP_GLB_STAT, UDP_GLB_STAT_FADDEN);
+        UDP->UDP_GLB_STAT |= UDP_GLB_STAT_FADDEN;
 
         // The device enters the Address state
         udp->state = UDP_STATE_ADDRESS;
@@ -1424,7 +1400,7 @@ udp_configuration_set (void *arg, udp_transfer_t *ptransfer __unused__)
 
         // Enter configured state
         udp->state = UDP_STATE_CONFIGURED;
-        UDP_REG_SET (UDP->UDP_GLB_STAT, UDP_GLB_STAT_CONFG);
+        UDP->UDP_GLB_STAT |= UDP_GLB_STAT_CONFG;
 
         // Configure other endpoints
         for (endpoint = 1; endpoint < UDP_EP_NUM; endpoint++)
@@ -1434,7 +1410,7 @@ udp_configuration_set (void *arg, udp_transfer_t *ptransfer __unused__)
     {
         // Go back to Address state
         udp->state = UDP_STATE_ADDRESS;
-        UDP_REG_SET (UDP->UDP_GLB_STAT, UDP_GLB_STAT_FADDEN);
+        UDP->UDP_GLB_STAT |= UDP_GLB_STAT_FADDEN;
 
         // For each endpoint, if it is enabled, disable it
         for (endpoint = 1; endpoint < UDP_EP_NUM; endpoint++)
