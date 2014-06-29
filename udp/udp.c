@@ -477,7 +477,7 @@ static void udp_endpoint_handler (udp_t udp, udp_ep_t endpoint);
    Several signals can generate an endpoint interupt:
    RXSETUP set to 1 (incoming setup request)
    RX_DATA_BK0 set to 1 (receive on bank 0
-   RX_DATA_BK1 set to 1 (receive on bnak 1)
+   RX_DATA_BK1 set to 1 (receive on bank 1)
    TXCOMP set to 1 (transmit complete)
    STALLSENT set to 1
 */
@@ -745,25 +745,16 @@ static void
 udp_rx_flag_clear (udp_t udp, udp_ep_t endpoint)
 {
     udp_ep_info_t *pep = &udp->eps[endpoint];
+    uint32_t mask = pep->bank == 0 ? UDP_CSR_RX_DATA_BK0 : UDP_CSR_RX_DATA_BK1;
 
     /* Clear previous bank flag, BK0 or BK1.  When we set this zero we
        tell the controller that we have read all the data in the
        specified bank.  */
-    UDP_CSR_CLR (endpoint, pep->bank);
+    UDP_CSR_CLR (endpoint, mask);
 
-    // Swap banks
-    if (pep->bank == UDP_CSR_RX_DATA_BK0) 
-    {
-        if (pep->num_fifo > 1)
-        {
-            // Swap bank if in dual-fifo mode
-            pep->bank = UDP_CSR_RX_DATA_BK1;
-        }
-    }
-    else 
-    {
-        pep->bank = UDP_CSR_RX_DATA_BK0;
-    }    
+    // Swap bank if in dual-fifo mode
+    if (pep->num_fifo > 1)
+        pep->bank == 1 - pep->bank;
 }
 
 
@@ -874,9 +865,10 @@ bool
 udp_endpoint_read_ready_p (udp_t udp, udp_ep_t endpoint)
 {
     udp_ep_info_t *pep = &udp->eps[endpoint];
+    uint32_t mask = pep->bank == 0 ? UDP_CSR_RX_DATA_BK0 : UDP_CSR_RX_DATA_BK1;
 
-    /* Check if have some data in the FIFO.  */
-    return (UDP->UDP_CSR[endpoint] & pep->bank) != 0;
+    /* Check if have some data in the FIFO for expected bank.  */
+    return (UDP->UDP_CSR[endpoint] & mask) != 0;
 }
 
 
@@ -1579,9 +1571,8 @@ udp_enable (udp_t udp)
     PMC->PMC_SCER |= PMC_SCER_UDP;
     mcu_pmc_enable (ID_UDP);
 
-    // Init data banks
     for (i = 0; i < UDP_EP_NUM; i++)
-        udp->eps[i].bank = UDP_CSR_RX_DATA_BK0;
+        udp->eps[i].bank = 0;
 
     TRACE_INFO (UDP, "UDP:Enabled\n");
 }
