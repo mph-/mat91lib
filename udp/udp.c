@@ -451,7 +451,6 @@ struct udp_dev_struct
     volatile udp_state_t state;
     volatile udp_state_t prev_state;
     udp_setup_t setup;
-    uint32_t rx_bank;
     udp_ep_info_t eps[UDP_EP_NUM];
 };
 
@@ -540,8 +539,7 @@ udp_interrupt_handler (void)
             }            
         }
         // Resume
-        else if (status & UDP_IER_WAKEUP 
-                 || status & UDP_IER_RXRSM)
+        else if (status & UDP_IER_WAKEUP || status & UDP_IER_RXRSM)
         {
             // TRACE_INFO (UDP, "UDP:Resm\n");
 
@@ -878,7 +876,7 @@ udp_endpoint_read_ready_p (udp_t udp, udp_ep_t endpoint)
     udp_ep_info_t *pep = &udp->eps[endpoint];
 
     /* Check if have some data in the FIFO.  */
-    return UDP->UDP_CSR[endpoint] & pep->bank;
+    return (UDP->UDP_CSR[endpoint] & pep->bank) != 0;
 }
 
 
@@ -1460,6 +1458,7 @@ udp_endpoint_read (udp_t udp, udp_ep_t endpoint, void *buffer, udp_size_t len)
         {
             udp_endpoint_error (udp, endpoint, UDP_ERROR_READ_TIMEOUT);
             udp_endpoint_complete (udp, endpoint, UDP_STATUS_TIMEOUT);
+            udp_endpoint_interrupt_disable (udp, endpoint);
             break;
         }
         DELAY_US (1);
@@ -1737,7 +1736,6 @@ udp_t udp_init (udp_request_handler_t request_handler, void *arg)
     udp->connection = 0;
     udp->prev_state = UDP_STATE_NOT_POWERED;
     udp->state = UDP_STATE_NOT_POWERED;
-    udp->rx_bank = UDP_CSR_RX_DATA_BK0;
     
     udp_unsignal (udp);
 
