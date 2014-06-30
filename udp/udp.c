@@ -933,8 +933,6 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pdata, unsigned int len,
 
     TRACE_DEBUG (UDP, "UDP:ARead%d %d\n", endpoint, len);
 
-    udp_endpoint_interrupt_disable (udp, endpoint);
-
     pep->pdata = pdata;
     pep->status = UDP_STATUS_PENDING;
     pep->remaining = len;
@@ -942,6 +940,8 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pdata, unsigned int len,
     pep->callback = callback;
     pep->arg = arg;
     pep->state = UDP_EP_STATE_READ;
+
+    udp_endpoint_interrupt_disable (udp, endpoint);
 
     if (udp_endpoint_read_ready_p (udp, endpoint))
     {
@@ -1102,6 +1102,9 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
 
         udp_endpoint_fifo_read (udp, endpoint);
         
+        if (pep->remaining == 0)
+            udp_endpoint_interrupt_disable (udp, endpoint);
+
         if (!pep->buffered)
         {
             /* The FIFO buffer is empty so tell controller.  */
@@ -1109,10 +1112,7 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
         }
 
         if (pep->remaining == 0)
-        {
             udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
-            udp_endpoint_interrupt_disable (udp, endpoint);
-        }
     }
     else
     {
@@ -1446,9 +1446,9 @@ udp_endpoint_read (udp_t udp, udp_ep_t endpoint, void *buffer, udp_size_t len)
         timeout--;
         if (!timeout || ! udp_configured_p (udp))
         {
+            udp_endpoint_interrupt_disable (udp, endpoint);
             udp_endpoint_error (udp, endpoint, UDP_ERROR_READ_TIMEOUT);
             udp_endpoint_complete (udp, endpoint, UDP_STATUS_TIMEOUT);
-            udp_endpoint_interrupt_disable (udp, endpoint);
             break;
         }
         DELAY_US (1);
