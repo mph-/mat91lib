@@ -289,10 +289,6 @@ UDP_CSR_CLR(udp_ep_t endpoint, uint32_t flags)
 
 #else
 
-// Bitmap for all status bits in CSR that are not effected by a value 1.
-#define REG_NO_EFFECT_1_ALL UDP_CSR_RX_DATA_BK0 | UDP_CSR_RX_DATA_BK1 | UDP_CSR_STALLSENT | UDP_CSR_RXSETUP | UDP_CSR_TXCOMP
-
-
 static inline void 
 UDP_CSR_SET (udp_ep_t endpoint, uint32_t flags)
 {
@@ -300,7 +296,8 @@ UDP_CSR_SET (udp_ep_t endpoint, uint32_t flags)
     volatile uint32_t reg; 
 
     reg = UDP->UDP_CSR[endpoint]; 
-    reg |= REG_NO_EFFECT_1_ALL; 
+    reg |= UDP_CSR_RX_DATA_BK0 | UDP_CSR_RX_DATA_BK1
+        | UDP_CSR_STALLSENT | UDP_CSR_RXSETUP | UDP_CSR_TXCOMP;
     reg |= flags; 
     UDP->UDP_CSR[endpoint] = reg; 
     for (i = 0; i < 15; i++)
@@ -315,7 +312,8 @@ UDP_CSR_CLR (udp_ep_t endpoint, uint32_t flags)
     volatile uint32_t reg; 
 
     reg = UDP->UDP_CSR[endpoint]; 
-    reg |= REG_NO_EFFECT_1_ALL; 
+    reg |= UDP_CSR_RX_DATA_BK0 | UDP_CSR_RX_DATA_BK1 
+        | UDP_CSR_STALLSENT | UDP_CSR_RXSETUP | UDP_CSR_TXCOMP;
     reg &= ~flags; 
     UDP->UDP_CSR[endpoint] = reg; 
     for (i = 0; i < 15; i++)
@@ -747,14 +745,14 @@ udp_rx_flag_clear (udp_t udp, udp_ep_t endpoint)
     udp_ep_info_t *pep = &udp->eps[endpoint];
     uint32_t mask = pep->bank == 0 ? UDP_CSR_RX_DATA_BK0 : UDP_CSR_RX_DATA_BK1;
 
-    /* Clear previous bank flag, BK0 or BK1.  When we set this zero we
-       tell the controller that we have read all the data in the
-       specified bank.  */
+    /* Clear bank flag, BK0 or BK1.  When we set this zero we tell the
+       controller that we have read all the data from the associated
+       bank.  */
     UDP_CSR_CLR (endpoint, mask);
 
-    // Swap bank if in dual-fifo mode
+    /* Update which bank we expect data from.  */
     if (pep->num_fifo > 1)
-        pep->bank == 1 - pep->bank;
+        pep->bank = 1 - pep->bank;
 }
 
 
