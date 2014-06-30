@@ -24,7 +24,9 @@ extern char __bss_end__;        /** End of uninitialised variables.  */
 /* TODO: reallocate vector table into SRAM.  */
 
 
-extern int main (void);
+int main (void);
+
+void __libc_init_array (void);
 
 void reset (void)
     __attribute__ ((alias ("_reset_handler")));
@@ -42,7 +44,8 @@ void _nmi_handler (void)
 
 void _hardfault_handler (void)
 {
-    /* This is due to an error during exception processing.  */
+    /* This is due to an error during exception processing. 
+       The reason can be found in SCB_HFSR.  */
     _unexpected_handler ();
 }
 
@@ -170,6 +173,9 @@ void _reset_handler (void)
 
     /* Set up clocks, etc.  */
     mcu_init ();
+
+    /* Initialise C library.  */
+    __libc_init_array ();
     
     main ();
     
