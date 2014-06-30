@@ -273,7 +273,7 @@ UDP_CSR_SET (udp_ep_t endpoint, uint32_t flags)
 {
     int i;
 
-    while (UDP->UDP_CSR[endpoint] & flags != flags)
+    while ((UDP->UDP_CSR[endpoint] & flags) != flags)
         UDP->UDP_CSR[endpoint] |= flags;
 }
 
@@ -1559,7 +1559,7 @@ udp_enable (udp_t udp)
 
 #ifdef __SAM7__
     // Set the PLL USB divider
-    PMC->CKGR_PLLR |= AT91C_CKGR_USBDIV_1;
+    PMC->PMC_PLLR |= AT91C_CKGR_USBDIV_1;
 #else
     /* Note, this clears USBS to select PLLA.  */
     PMC->PMC_USB = PMC_USB_USBDIV ((int)(F_PLL / 48e6 + 0.5) - 1);
