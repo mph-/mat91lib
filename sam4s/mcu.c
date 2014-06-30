@@ -246,6 +246,8 @@ mcu_init (void)
     irq_id_t id;
     int i;
 
+    EFC0->EEFC_FMR = EEFC_FMR_FWS (5);
+
     /* Disable all interrupts to be sure when debugging.  */
     for (i = 0; i < 8; i++)
         NVIC->ICER[i] = ~0;
