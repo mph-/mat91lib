@@ -141,15 +141,12 @@ irq_handler_t exception_table[] =
 };
 
 
-/* TEMPORARY PATCH FOR SCB */
-#define SCB_VTOR_TBLBASE_Pos               29                            /*!< SCB VTOR: TBLBASE Position */
-#define SCB_VTOR_TBLBASE_Msk               (1UL << SCB_VTOR_TBLBASE_Pos) /*!< SCB VTOR: TBLBASE Mask */
-
-
 void _reset_handler (void)
 {
     char *src;
     char *dst;
+
+    SCB->VTOR = 0;
 
     /* There's not much frigging around to set things up; the initial
        stack pointer is loaded from the vector table.  At this point
