@@ -10,18 +10,11 @@
 #include "bits.h"
 
 
-
-/* Init and configure, still need to be enabled after calling this.  */
-void
-ssc_init (const ssc_cfg_t *cfg)
-{
-    ssc_config (cfg);
-    ssc_enable ();
-}
+ssc_t ssc_dev;
 
 
 /* Set the clock divider.  */
-void
+static void
 ssc_set_clock_div (ssc_clock_div_t clockdiv) 
 {
    SSC->SSC_CMR = clockdiv;
@@ -32,112 +25,107 @@ ssc_set_clock_div (ssc_clock_div_t clockdiv)
 static uint8_t
 ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module) 
 {
-    /* Check if the config exists (by way of null pointer check. FIXME).  */
-    if (cfg)
-    {
-        /* Select options to apply to clock mode register.  */
-        uint32_t cmr;
-        uint32_t fmr;
-
-        cmr = (cfg->period << 24) | (cfg->delay << 16) | cfg->start_mode
-            | cfg->clock_sampling_edge;
-
-
-        switch (cfg->clock_select)
-        {
-        case SSC_CLOCK_INTERNAL:
-            // Use internally generated clock
-            break;
-
-        case SSC_CLOCK_OTHER:
-            // Use clock from other module
-            cmr |= SSC_RCMR_CKS_TK;
-            break;
-
-        case SSC_CLOCK_PIN:
-            // Use clock from clock pin
-            cmr |= SSC_RCMR_CKS_RK;
-            break;
-        }
-
-        switch (cfg->clock_out_mode)
-        {
-        case SSC_CLOCK_INPUT:
-            // External clock - no clock control
-            cmr |= SSC_RCMR_CKO_NONE;
-            break;
-
-        case SSC_CLOCK_CONTINUOUS:
-            // Continuous clock output
-            cmr |= SSC_RCMR_CKO_CONTINUOUS;
-            break;
-
-        case SSC_CLOCK_TRANSFER:
-            // Clock output only for data transfers
-            cmr |= SSC_RCMR_CKO_TRANSFER;
-            break;
-        }
-
-        switch (cfg->clock_gate_mode)
-        {
-        case SSC_CLOCK_GATE_NONE:
-            break;
-
-        case SSC_CLOCK_GATE_RF_LOW:
-            cmr |= 1 << 7;
-            break;
-            
-        case SSC_CLOCK_GATE_RF_HIGH:
-            cmr |= 2 << 7;
-            break;
-        }
+    if (!cfg)
+        return 0;
         
-        /* Select options to apply to frame mode register FIXME magic
-           numbers.  */
-        fmr = cfg->fsos_mode | (cfg->fslen << 16)
-            | ((cfg->words_per_frame-1) << 8) | (cfg->word_size - 1); 
-      
-
-        switch (cfg->fsedge)
-        {
-        case SSC_FSEDGE_POSITIVE:
-            break;
-
-        case SSC_FSEDGE_NEGATIVE:
-            fmr |= SSC_RFMR_FSEDGE;
-            break;
+    /* Select options to apply to clock mode register.  */
+    uint32_t cmr;
+    uint32_t fmr;
+    
+    cmr = (cfg->period << 24) | (cfg->delay << 16) | cfg->start_mode
+        | cfg->clock_sampling_edge;
+    
+    
+    switch (cfg->clock_select)
+    {
+    case SSC_CLOCK_INTERNAL:
+        // Use internally generated clock
+        break;
+        
+    case SSC_CLOCK_OTHER:
+        // Use clock from other module
+        cmr |= SSC_RCMR_CKS_TK;
+        break;
+        
+    case SSC_CLOCK_PIN:
+        // Use clock from clock pin
+        cmr |= SSC_RCMR_CKS_RK;
+        break;
         }
-
-        if (cfg->msb_first)
-            fmr |= SSC_RFMR_MSBF;
-
-        /* Apply the configuration to the appropriate module.  */
-        if (module == SSC_TX)
-        {
-            if (cfg->td_default)
-                fmr |= SSC_TFMR_DATDEF;
-
-            SSC->SSC_TFMR = fmr | cfg->sync_data_enable;
-            SSC->SSC_TCMR = cmr;
-            return 0;
-        }
-        else 
-        {
-            if (cfg->loop_mode)
-                fmr |= SSC_RFMR_LOOP;
-
-            SSC->SSC_RFMR = fmr;
-            SSC->SSC_RCMR = cmr | cfg->stop_mode;
-            return 0;
-        }
+    
+    switch (cfg->clock_out_mode)
+    {
+    case SSC_CLOCK_INPUT:
+        // External clock - no clock control
+        cmr |= SSC_RCMR_CKO_NONE;
+        break;
+        
+    case SSC_CLOCK_CONTINUOUS:
+        // Continuous clock output
+        cmr |= SSC_RCMR_CKO_CONTINUOUS;
+        break;
+        
+    case SSC_CLOCK_TRANSFER:
+        // Clock output only for data transfers
+        cmr |= SSC_RCMR_CKO_TRANSFER;
+        break;
     }
-    else
-        return 2;
+    
+    switch (cfg->clock_gate_mode)
+    {
+    case SSC_CLOCK_GATE_NONE:
+        break;
+        
+    case SSC_CLOCK_GATE_RF_LOW:
+        cmr |= 1 << 7;
+        break;
+        
+    case SSC_CLOCK_GATE_RF_HIGH:
+        cmr |= 2 << 7;
+        break;
+    }
+    
+    fmr = cfg->fsos_mode | (cfg->fslen << 16)
+        | ((cfg->words_per_frame-1) << 8) | (cfg->word_size - 1); 
+    
+
+    switch (cfg->fsedge)
+    {
+    case SSC_FSEDGE_POSITIVE:
+        break;
+        
+    case SSC_FSEDGE_NEGATIVE:
+        fmr |= SSC_RFMR_FSEDGE;
+        break;
+    }
+    
+    if (cfg->msb_first)
+        fmr |= SSC_RFMR_MSBF;
+    
+    /* Apply the configuration to the appropriate module.  */
+    if (module == SSC_TX)
+    {
+        if (cfg->td_default)
+            fmr |= SSC_TFMR_DATDEF;
+        
+        SSC->SSC_TFMR = fmr | cfg->sync_data_enable;
+        SSC->SSC_TCMR = cmr;
+    }
+    else 
+    {
+        if (cfg->loop_mode)
+            fmr |= SSC_RFMR_LOOP;
+        
+        SSC->SSC_RFMR = fmr;
+        SSC->SSC_RCMR = cmr | cfg->stop_mode;
+    }
+    return 1;
 }
 
 
 /* Configure the ssc peripheral, null pointer = don't use a module.  */
-void ssc_config (const ssc_cfg_t *cfg) 
+static void
+ssc_config (ssc_t *ssc, const ssc_cfg_t *cfg) 
 {
     /* Enable the peripheral clock.  */
     mcu_pmc_enable (ID_SSC);
@@ -145,22 +133,21 @@ void ssc_config (const ssc_cfg_t *cfg)
     /* Set the clock divider.  */
     ssc_set_clock_div (cfg->clock_div);
     
-    /* Configure the reciever module if the configuration exists.  */
-    ssc_module_config (cfg->rx_cfg, 0);
+    /* Configure the receiver module if the configuration exists.  */
+    ssc_module_config (cfg->rx_cfg, SSC_RX);
     
     /* Configure the transmit module if the configuration exists.  */
-    ssc_module_config (cfg->tx_cfg, 1);
-    
+    ssc_module_config (cfg->tx_cfg, SSC_TX);
 }
 
 
 /* Read data from the rx buffer.  */
 ssc_data_t
-ssc_read_data (bool wait) 
+ssc_read_data (ssc_t *ssc, bool wait) 
 {
     if (wait)
     {
-        while (!ssc_buffer_ready_p (SSC_RX))
+        while (!ssc_buffer_ready_p (ssc, SSC_RX))
             continue;
     }
     
@@ -171,7 +158,7 @@ ssc_read_data (bool wait)
 
 /* Check if a buffer (tx or rx) is ready (empty or full respectively).  */
 bool
-ssc_buffer_ready_p (ssc_module_t tx_rx)
+ssc_buffer_ready_p (ssc_t *ssc, ssc_module_t tx_rx)
 {
     unsigned int mask = 0;
 
@@ -195,7 +182,7 @@ ssc_buffer_ready_p (ssc_module_t tx_rx)
 
 /* enable a SSC module*/
 void
-ssc_module_enable (ssc_module_t tx_rx) 
+ssc_module_enable (ssc_t *ssc, ssc_module_t tx_rx) 
 {
     switch (tx_rx) 
     {
@@ -220,7 +207,7 @@ ssc_module_enable (ssc_module_t tx_rx)
 
 /* Disable a SSC module.  */
 void
-ssc_module_disable (ssc_module_t tx_rx) 
+ssc_module_disable (ssc_t *ssc, ssc_module_t tx_rx) 
 {
     switch (tx_rx)
     {
@@ -245,26 +232,26 @@ ssc_module_disable (ssc_module_t tx_rx)
 
 /* Disable all of the modules.  */
 void
-ssc_disable (void)
+ssc_disable (ssc_t *ssc)
 {
-    ssc_module_disable (SSC_TX);
-    ssc_module_disable (SSC_RX);
+    ssc_module_disable (ssc, SSC_TX);
+    ssc_module_disable (ssc, SSC_RX);
 }
 
 
 /* Enable all of the modules.  */
 void
-ssc_enable (void)
+ssc_enable (ssc_t *ssc)
 {
-    ssc_module_enable (SSC_TX);
-    ssc_module_enable (SSC_RX);
+    ssc_module_enable (ssc, SSC_TX);
+    ssc_module_enable (ssc, SSC_RX);
 }
 
 
 
 /* Read from the receive holding register.  */
 ssc_data_t
-ssc_read (bool wait)
+ssc_read (ssc_t *ssc, bool wait)
 {
    ssc_data_t temp_data = 0;
    
@@ -277,8 +264,23 @@ ssc_read (bool wait)
 
 /* Write to the transmit buffer.  */
 void
-ssc_write (ssc_data_t data, bool wait)
+ssc_write (ssc_t *ssc, ssc_data_t data, bool wait)
 {
     SSC->SSC_THR = data;
+}
+
+
+/* Init and configure, still need to be enabled after calling this.  */
+ssc_t *
+ssc_init (const ssc_cfg_t *cfg)
+{
+    ssc_t *ssc;
+
+    ssc = &ssc_dev;
+
+    ssc_config (ssc, cfg);
+    ssc_enable (ssc);
+
+    return ssc;
 }
 

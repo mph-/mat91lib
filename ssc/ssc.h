@@ -34,16 +34,24 @@ typedef uint32_t ssc_data_t;
  */
 #include "ssc_module.h"
 
+
+typedef struct 
+{
+    
+} ssc_t;
+
+
+
 /* SSC configuration structure, allows tx and rx modules to be independently
  * configured.
  */
 typedef struct 
 {
-    // Transmitter configuration, null pointer = won't be configured
-    ssc_module_cfg_t  *tx_cfg; // From ssc_module.h
+    // Transmitter configuration
+    ssc_module_cfg_t *tx_cfg;
     
-    // Receiver configuration, null pointer = disabled
-    ssc_module_cfg_t  *rx_cfg; // From ssc_module.h
+    // Receiver configuration
+    ssc_module_cfg_t *rx_cfg;
     
     // Clock Div, multiplied by 2 before dividing, 0 = won't be configured
     ssc_clock_div_t clock_div;
@@ -61,72 +69,42 @@ typedef struct
    null. 
    @param pointer to the ssc configuration structure to apply
  */
-void
+ssc_t *
 ssc_init (const ssc_cfg_t *);
 
 
 /** Enable all the modules.
  */
 void
-ssc_enable (void);
+ssc_enable (ssc_t *ssc);
 
 
 /** Disable all the modules
  */
 void
-ssc_disable (void);
-
-
-void
-ssc_config (const ssc_cfg_t *);
-
-
-/** Configure clocks
-   Applies only the clock configuration options (only changes the CMR register)
-   @param configuration, either for tx or rx module
-*/
-void
-ssc_clock_cfg (ssc_module_cfg_t *);
-
-
-
-/** Configure frame
-   Applies only the frame configuration options (only changes the FMR register)
-   @param configuration for either the tx or rx module
-*/
-void
-ssc_frame_cfg (ssc_module_cfg_t *);
-
-
-/** Set the clock divider
-   @param 12-bit clock divider. 0 = internal ssc clock disabled, 1-4095 the
-   internal ssc clock is enabled with a frequency of (MCK/2*div), where div is
-   the divider supplied here
- */
-void
-ssc_set_clock_div (ssc_clock_div_t);
+ssc_disable (ssc_t *ssc);
 
 
 /** Enable either the tx or the rx module of the SSC
    @param the module to enable
  */
 void 
-ssc_enable_module (ssc_module_t);
+ssc_enable_module (ssc_t *ssc, ssc_module_t module);
 
 
 /** Disable either the tx or the rx module of the SSC
    @param the module to disable
  */
 void 
-ssc_disable_module (ssc_module_t);
+ssc_disable_module (ssc_t *ssc, ssc_module_t module);
 
 
-/** Check weather the tx/rx buffer is ready for read/write TODO (test)
+/** Check wether the tx/rx buffer is ready for read/write TODO (test)
    @param module to check (SSC_TX or SSC_RX)
    @return true = ready, false = not ready
  */
 bool
-ssc_buffer_ready_p (ssc_module_t);
+ssc_buffer_ready_p (ssc_t *ssc, ssc_module_t module);
 
 
 /** Read the data in the rx buffer TODO (test)
@@ -134,7 +112,7 @@ ssc_buffer_ready_p (ssc_module_t);
    @param boolean wait for buffer ready, true = wait, false = don't wait
  */
 ssc_data_t
-ssc_read (bool wait);
+ssc_read (ssc_t *ssc, bool wait);
 
 
 /** Write to the tx buffer TODO (test)
@@ -142,7 +120,7 @@ ssc_read (bool wait);
    @param boolean wait for ready, true = wait, false = don't wait
  */
 void
-ssc_write (ssc_data_t data, bool wait);
+ssc_write (ssc_t *ssc, ssc_data_t data, bool wait);
 
 #endif //SSC_H
 

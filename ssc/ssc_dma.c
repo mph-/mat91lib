@@ -90,7 +90,7 @@ ssc_dma_read_disable (void)
 
 
 void
-ssc_dma_write_init (void* buffer, uint16_t size)
+ssc_dma_write_init (void *buffer, uint16_t size)
 {
     ssc_dma_write_disable ();
 
@@ -104,7 +104,7 @@ ssc_dma_write_init (void* buffer, uint16_t size)
 }
 
 void
-ssc_dma_read_init (void* buffer, uint16_t size)
+ssc_dma_read_init (void *buffer, uint16_t size)
 {
     ssc_dma_read_disable ();
 
@@ -119,7 +119,7 @@ ssc_dma_read_init (void* buffer, uint16_t size)
 
 
 void
-ssc_dma_write_next (void*buffer, uint16_t size)
+ssc_dma_write_next (void *buffer, uint16_t size)
 {
     PDC_SSC->PERIPH_TNPR = (uint32_t) buffer;
     PDC_SSC->PERIPH_TNCR = size;
@@ -137,16 +137,16 @@ ssc_dma_read_next (void *buffer, uint16_t size)
 void
 ssc_dma_init (void *txbuffer, void *rxbuffer, uint16_t size)
 {
-    ssc_dma_read_init ( rxbuffer, size);
-    ssc_dma_write_init ( txbuffer, size);
+    ssc_dma_read_init (rxbuffer, size);
+    ssc_dma_write_init (txbuffer, size);
 }
 
 
 void
 ssc_dma_next (void *txbuffer, void *rxbuffer, uint16_t size)
 {
-    ssc_dma_read_next ( rxbuffer, size);
-    ssc_dma_write_next ( txbuffer, size);
+    ssc_dma_read_next (rxbuffer, size);
+    ssc_dma_write_next (txbuffer, size);
 }
 
 

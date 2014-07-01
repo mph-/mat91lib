@@ -65,7 +65,7 @@ bssc_init (bssc_t *dev, const ssc_cfg_t *cfg,
     // Enable interrupts globally
     irq_enable (ID_SSC);
     
-    dev->ssc = *cfg;
+    dev->cfg = *cfg;
     dev->buffer = buffer;
 }
 
