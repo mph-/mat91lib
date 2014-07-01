@@ -12,12 +12,12 @@
 #define SSC_MODULE_H
 
 /* Length and other primitive typedefs.  */
-typedef uint16_t  ssc_period_t;    // RF signal period
-typedef uint8_t   ssc_delay_t;     // Delay between start & receive
-typedef uint8_t   ssc_datalen_t;   // Data word length
-typedef uint8_t   ssc_fslen_t;     // Framesync Length
-typedef uint8_t   ssc_datanum_t;   // Data words per frame
-typedef uint32_t  ssc_data_t;      // SSC data type - up to 32 bits per word
+typedef uint16_t  ssc_period_t;      // RF signal period
+typedef uint8_t   ssc_delay_t;       // Delay between start & receive
+typedef uint8_t   ssc_data_length_t; // Data word length
+typedef uint8_t   ssc_fs_length_t;   // Framesync Length
+typedef uint8_t   ssc_data_num_t;     // Data words per frame
+typedef uint32_t  ssc_data_t;        // SSC data type - up to 32 bits per word
 
 
 
@@ -26,7 +26,7 @@ typedef enum
 {
     SSC_CLOCK_FALLING = 0x0,         // Data are sampled/shifted on clock falling edge
     SSC_CLOCK_RISING  = SSC_RCMR_CKI // Data are sampled/shifted on clock rising edge
-} ssc_clock_edge_sample_t;
+} ssc_clock_edge_t;
 
 
 
@@ -88,20 +88,20 @@ typedef enum
 /* Frame sync output mode.  */
 typedef enum 
 {
-    SSC_FSOS_NONE       = SSC_RFMR_FSOS_NONE,      // RF/TF pin is input
-    SSC_FSOS_NEGATIVE   = SSC_RFMR_FSOS_NEGATIVE,  // Negative pulse
-    SSC_FSOS_POSITIVE   = SSC_RFMR_FSOS_POSITIVE,  // Positive pulse
-    SSC_FSOS_DRIVE_LOW  = SSC_RFMR_FSOS_LOW,       // Driven low during transfer
-    SSC_FSOS_DRIVE_HIGH = SSC_RFMR_FSOS_HIGH,      // Driven high during transfer
-    SSC_FSOS_TOGGLE     = SSC_RFMR_FSOS_TOGGLING   // Toggle to begin transfer
-}  ssc_fsos_mode_t;
+    SSC_FS_INPUT      = SSC_RFMR_FSOS_NONE,      // RF/TF pin is input
+    SSC_FS_NEGATIVE   = SSC_RFMR_FSOS_NEGATIVE,  // Negative pulse
+    SSC_FS_POSITIVE   = SSC_RFMR_FSOS_POSITIVE,  // Positive pulse
+    SSC_FS_DRIVE_LOW  = SSC_RFMR_FSOS_LOW,       // Driven low during transfer
+    SSC_FS_DRIVE_HIGH = SSC_RFMR_FSOS_HIGH,      // Driven high during transfer
+    SSC_FS_TOGGLE     = SSC_RFMR_FSOS_TOGGLING   // Toggle to begin transfer
+}  ssc_fs_mode_t;
 
 
 /* Frame sync edge detect which generates interrupts.  */
 typedef enum 
 {
     SSC_FSEDGE_POSITIVE, SSC_FSEDGE_NEGATIVE
-} ssc_fsedge_t;
+} ssc_fs_edge_t;
 
 
 /* What happens when the frame sync signal happens.  */
@@ -117,17 +117,17 @@ typedef struct
 {
    ssc_period_t         period;   
    ssc_delay_t          delay;
-   ssc_datalen_t        word_size;
-   ssc_fslen_t          fslen;
-   ssc_datanum_t        words_per_frame;
-   ssc_clock_edge_sample_t clock_sampling_edge;
+   ssc_data_length_t    data_length;
+   ssc_fs_length_t      fs_length;
+   ssc_data_num_t       data_num;
+   ssc_clock_edge_t     clock_edge;
    ssc_stop_t           stop_mode;
    ssc_clock_select_t   clock_select;
    ssc_clock_out_mode_t clock_out_mode;
    ssc_clock_gate_mode_t clock_gate_mode;
    ssc_start_mode_t     start_mode;
-   ssc_fsos_mode_t      fsos_mode;
-   ssc_fsedge_t         fsedge;
+   ssc_fs_mode_t        fs_mode;
+   ssc_fs_edge_t        fs_edge;
    bool                 loop_mode;
    bool                 msb_first;
    bool                 td_default;

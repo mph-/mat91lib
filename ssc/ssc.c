@@ -47,7 +47,7 @@ ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module)
         return 0;
         
     cmr = (cfg->period << 24) | (cfg->delay << 16) | cfg->start_mode
-        | cfg->clock_sampling_edge;
+        | cfg->clock_edge;
     
     switch (cfg->clock_select)
     {
@@ -98,11 +98,11 @@ ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module)
         break;
     }
     
-    fmr = cfg->fsos_mode | (cfg->fslen << 16)
-        | ((cfg->words_per_frame-1) << 8) | (cfg->word_size - 1); 
+    fmr = cfg->fs_mode | (cfg->fs_length << 16)
+        | ((cfg->data_num - 1) << 8) | (cfg->data_length - 1); 
     
 
-    switch (cfg->fsedge)
+    switch (cfg->fs_edge)
     {
     case SSC_FSEDGE_POSITIVE:
         break;
@@ -171,7 +171,7 @@ ssc_module_ready_p (ssc_t *ssc, ssc_module_t tx_rx)
         break;
     }
     
-    return ((mask & SSC->SSC_SR) != 0);
+    return (mask & SSC->SSC_SR) != 0;
 }
 
 
