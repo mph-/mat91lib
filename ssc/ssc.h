@@ -34,18 +34,19 @@ typedef uint32_t ssc_data_t;
  */
 #include "ssc_module.h"
 
-/* SSC configuration structure, allows tx and rx modules to be independantly
+/* SSC configuration structure, allows tx and rx modules to be independently
  * configured.
  */
-typedef struct {
-   // Transmitter configuration, null pointer = won't be configured
-   ssc_module_cfg_t  *tx_cfg; // From ssc_module.h
-
-   // Receiver configuration, null pointer = disabled
-   ssc_module_cfg_t  *rx_cfg; // From ssc_module.h
-
-   // Clock Div, multiplied by 2 before dividing, 0 = won't be configured
-   ssc_clock_div_t   clock_div;
+typedef struct 
+{
+    // Transmitter configuration, null pointer = won't be configured
+    ssc_module_cfg_t  *tx_cfg; // From ssc_module.h
+    
+    // Receiver configuration, null pointer = disabled
+    ssc_module_cfg_t  *rx_cfg; // From ssc_module.h
+    
+    // Clock Div, multiplied by 2 before dividing, 0 = won't be configured
+    ssc_clock_div_t clock_div;
 } ssc_cfg_t;
 
 
@@ -68,6 +69,7 @@ ssc_init (const ssc_cfg_t *);
  */
 void
 ssc_enable (void);
+
 
 /** Disable all the modules
  */
@@ -124,7 +126,7 @@ ssc_disable_module (ssc_module_t);
    @return true = ready, false = not ready
  */
 bool
-ssc_buffer_ready (ssc_module_t);
+ssc_buffer_ready_p (ssc_module_t);
 
 
 /** Read the data in the rx buffer TODO (test)
@@ -132,7 +134,7 @@ ssc_buffer_ready (ssc_module_t);
    @param boolean wait for buffer ready, true = wait, false = don't wait
  */
 ssc_data_t
-ssc_read (bool);
+ssc_read (bool wait);
 
 
 /** Write to the tx buffer TODO (test)
@@ -140,7 +142,7 @@ ssc_read (bool);
    @param boolean wait for ready, true = wait, false = don't wait
  */
 void
-ssc_write(ssc_data_t, bool);
+ssc_write (ssc_data_t data, bool wait);
 
 #endif //SSC_H
 

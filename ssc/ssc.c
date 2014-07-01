@@ -39,12 +39,12 @@ ssc_module_config (ssc_module_cfg_t *cfg)
         uint32_t cmr;
         uint32_t fmr;
 
-
         cmr = (cfg->period << 24) | (cfg->delay << 16) | cfg->start_mode
             | cfg->clock_select | cfg->clock_out_mode
             | cfg->clock_gate_mode | cfg->clock_sampling_edge;
         
-        /* Select options to apply to frame mode register FIXME magic numbers*/
+        /* Select options to apply to frame mode register FIXME magic
+           numbers.  */
         fmr = cfg->fsedge_mode | cfg->fsos_mode | (cfg->fslen << 16)
             | ((cfg->words_per_frame-1)<<8) | (cfg->word_size-1) | cfg->msb; 
         
@@ -55,7 +55,7 @@ ssc_module_config (ssc_module_cfg_t *cfg)
             SSC->SSC_TCMR = cmr;
             return 0;
         }
-        else if ((cfg->tx_or_rx) == SSC_RX)
+        else if (cfg->tx_or_rx == SSC_RX)
         {
             SSC->SSC_RFMR = fmr | cfg->loop;
             SSC->SSC_RCMR = cmr | cfg->stop_mode;
@@ -87,13 +87,13 @@ void ssc_config (const ssc_cfg_t *cfg)
 }
 
 
-/* read data from the rx buffer*/
+/* Read data from the rx buffer.  */
 ssc_data_t
 ssc_read_data (bool wait) 
 {
     if (wait)
     {
-        while (!ssc_buffer_ready (SSC_RX))
+        while (!ssc_buffer_ready_p (SSC_RX))
             continue;
     }
     
@@ -102,9 +102,9 @@ ssc_read_data (bool wait)
 
 
 
-/* check if a buffer (tx or rx) is ready (empty or full respectively).  */
+/* Check if a buffer (tx or rx) is ready (empty or full respectively).  */
 bool
-ssc_buffer_ready (ssc_module_t tx_rx)
+ssc_buffer_ready_p (ssc_module_t tx_rx)
 {
     unsigned int mask = 0;
 
