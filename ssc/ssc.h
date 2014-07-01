@@ -111,16 +111,16 @@ ssc_buffer_ready_p (ssc_t *ssc, ssc_module_t module);
    @return the data read from the buffer
    @param boolean wait for buffer ready, true = wait, false = don't wait
  */
-ssc_data_t
-ssc_read (ssc_t *ssc, bool wait);
+uint16_t
+ssc_read (ssc_t *ssc, void *buffer, uint16_t length);
 
 
 /** Write to the tx buffer TODO (test)
    @param the data to write
    @param boolean wait for ready, true = wait, false = don't wait
  */
-void
-ssc_write (ssc_t *ssc, ssc_data_t data, bool wait);
+uint16_t
+ssc_write (ssc_t *ssc, void *buffer, uint16_t length);
 
 #endif //SSC_H
 

@@ -141,21 +141,6 @@ ssc_config (ssc_t *ssc, const ssc_cfg_t *cfg)
 }
 
 
-/* Read data from the rx buffer.  */
-ssc_data_t
-ssc_read_data (ssc_t *ssc, bool wait) 
-{
-    if (wait)
-    {
-        while (!ssc_buffer_ready_p (ssc, SSC_RX))
-            continue;
-    }
-    
-    return SSC->SSC_RHR;
-}
-
-
-
 /* Check if a buffer (tx or rx) is ready (empty or full respectively).  */
 bool
 ssc_buffer_ready_p (ssc_t *ssc, ssc_module_t tx_rx)
@@ -248,25 +233,41 @@ ssc_enable (ssc_t *ssc)
 }
 
 
-
-/* Read from the receive holding register.  */
-ssc_data_t
-ssc_read (ssc_t *ssc, bool wait)
+/* Read data from the rx buffer.  */
+uint16_t
+ssc_read (ssc_t *ssc, void *buffer, uint16_t length)
 {
-   ssc_data_t temp_data = 0;
-   
-   if (!wait)
-       temp_data = SSC->SSC_RHR;
-   
-   return temp_data;
+    uint8_t *dst = buffer;
+    int i;
+
+    for (i = 0; i < length; i++)
+    {
+        while (!ssc_buffer_ready_p (ssc, SSC_RX))
+            continue;
+        
+        *dst++ = SSC->SSC_RHR;
+    }
+    
+    return length;
 }
 
 
 /* Write to the transmit buffer.  */
-void
-ssc_write (ssc_t *ssc, ssc_data_t data, bool wait)
+uint16_t
+ssc_write (ssc_t *ssc, void *buffer, uint16_t length)
 {
-    SSC->SSC_THR = data;
+    uint8_t *src = buffer;
+    int i;
+
+    for (i = 0; i < length; i++)
+    {
+        while (!ssc_buffer_ready_p (ssc, SSC_RX))
+            continue;
+
+        SSC->SSC_THR = *src++;        
+    }
+    
+    return length;
 }
 
 
