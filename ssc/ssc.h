@@ -37,7 +37,11 @@ typedef uint32_t ssc_data_t;
 
 typedef struct 
 {
+    // Transmitter configuration
+    ssc_module_cfg_t *tx;
     
+    // Receiver configuration
+    ssc_module_cfg_t *rx;
 } ssc_t;
 
 
@@ -48,10 +52,10 @@ typedef struct
 typedef struct 
 {
     // Transmitter configuration
-    ssc_module_cfg_t *tx_cfg;
+    ssc_module_cfg_t *tx;
     
     // Receiver configuration
-    ssc_module_cfg_t *rx_cfg;
+    ssc_module_cfg_t *rx;
     
     // Clock Div, multiplied by 2 before dividing, 0 = won't be configured
     ssc_clock_div_t clock_div;
@@ -72,20 +76,6 @@ ssc_enable (ssc_t *ssc);
  */
 void
 ssc_disable (ssc_t *ssc);
-
-
-/** Enable either the tx or the rx module of the SSC
-   @param the module to enable
- */
-void 
-ssc_enable_module (ssc_t *ssc, ssc_module_t module);
-
-
-/** Disable either the tx or the rx module of the SSC
-   @param the module to disable
- */
-void 
-ssc_disable_module (ssc_t *ssc, ssc_module_t module);
 
 
 bool

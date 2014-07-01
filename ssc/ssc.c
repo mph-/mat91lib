@@ -25,16 +25,15 @@ ssc_set_clock_div (ssc_clock_div_t clockdiv)
 static uint8_t
 ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module) 
 {
-    if (!cfg)
-        return 0;
-        
     /* Select options to apply to clock mode register.  */
     uint32_t cmr;
     uint32_t fmr;
     
+    if (!cfg)
+        return 0;
+        
     cmr = (cfg->period << 24) | (cfg->delay << 16) | cfg->start_mode
         | cfg->clock_sampling_edge;
-    
     
     switch (cfg->clock_select)
     {
@@ -134,10 +133,10 @@ ssc_config (ssc_t *ssc, const ssc_cfg_t *cfg)
     ssc_set_clock_div (cfg->clock_div);
     
     /* Configure the receiver module if the configuration exists.  */
-    ssc_module_config (cfg->rx_cfg, SSC_RX);
+    ssc_module_config (cfg->rx, SSC_RX);
     
     /* Configure the transmit module if the configuration exists.  */
-    ssc_module_config (cfg->tx_cfg, SSC_TX);
+    ssc_module_config (cfg->tx, SSC_TX);
 }
 
 
@@ -169,7 +168,6 @@ ssc_read_ready_p (ssc_t *ssc)
 }
 
 
-
 bool
 ssc_write_ready_p (ssc_t *ssc)
 {
@@ -177,9 +175,8 @@ ssc_write_ready_p (ssc_t *ssc)
 }
 
 
-
-/* enable a SSC module*/
-void
+/* Enable an SSC module.  */
+static void
 ssc_module_enable (ssc_t *ssc, ssc_module_t tx_rx) 
 {
     switch (tx_rx) 
@@ -203,8 +200,8 @@ ssc_module_enable (ssc_t *ssc, ssc_module_t tx_rx)
 }
 
 
-/* Disable a SSC module.  */
-void
+/* Disable an SSC module.  */
+static void
 ssc_module_disable (ssc_t *ssc, ssc_module_t tx_rx) 
 {
     switch (tx_rx)
@@ -232,17 +229,23 @@ ssc_module_disable (ssc_t *ssc, ssc_module_t tx_rx)
 void
 ssc_disable (ssc_t *ssc)
 {
-    ssc_module_disable (ssc, SSC_TX);
-    ssc_module_disable (ssc, SSC_RX);
-}
+    if (ssc->tx)
+        ssc_module_disable (ssc, SSC_TX);
+
+    if (ssc->rx)
+        ssc_module_disable (ssc, SSC_RX);
+} 
 
 
 /* Enable all of the modules.  */
 void
 ssc_enable (ssc_t *ssc)
 {
-    ssc_module_enable (ssc, SSC_TX);
-    ssc_module_enable (ssc, SSC_RX);
+    if (ssc->tx)
+        ssc_module_enable (ssc, SSC_TX);
+
+    if (ssc->rx)
+        ssc_module_enable (ssc, SSC_RX);
 }
 
 
@@ -293,6 +296,10 @@ ssc_init (const ssc_cfg_t *cfg)
     ssc = &ssc_dev;
 
     ssc_config (ssc, cfg);
+
+    ssc->rx = cfg->rx;
+    ssc->tx = cfg->tx;
+
     ssc_enable (ssc);
 
     return ssc;
