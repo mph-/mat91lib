@@ -24,10 +24,13 @@
 
 
 /* Clock Divider Type */
-typedef uint16_t ssc_clock_div_t;
+typedef uint16_t ssc_clock_divisor_t;
 
 /* Data type, SSC allows for up to 32 bit data words */
 typedef uint32_t ssc_data_t;
+
+typedef uint32_t ssc_clock_speed_t;
+
 
 /* Include the big complicated configuration structure for the
  * ssc modules (transmit and receive)
@@ -42,6 +45,8 @@ typedef struct
     
     // Receiver configuration
     ssc_module_cfg_t *rx;
+
+    uint16_t clock_divisor;
 } ssc_t;
 
 
@@ -57,8 +62,8 @@ typedef struct
     // Receiver configuration
     ssc_module_cfg_t *rx;
     
-    // Clock Div, multiplied by 2 before dividing, 0 = won't be configured
-    ssc_clock_div_t clock_div;
+    /* Clock speed in kHz (maximum).  */
+    ssc_clock_speed_t clock_speed_kHz;
 } ssc_cfg_t;
 
 

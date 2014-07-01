@@ -15,9 +15,23 @@ ssc_t ssc_dev;
 
 /* Set the clock divider.  */
 static void
-ssc_set_clock_div (ssc_clock_div_t clockdiv) 
+ssc_clock_divisor_set (ssc_t *ssc, ssc_clock_divisor_t clock_divisor) 
 {
-   SSC->SSC_CMR = clockdiv;
+   SSC->SSC_CMR = clock_divisor;
+   ssc->clock_divisor = clock_divisor;
+}
+
+
+ssc_clock_speed_t
+ssc_clock_speed_kHz_set (ssc_t *ssc, ssc_clock_speed_t clock_speed_kHz)
+{
+    uint32_t clock_speed;
+
+    clock_speed = clock_speed_kHz * 1000;
+    ssc_clock_divisor_set (ssc, (F_CPU + clock_speed - 1) / clock_speed);
+    clock_speed = F_CPU / ssc->clock_divisor;
+
+    return clock_speed / 1000;
 }
 
 
@@ -130,7 +144,7 @@ ssc_config (ssc_t *ssc, const ssc_cfg_t *cfg)
     mcu_pmc_enable (ID_SSC);
     
     /* Set the clock divider.  */
-    ssc_set_clock_div (cfg->clock_div);
+    ssc_clock_speed_kHz_set (ssc, cfg->clock_speed_kHz);
     
     /* Configure the receiver module if the configuration exists.  */
     ssc_module_config (cfg->rx, SSC_RX);
