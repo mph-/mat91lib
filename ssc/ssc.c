@@ -42,6 +42,9 @@ ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module)
     /* Select options to apply to clock mode register.  */
     uint32_t cmr;
     uint32_t fmr;
+    uint8_t fslen;
+    uint8_t fslen_ext;
+    uint8_t datlen;
     
     if (!cfg)
         return 0;
@@ -98,8 +101,17 @@ ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module)
         break;
     }
     
-    fmr = cfg->fs_mode | (cfg->fs_length << 16)
-        | ((cfg->data_num - 1) << 8) | (cfg->data_length - 1); 
+    fslen = cfg->fs_length & 0x0f;
+    fslen_ext = cfg->fs_length >> 4;
+
+    /* datlen must be greater than 0 (at least 2 bits transferred).
+       If datlen is smaller than 8, data transfers are in bytes, else
+       if datlen is smaller than 16, half-words are transferred, otherwise
+       32-bit words are transferred.  */
+    datlen = cfg->data_length - 1;
+
+    fmr = cfg->fs_mode | (fslen << 16) | (fslen_ext << 28)
+        | ((cfg->data_num - 1) << 8) | datlen;
     
 
     switch (cfg->fs_edge)
@@ -264,8 +276,8 @@ ssc_enable (ssc_t *ssc)
 
 
 /* Read data from the rx buffer.  */
-uint16_t
-ssc_read (ssc_t *ssc, void *buffer, uint16_t length)
+static uint16_t
+ssc_read_8 (ssc_t *ssc, void *buffer, uint16_t length)
 {
     uint8_t *dst = buffer;
     int i;
@@ -274,17 +286,63 @@ ssc_read (ssc_t *ssc, void *buffer, uint16_t length)
     {
         while (!ssc_read_ready_p (ssc))
             continue;
-        
         *dst++ = SSC->SSC_RHR;
     }
-    
     return length;
 }
 
 
-/* Write to the transmit buffer.  */
+/* Read data from the rx buffer.  */
+static uint16_t
+ssc_read_16 (ssc_t *ssc, void *buffer, uint16_t length)
+{
+    uint16_t *dst = buffer;
+    int i;
+
+    for (i = 0; i < length; i++)
+    {
+        while (!ssc_read_ready_p (ssc))
+            continue;
+        *dst++ = SSC->SSC_RHR;
+    }
+    return length;
+}
+
+
+
+/* Read data from the rx buffer.  */
+static uint16_t
+ssc_read_32 (ssc_t *ssc, void *buffer, uint16_t length)
+{
+    uint8_t *dst = buffer;
+    int i;
+
+    for (i = 0; i < length; i++)
+    {
+        while (!ssc_read_ready_p (ssc))
+            continue;
+        *dst++ = SSC->SSC_RHR;
+    }
+    return length;
+}
+
+
+/* Read data from the rx buffer.  */
 uint16_t
-ssc_write (ssc_t *ssc, void *buffer, uint16_t length)
+ssc_read (ssc_t *ssc, void *buffer, uint16_t length)
+{
+    if (ssc->rx->data_length < 8)
+        return ssc_read_8 (ssc, buffer, length);
+    else if (ssc->rx->data_length < 16)
+        return ssc_read_16 (ssc, buffer, (length + 1) >> 1);
+    return ssc_read_32 (ssc, buffer, (length + 3) >> 2);
+}
+
+
+
+/* Write to the transmit buffer.  */
+static uint16_t
+ssc_write_8 (ssc_t *ssc, void *buffer, uint16_t length)
 {
     uint8_t *src = buffer;
     int i;
@@ -293,11 +351,55 @@ ssc_write (ssc_t *ssc, void *buffer, uint16_t length)
     {
         while (!ssc_write_ready_p (ssc))
             continue;
-
         SSC->SSC_THR = *src++;        
     }
-    
     return length;
+}
+
+
+/* Write to the transmit buffer.  */
+static uint16_t
+ssc_write_16 (ssc_t *ssc, void *buffer, uint16_t length)
+{
+    uint16_t *src = buffer;
+    int i;
+
+    for (i = 0; i < length; i++)
+    {
+        while (!ssc_write_ready_p (ssc))
+            continue;
+        SSC->SSC_THR = *src++;        
+    }
+    return length;
+}
+
+
+/* Write to the transmit buffer.  */
+static uint16_t
+ssc_write_32 (ssc_t *ssc, void *buffer, uint16_t length)
+{
+    uint32_t *src = buffer;
+    int i;
+
+    for (i = 0; i < length; i++)
+    {
+        while (!ssc_write_ready_p (ssc))
+            continue;
+        SSC->SSC_THR = *src++;        
+    }
+    return length;
+}
+
+
+/* Write to the transmit buffer.  */
+uint16_t
+ssc_write (ssc_t *ssc, void *buffer, uint16_t length)
+{
+    if (ssc->tx->data_length < 8)
+        return ssc_write_8 (ssc, buffer, length);
+    else if (ssc->tx->data_length < 16)
+        return ssc_write_16 (ssc, buffer, (length + 1) >> 1);
+    return ssc_write_32 (ssc, buffer, (length + 3) >> 2);
 }
 
 

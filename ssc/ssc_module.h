@@ -115,23 +115,24 @@ typedef enum
 /* Configuration structure for the SSC.  */
 typedef struct 
 {
-   ssc_period_t         period;   
-   ssc_delay_t          delay;
-   ssc_data_length_t    data_length;
-   ssc_fs_length_t      fs_length;
-   ssc_data_num_t       data_num;
-   ssc_clock_edge_t     clock_edge;
-   ssc_stop_t           stop_mode;
-   ssc_clock_select_t   clock_select;
-   ssc_clock_out_mode_t clock_out_mode;
-   ssc_clock_gate_mode_t clock_gate_mode;
-   ssc_start_mode_t     start_mode;
-   ssc_fs_mode_t        fs_mode;
-   ssc_fs_edge_t        fs_edge;
-   bool                 loop_mode;
-   bool                 msb_first;
-   bool                 td_default;
-   ssc_tx_fs_data_enable_t sync_data_enable;
+    ssc_period_t         period;   
+    ssc_delay_t          delay;
+    ssc_data_length_t    data_length;
+    /* Length of the frame sync pulse when it is pulsed.  */
+    ssc_fs_length_t      fs_length;
+    ssc_data_num_t       data_num;
+    ssc_clock_edge_t     clock_edge;
+    ssc_stop_t           stop_mode;
+    ssc_clock_select_t   clock_select;
+    ssc_clock_out_mode_t clock_out_mode;
+    ssc_clock_gate_mode_t clock_gate_mode;
+    ssc_start_mode_t     start_mode;
+    ssc_fs_mode_t        fs_mode;
+    ssc_fs_edge_t        fs_edge;
+    bool                 loop_mode;
+    bool                 msb_first;
+    bool                 td_default;
+    ssc_tx_fs_data_enable_t sync_data_enable;
 } ssc_module_cfg_t;
 
 
