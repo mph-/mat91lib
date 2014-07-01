@@ -19,6 +19,7 @@ static void bssc_advance (bssc_t *dev)
     ssc_dma_next (0, next, dev->dma_size);
 }
 
+
 /** bssc_isr
    advance the ring buffer once the data has been written
    */
@@ -80,5 +81,3 @@ int bssc_read (bssc_t *dev, void *buffer, int size)
 {
     return ring_read (dev->ring, buffer, size);
 }
-
-

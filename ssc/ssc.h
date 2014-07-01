@@ -62,17 +62,6 @@ typedef struct
 /* Function Prototypes */
 
 
-
-/** Initialize/configure the SSC. You still need to enable the
-   appropriate modules.  If a module is to be disabled then the
-   pointer to its configuration from within the ssc config should be
-   null. 
-   @param pointer to the ssc configuration structure to apply
- */
-ssc_t *
-ssc_init (const ssc_cfg_t *);
-
-
 /** Enable all the modules.
  */
 void
@@ -121,6 +110,17 @@ ssc_read (ssc_t *ssc, void *buffer, uint16_t length);
  */
 uint16_t
 ssc_write (ssc_t *ssc, void *buffer, uint16_t length);
+
+
+/** Initialize/configure the SSC. You still need to enable the
+   appropriate modules.  If a module is to be disabled then the
+   pointer to its configuration from within the ssc config should be
+   null. 
+   @param pointer to the ssc configuration structure to apply
+ */
+ssc_t *
+ssc_init (const ssc_cfg_t *);
+
 
 #endif //SSC_H
 
