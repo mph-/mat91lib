@@ -24,8 +24,8 @@ typedef uint32_t  ssc_data_t;      // SSC data type - up to 32 bits per word
 /* Clock sampling 'inversion'.  */
 typedef enum
 {
-    SSC_CLKS_FALLING = 0x0,          // Data are sampled/shifted on clock falling edge
-    SSC_CLKS_RISING  = SSC_RCMR_CKI // Data are sampled/shifted on clock rising edge
+    SSC_CLOCK_FALLING = 0x0,         // Data are sampled/shifted on clock falling edge
+    SSC_CLOCK_RISING  = SSC_RCMR_CKI // Data are sampled/shifted on clock rising edge
 } ssc_clock_edge_sample_t;
 
 
@@ -39,9 +39,9 @@ typedef enum
 } ssc_stop_t;
 
 
-/* Flag for weather the config is for the rx or tx module.  */
-typedef enum {
-   SSC_TX,SSC_RX
+typedef enum 
+{
+   SSC_TX, SSC_RX
 } ssc_module_t;
 
 
@@ -100,8 +100,7 @@ typedef enum
 /* Frame sync edge detect which generates interrupts.  */
 typedef enum 
 {
-    SSC_FSEDGE_POSITIVE  = 0x0u,
-    SSC_FSEDGE_NEGATIVE  = SSC_RFMR_FSEDGE
+    SSC_FSEDGE_POSITIVE, SSC_FSEDGE_NEGATIVE
 } ssc_fsedge_t;
 
 
@@ -123,7 +122,6 @@ typedef struct
    ssc_datanum_t        words_per_frame;
    ssc_clock_edge_sample_t clock_sampling_edge;
    ssc_stop_t           stop_mode;
-   ssc_module_t         tx_or_rx;
    ssc_clock_select_t   clock_select;
    ssc_clock_out_mode_t clock_out_mode;
    ssc_clock_gate_mode_t clock_gate_mode;

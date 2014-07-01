@@ -20,7 +20,7 @@ ssc_init (const ssc_cfg_t *cfg)
 }
 
 
-/* set the clock divider.  */
+/* Set the clock divider.  */
 void
 ssc_set_clock_div (ssc_clock_div_t clockdiv) 
 {
@@ -28,9 +28,9 @@ ssc_set_clock_div (ssc_clock_div_t clockdiv)
 }
 
 
-/* configure a module.  */
-uint8_t
-ssc_module_config (ssc_module_cfg_t *cfg) 
+/* Configure a module.  */
+static uint8_t
+ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module) 
 {
     /* Check if the config exists (by way of null pointer check. FIXME).  */
     if (cfg)
@@ -112,7 +112,7 @@ ssc_module_config (ssc_module_cfg_t *cfg)
             fmr |= SSC_RFMR_MSBF;
 
         /* Apply the configuration to the appropriate module.  */
-        if (cfg->tx_or_rx == SSC_TX)
+        if (module == SSC_TX)
         {
             if (cfg->td_default)
                 fmr |= SSC_TFMR_DATDEF;
@@ -121,7 +121,7 @@ ssc_module_config (ssc_module_cfg_t *cfg)
             SSC->SSC_TCMR = cmr;
             return 0;
         }
-        else if (cfg->tx_or_rx == SSC_RX)
+        else 
         {
             if (cfg->loop_mode)
                 fmr |= SSC_RFMR_LOOP;
@@ -130,8 +130,6 @@ ssc_module_config (ssc_module_cfg_t *cfg)
             SSC->SSC_RCMR = cmr | cfg->stop_mode;
             return 0;
         }
-        else
-            return 1;
     }
     else
         return 2;
@@ -148,10 +146,10 @@ void ssc_config (const ssc_cfg_t *cfg)
     ssc_set_clock_div (cfg->clock_div);
     
     /* Configure the reciever module if the configuration exists.  */
-    ssc_module_config (cfg->rx_cfg);
+    ssc_module_config (cfg->rx_cfg, 0);
     
     /* Configure the transmit module if the configuration exists.  */
-    ssc_module_config (cfg->tx_cfg);
+    ssc_module_config (cfg->tx_cfg, 1);
     
 }
 
