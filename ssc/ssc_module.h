@@ -20,12 +20,13 @@ typedef uint8_t   ssc_datanum_t;   // Data words per frame
 typedef uint32_t  ssc_data_t;      // SSC data type - up to 32 bits per word
 
 
+
 /* Clock sampling 'inversion'.  */
 typedef enum
 {
     SSC_CLKS_FALLING = 0x0,          // Data are sampled/shifted on clock falling edge
     SSC_CLKS_RISING  = SSC_RCMR_CKI // Data are sampled/shifted on clock rising edge
-} ssc_clk_edge_sample_t;
+} ssc_clock_edge_sample_t;
 
 
 
@@ -38,66 +39,31 @@ typedef enum
 } ssc_stop_t;
 
 
-
-/* Loopback enable 
-
-   - only configurable via the rx module, requires both modules to be
-     configured & enabled
-
-   - Data sent via tx will appear in the rx data register
- */
-typedef enum 
-{
-    SSC_LOOP_OFF = 0x0,          // Normal operation
-    SSC_LOOP_ON  = SSC_RFMR_LOOP // RD=TD, RF = TF, RK = TK
-} ssc_loop_t;
-
-
-
-/* MSB first or last.  */
-typedef enum 
-{
-    SSC_DATA_MSB_LAST    = 0x0,           // Least significant bit sampled first
-    SSC_DATA_MSB_FIRST   = SSC_RFMR_MSBF  // Most significant bit sampled first
-} ssc_msb_t;
-
-
-
 /* Flag for weather the config is for the rx or tx module.  */
 typedef enum {
    SSC_TX,SSC_RX
 } ssc_module_t;
 
 
-
 /* Clock source.  */
 typedef enum 
 {
-    SSC_CS_DIVIDED = SSC_RCMR_CKS_MCK, // Divided clock
-    SSC_CS_INT     = SSC_RCMR_CKS_TK,  // Internal clock (TX clock when configuring the RX module, and vice versa)
-    SSC_CS_EXT     = SSC_RCMR_CKS_RK   // Clock on external pin (TK and RK pins for transmitter and receiver modules respectively)
+    SSC_CLOCK_INTERNAL, SSC_CLOCK_OTHER, SSC_CLOCK_PIN
 } ssc_clock_select_t;
 
 
-
-/* Clock mode - continous or not.  */
+/* Clock mode.  */
 typedef enum 
 {
-    SSC_CM_INPUT        = SSC_RCMR_CKO_NONE,       // External clock - no clock control
-    SSC_CM_CONTINUOUS   = SSC_RCMR_CKO_CONTINUOUS, // Continous clock output
-    SSC_CM_TRANSFER     = SSC_RCMR_CKO_TRANSFER    // Clock output only for data transfers
+    SSC_CLOCK_INPUT, SSC_CLOCK_CONTINUOUS, SSC_CLOCK_TRANSFER
 } ssc_clock_out_mode_t;
-
 
 
 /* Clock gating - determines inversion of the ready signal.  */
 typedef enum 
 {
-    //Not in the header file either?
-    SSC_CG_INPUT        = (0x0 << 7),     // Continuous clock
-    SSC_CG_RFL          = (0x1 << 7),     // Clock when ready signal low
-    SSC_CG_RFH          = (0x2 << 7)      // Clock when ready signal high
-} ssc_clk_gate_mode_t;
+    SSC_CLOCK_GATE_NONE, SSC_CLOCK_GATE_RF_LOW, SSC_CLOCK_GATE_RF_HIGH
+} ssc_clock_gate_mode_t;
 
 
 
@@ -136,18 +102,10 @@ typedef enum
 {
     SSC_FSEDGE_POSITIVE  = 0x0u,
     SSC_FSEDGE_NEGATIVE  = SSC_RFMR_FSEDGE
-} ssc_fsedge_mode_t;
+} ssc_fsedge_t;
 
 
-/* Default level of the TD pin when not transmitting.  */
-typedef enum 
-{
-    SSC_DATADEF_HIGH = SSC_TFMR_DATDEF,
-    SSC_DATADEF_LOW = 0x0u
-} ssc_tx_data_default_t;
-
-
-/* what happens when the frame sync signal happens.  */
+/* What happens when the frame sync signal happens.  */
 typedef enum 
 {
     SSC_FSDEN_DEFAULT = 0x0u,
@@ -163,18 +121,18 @@ typedef struct
    ssc_datalen_t        word_size;
    ssc_fslen_t          fslen;
    ssc_datanum_t        words_per_frame;
-   ssc_clk_edge_sample_t clock_sampling_edge;
+   ssc_clock_edge_sample_t clock_sampling_edge;
    ssc_stop_t           stop_mode;
-   ssc_loop_t           loop;
-   ssc_msb_t            msb;
    ssc_module_t         tx_or_rx;
    ssc_clock_select_t   clock_select;
    ssc_clock_out_mode_t clock_out_mode;
-   ssc_clk_gate_mode_t  clock_gate_mode;
+   ssc_clock_gate_mode_t clock_gate_mode;
    ssc_start_mode_t     start_mode;
    ssc_fsos_mode_t      fsos_mode;
-   ssc_fsedge_mode_t    fsedge_mode;
-   ssc_tx_data_default_t td_default;
+   ssc_fsedge_t         fsedge;
+   bool                 loop_mode;
+   bool                 msb_first;
+   bool                 td_default;
    ssc_tx_fs_data_enable_t sync_data_enable;
 } ssc_module_cfg_t;
 

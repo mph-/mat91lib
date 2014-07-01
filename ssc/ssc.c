@@ -40,24 +40,93 @@ ssc_module_config (ssc_module_cfg_t *cfg)
         uint32_t fmr;
 
         cmr = (cfg->period << 24) | (cfg->delay << 16) | cfg->start_mode
-            | cfg->clock_select | cfg->clock_out_mode
-            | cfg->clock_gate_mode | cfg->clock_sampling_edge;
+            | cfg->clock_sampling_edge;
+
+
+        switch (cfg->clock_select)
+        {
+        case SSC_CLOCK_INTERNAL:
+            // Use internally generated clock
+            break;
+
+        case SSC_CLOCK_OTHER:
+            // Use clock from other module
+            cmr |= SSC_RCMR_CKS_TK;
+            break;
+
+        case SSC_CLOCK_PIN:
+            // Use clock from clock pin
+            cmr |= SSC_RCMR_CKS_RK;
+            break;
+        }
+
+        switch (cfg->clock_out_mode)
+        {
+        case SSC_CLOCK_INPUT:
+            // External clock - no clock control
+            cmr |= SSC_RCMR_CKO_NONE;
+            break;
+
+        case SSC_CLOCK_CONTINUOUS:
+            // Continuous clock output
+            cmr |= SSC_RCMR_CKO_CONTINUOUS;
+            break;
+
+        case SSC_CLOCK_TRANSFER:
+            // Clock output only for data transfers
+            cmr |= SSC_RCMR_CKO_TRANSFER;
+            break;
+        }
+
+        switch (cfg->clock_gate_mode)
+        {
+        case SSC_CLOCK_GATE_NONE:
+            break;
+
+        case SSC_CLOCK_GATE_RF_LOW:
+            cmr |= 1 << 7;
+            break;
+            
+        case SSC_CLOCK_GATE_RF_HIGH:
+            cmr |= 2 << 7;
+            break;
+        }
         
         /* Select options to apply to frame mode register FIXME magic
            numbers.  */
-        fmr = cfg->fsedge_mode | cfg->fsos_mode | (cfg->fslen << 16)
-            | ((cfg->words_per_frame-1)<<8) | (cfg->word_size-1) | cfg->msb; 
-        
+        fmr = cfg->fsos_mode | (cfg->fslen << 16)
+            | ((cfg->words_per_frame-1) << 8) | (cfg->word_size - 1); 
+      
+
+        switch (cfg->fsedge)
+        {
+        case SSC_FSEDGE_POSITIVE:
+            break;
+
+        case SSC_FSEDGE_NEGATIVE:
+            fmr |= SSC_RFMR_FSEDGE;
+            break;
+        }
+
+        if (cfg->msb_first)
+            fmr |= SSC_RFMR_MSBF;
+
         /* Apply the configuration to the appropriate module.  */
         if (cfg->tx_or_rx == SSC_TX)
         {
-            SSC->SSC_TFMR = fmr | cfg->td_default | cfg->sync_data_enable;
+            if (cfg->td_default)
+                fmr |= SSC_TFMR_DATDEF;
+
+            SSC->SSC_TFMR = fmr | cfg->sync_data_enable;
             SSC->SSC_TCMR = cmr;
             return 0;
         }
         else if (cfg->tx_or_rx == SSC_RX)
         {
-            SSC->SSC_RFMR = fmr | cfg->loop;
+            if (cfg->loop_mode)
+                fmr |= SSC_RFMR_LOOP;
+
+            SSC->SSC_RFMR = fmr;
             SSC->SSC_RCMR = cmr | cfg->stop_mode;
             return 0;
         }
