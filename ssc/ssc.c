@@ -142,8 +142,8 @@ ssc_config (ssc_t *ssc, const ssc_cfg_t *cfg)
 
 
 /* Check if a buffer (tx or rx) is ready (empty or full respectively).  */
-bool
-ssc_buffer_ready_p (ssc_t *ssc, ssc_module_t tx_rx)
+static bool
+ssc_module_ready_p (ssc_t *ssc, ssc_module_t tx_rx)
 {
     unsigned int mask = 0;
 
@@ -158,11 +158,24 @@ ssc_buffer_ready_p (ssc_t *ssc, ssc_module_t tx_rx)
         break;
     }
     
-    if ((mask & SSC->SSC_SR) != 0)
-        return true;
-    else
-        return false;
+    return ((mask & SSC->SSC_SR) != 0);
 }
+
+
+static bool
+ssc_read_ready_p (ssc_t *ssc)
+{
+    return ssc_module_ready_p (ssc, SSC_RX);
+}
+
+
+
+static bool
+ssc_write_ready_p (ssc_t *ssc)
+{
+    return ssc_module_ready_p (ssc, SSC_TX);
+}
+
 
 
 /* enable a SSC module*/
@@ -242,7 +255,7 @@ ssc_read (ssc_t *ssc, void *buffer, uint16_t length)
 
     for (i = 0; i < length; i++)
     {
-        while (!ssc_buffer_ready_p (ssc, SSC_RX))
+        while (!ssc_read_ready_p (ssc))
             continue;
         
         *dst++ = SSC->SSC_RHR;
@@ -261,7 +274,7 @@ ssc_write (ssc_t *ssc, void *buffer, uint16_t length)
 
     for (i = 0; i < length; i++)
     {
-        while (!ssc_buffer_ready_p (ssc, SSC_RX))
+        while (!ssc_write_ready_p (ssc))
             continue;
 
         SSC->SSC_THR = *src++;        

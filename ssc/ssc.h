@@ -99,12 +99,12 @@ void
 ssc_disable_module (ssc_t *ssc, ssc_module_t module);
 
 
-/** Check wether the tx/rx buffer is ready for read/write TODO (test)
-   @param module to check (SSC_TX or SSC_RX)
-   @return true = ready, false = not ready
- */
 bool
-ssc_buffer_ready_p (ssc_t *ssc, ssc_module_t module);
+ssc_read_ready_p (ssc_t *ssc);
+
+
+bool
+ssc_write_ready_p (ssc_t *ssc);
 
 
 /** Read the data in the rx buffer TODO (test)
