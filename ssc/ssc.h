@@ -30,7 +30,7 @@ typedef uint32_t ssc_data_t;
 
 typedef uint32_t ssc_clock_speed_t;
 
-typedef uint16_t  ssc_period_t;      // RF signal period
+typedef uint16_t  ssc_fs_period_t;      // RF signal period
 
 typedef uint8_t   ssc_delay_t;       // Delay between start & receive
 
@@ -112,8 +112,8 @@ typedef enum
     SSC_FS_INPUT      = SSC_RFMR_FSOS_NONE,      // RF/TF pin is input
     SSC_FS_NEGATIVE   = SSC_RFMR_FSOS_NEGATIVE,  // Negative pulse
     SSC_FS_POSITIVE   = SSC_RFMR_FSOS_POSITIVE,  // Positive pulse
-    SSC_FS_DRIVE_LOW  = SSC_RFMR_FSOS_LOW,       // Driven low during transfer
-    SSC_FS_DRIVE_HIGH = SSC_RFMR_FSOS_HIGH,      // Driven high during transfer
+    SSC_FS_LOW        = SSC_RFMR_FSOS_LOW,       // Driven low during transfer
+    SSC_FS_HIGH       = SSC_RFMR_FSOS_HIGH,      // Driven high during transfer
     SSC_FS_TOGGLE     = SSC_RFMR_FSOS_TOGGLING   // Toggle to begin transfer
 }  ssc_fs_mode_t;
 
@@ -136,11 +136,15 @@ typedef enum
 /* Configuration structure for the SSC.  */
 typedef struct 
 {
-    ssc_period_t         period;   
-    ssc_delay_t          delay;
-    ssc_data_length_t    data_length;
+    /* Period between fs assertions (clocks).  */
+    ssc_fs_period_t      fs_period;   
+    /* Delay after start event before data reception/transmission (clocks).  */
+    ssc_delay_t          start_delay;
     /* Length of the frame sync pulse when it is pulsed.  */
     ssc_fs_length_t      fs_length;
+    /* Number of bits per word.  */
+    ssc_data_length_t    data_length;
+    /* Number of words per frame.  */
     ssc_data_num_t       data_num;
     ssc_clock_edge_t     clock_edge;
     ssc_stop_t           stop_mode;
@@ -151,7 +155,7 @@ typedef struct
     ssc_fs_mode_t        fs_mode;
     ssc_fs_edge_t        fs_edge;
     bool                 loop_mode;
-    bool                 msb_first;
+    bool                 data_msb_first;
     bool                 td_default;
     ssc_tx_fs_data_enable_t sync_data_enable;
 } ssc_module_cfg_t;

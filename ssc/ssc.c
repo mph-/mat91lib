@@ -45,11 +45,17 @@ ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module)
     uint8_t fslen;
     uint8_t fslen_ext;
     uint8_t datlen;
+    uint8_t period;
     
     if (!cfg)
         return 0;
         
-    cmr = (cfg->period << 24) | (cfg->delay << 16) | cfg->start_mode
+    if (cfg->fs_period == 0)
+        period = 0;
+    else
+        period = (cfg->fs_period >> 1) - 1;
+
+    cmr = (period << 24) | (cfg->start_delay << 16) | cfg->start_mode
         | cfg->clock_edge;
     
     switch (cfg->clock_select)
@@ -124,7 +130,7 @@ ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module)
         break;
     }
     
-    if (cfg->msb_first)
+    if (cfg->data_msb_first)
         fmr |= SSC_RFMR_MSBF;
     
     /* Apply the configuration to the appropriate module.  */
