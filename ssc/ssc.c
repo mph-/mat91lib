@@ -311,7 +311,7 @@ ssc_read_16 (ssc_t *ssc, void *buffer, uint16_t length)
             continue;
         *dst++ = SSC->SSC_RHR;
     }
-    return length;
+    return length << 1;
 }
 
 
@@ -329,21 +329,20 @@ ssc_read_32 (ssc_t *ssc, void *buffer, uint16_t length)
             continue;
         *dst++ = SSC->SSC_RHR;
     }
-    return length;
+    return length << 2;
 }
 
 
 /* Read data from the rx buffer.  */
 uint16_t
-ssc_read (ssc_t *ssc, void *buffer, uint16_t length)
+ssc_read (ssc_t *ssc, void *buffer, uint16_t bytes)
 {
-    if (ssc->rx->data_length < 8)
-        return ssc_read_8 (ssc, buffer, length);
-    else if (ssc->rx->data_length < 16)
-        return ssc_read_16 (ssc, buffer, (length + 1) >> 1);
-    return ssc_read_32 (ssc, buffer, (length + 3) >> 2);
+    if (ssc->rx->data_length <= 8)
+        return ssc_read_8 (ssc, buffer, bytes);
+    else if (ssc->rx->data_length <= 16)
+        return ssc_read_16 (ssc, buffer, (bytes + 1) >> 1);
+    return ssc_read_32 (ssc, buffer, (bytes + 3) >> 2);
 }
-
 
 
 /* Write to the transmit buffer.  */
@@ -376,7 +375,7 @@ ssc_write_16 (ssc_t *ssc, void *buffer, uint16_t length)
             continue;
         SSC->SSC_THR = *src++;        
     }
-    return length;
+    return length << 1;
 }
 
 
@@ -393,19 +392,19 @@ ssc_write_32 (ssc_t *ssc, void *buffer, uint16_t length)
             continue;
         SSC->SSC_THR = *src++;        
     }
-    return length;
+    return length << 2;
 }
 
 
 /* Write to the transmit buffer.  */
 uint16_t
-ssc_write (ssc_t *ssc, void *buffer, uint16_t length)
+ssc_write (ssc_t *ssc, void *buffer, uint16_t bytes)
 {
-    if (ssc->tx->data_length < 8)
-        return ssc_write_8 (ssc, buffer, length);
-    else if (ssc->tx->data_length < 16)
-        return ssc_write_16 (ssc, buffer, (length + 1) >> 1);
-    return ssc_write_32 (ssc, buffer, (length + 3) >> 2);
+    if (ssc->tx->data_length <= 8)
+        return ssc_write_8 (ssc, buffer, bytes);
+    else if (ssc->tx->data_length <= 16)
+        return ssc_write_16 (ssc, buffer, (bytes + 1) >> 1);
+    return ssc_write_32 (ssc, buffer, (bytes + 3) >> 2);
 }
 
 
