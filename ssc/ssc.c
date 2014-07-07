@@ -28,8 +28,8 @@ ssc_clock_speed_kHz_set (ssc_t *ssc, ssc_clock_speed_t clock_speed_kHz)
     uint32_t clock_speed;
 
     clock_speed = clock_speed_kHz * 1000;
-    ssc_clock_divisor_set (ssc, (F_CPU + clock_speed - 1) / clock_speed);
-    clock_speed = F_CPU / ssc->clock_divisor;
+    ssc_clock_divisor_set (ssc, ((F_CPU / 2) + clock_speed - 1) / clock_speed);
+    clock_speed = (F_CPU / 2) / ssc->clock_divisor;
 
     return clock_speed / 1000;
 }
@@ -214,19 +214,19 @@ ssc_module_enable (ssc_t *ssc, ssc_module_t tx_rx)
     switch (tx_rx) 
     {
     case SSC_TX: 
-        SSC->SSC_CR |= SSC_CR_TXEN;
-
-        pio_config_set (RD_PIO, PIO_PERIPH_A);
-        pio_config_set (RK_PIO, PIO_PERIPH_A);
-        pio_config_set (RF_PIO, PIO_PERIPH_A);
-        break;
-
-    case SSC_RX:
-        SSC->SSC_CR |= SSC_CR_RXEN;
-
         pio_config_set (TD_PIO, PIO_PERIPH_A);
         pio_config_set (TK_PIO, PIO_PERIPH_A);
         pio_config_set (TF_PIO, PIO_PERIPH_A);
+
+        SSC->SSC_CR |= SSC_CR_TXEN;
+        break;
+
+    case SSC_RX:
+        pio_config_set (RD_PIO, PIO_PERIPH_A);
+        pio_config_set (RK_PIO, PIO_PERIPH_A);
+        pio_config_set (RF_PIO, PIO_PERIPH_A);
+
+        SSC->SSC_CR |= SSC_CR_RXEN;
         break;
     }
 }
