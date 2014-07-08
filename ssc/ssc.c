@@ -50,6 +50,10 @@ ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module)
     if (!cfg)
         return 0;
         
+    /* Check maximum frame sync period in rx clocks.  */
+    if (cfg->fs_period > 512)
+        cfg->fs_period = 512;
+
     if (cfg->fs_period == 0)
         period = 0;
     else
@@ -107,8 +111,11 @@ ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module)
         break;
     }
     
-    fslen = cfg->fs_length & 0x0f;
-    fslen_ext = cfg->fs_length >> 4;
+    if (cfg->fs_length < 1)
+        cfg->fs_length = 1;
+
+    fslen = (cfg->fs_length - 1) & 0x0f;
+    fslen_ext = (cfg->fs_length - 1) >> 4;
 
     /* datlen must be greater than 0 (at least 2 bits transferred).
        If datlen is smaller than 8, data transfers are in bytes, else
@@ -122,10 +129,10 @@ ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module)
 
     switch (cfg->fs_edge)
     {
-    case SSC_FSEDGE_POSITIVE:
+    case SSC_FS_EDGE_POSITIVE:
         break;
         
-    case SSC_FSEDGE_NEGATIVE:
+    case SSC_FS_EDGE_NEGATIVE:
         fmr |= SSC_RFMR_FSEDGE;
         break;
     }

@@ -121,7 +121,7 @@ typedef enum
 /* Frame sync edge detect which generates interrupts.  */
 typedef enum 
 {
-    SSC_FSEDGE_POSITIVE, SSC_FSEDGE_NEGATIVE
+    SSC_FS_EDGE_POSITIVE, SSC_FS_EDGE_NEGATIVE
 } ssc_fs_edge_t;
 
 
