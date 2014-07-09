@@ -20,43 +20,44 @@
 #define SSC_H
 
 #include "config.h"
-#include "pio.h"  //For selecting the SSC as the pio driver
 
-
-/* Clock Divider Type */
 typedef uint16_t ssc_clock_divisor_t;
 
 typedef uint32_t ssc_data_t;
 
 typedef uint32_t ssc_clock_speed_t;
 
-typedef uint16_t  ssc_fs_period_t;      // RF signal period
+typedef uint16_t ssc_fs_period_t;   // RF signal period
 
-typedef uint8_t   ssc_delay_t;       // Delay between start & receive
+typedef uint8_t  ssc_delay_t;       // Delay between start & receive
 
-typedef uint8_t   ssc_data_length_t; // Data word length
+typedef uint8_t  ssc_data_length_t; // Data word length
 
-typedef uint8_t   ssc_fs_length_t;   // Framesync Length
+typedef uint8_t  ssc_fs_length_t;   // Framesync Length
 
-typedef uint8_t   ssc_data_num_t;    // Data words per frame
+typedef uint8_t  ssc_data_num_t;    // Data words per frame
 
 
 
 /* Clock sampling 'inversion'.  */
 typedef enum
 {
-    SSC_CLOCK_FALLING = 0x0,         // Data are sampled/shifted on clock falling edge
-    SSC_CLOCK_RISING  = SSC_RCMR_CKI // Data are sampled/shifted on clock rising edge
+    // Data are sampled/shifted on clock falling edge
+    SSC_CLOCK_FALLING = 0,         
+    // Data are sampled/shifted on clock rising edge
+    SSC_CLOCK_RISING  = SSC_RCMR_CKI 
 } ssc_clock_edge_t;
 
 
 
-/* Stop condition select.  */
+/* Stop condition select.  This only applies if a data transfer has
+ * started with a compare register 0 match.  */
 typedef enum 
 {
-    //Neither of these are in the header files?
-    SSC_STOP_WAIT       = (0x0 << 12),       // Wait for new start
-    SSC_STOP_CONTINUOUS = (0x1 << 12)        // Continuously transfer
+    // Wait for next compare register 0 match
+    SSC_STOP_WAIT       = (0 << 12),       
+    // Operate continuously until a compare register 1 match
+    SSC_STOP_CONTINUOUS = (1 << 12)        
 } ssc_stop_t;
 
 
@@ -69,66 +70,96 @@ typedef enum
 /* Clock source.  */
 typedef enum 
 {
-    SSC_CLOCK_INTERNAL, SSC_CLOCK_OTHER, SSC_CLOCK_PIN
+    // Use internal clock
+    SSC_CLOCK_INTERNAL = 0,
+    // Use TK or RK of other module
+    SSC_CLOCK_OTHER = SSC_RCMR_CKS_TK,
+    // Use TK or RK
+    SSC_CLOCK_PIN = SSC_RCMR_CKS_RK
 } ssc_clock_select_t;
 
 
 /* Clock mode.  */
 typedef enum 
 {
-    SSC_CLOCK_INPUT, SSC_CLOCK_CONTINUOUS, SSC_CLOCK_TRANSFER
+    // Configure TK or RK as input
+    SSC_CLOCK_INPUT = SSC_RCMR_CKO_NONE,
+    // Drive TK or RK continuously
+    SSC_CLOCK_CONTINUOUS = SSC_RCMR_CKO_CONTINUOUS,
+    // Drive TK or RK during transfer
+    SSC_CLOCK_TRANSFER = SSC_RCMR_CKO_TRANSFER
 } ssc_clock_out_mode_t;
 
 
-/* Clock gating - determines inversion of the ready signal.  */
+/* Clock gating.  */
 typedef enum 
 {
-    SSC_CLOCK_GATE_NONE, SSC_CLOCK_GATE_RF_LOW, SSC_CLOCK_GATE_RF_HIGH
+    // Receive clock always enabled
+    SSC_CLOCK_GATE_NONE = 0,
+    // Receive enabled when RF low
+    SSC_CLOCK_GATE_RF_LOW = 1 << 7,
+    // Receive enabled when RF high
+    SSC_CLOCK_GATE_RF_HIGH = 2 << 7
 } ssc_clock_gate_mode_t;
 
 
-
-/* Receive start conditions - what's the difference between level
-   changes and edges?  */
-
+/* Frame sync start mode.  */
 typedef enum
 {
-    SSC_START_CONTINUOUS    = SSC_RCMR_START_CONTINUOUS,  // Continuously receive
-    SSC_START_TX            = SSC_RCMR_START_TRANSMIT,    // Transmit/Receive start
-    SSC_START_LOW           = SSC_RCMR_START_RF_LOW,      // Low level RF/TF sig
-    SSC_START_HIGH          = SSC_RCMR_START_RF_HIGH,     // High level RF/TF sig
-    SSC_START_FALLING       = SSC_RCMR_START_RF_FALLING,  // RF/TF Falling Edge
-    SSC_START_RISING        = SSC_RCMR_START_RF_RISING,   // RF/TF Rising Edge
-    SSC_START_LEVEL_CHANGE  = SSC_RCMR_START_RF_LEVEL,    // Any level change of RF/TF
-    SSC_START_ANY_EDGE      = SSC_RCMR_START_RF_EDGE,     // Any edge of RF/TF
+    // Start continuous transfer; either by writing to TTHR for transmit or
+    // enabling receiver for receive
+    SSC_START_CONTINUOUS    = SSC_RCMR_START_CONTINUOUS,
+    // Transmit/Receive start
+    SSC_START_TX            = SSC_RCMR_START_TRANSMIT,
+    // Start one clock after falling edge of RF
+    SSC_START_LOW           = SSC_RCMR_START_RF_LOW,
+    // Start one clock after rising edge of RF
+    SSC_START_HIGH          = SSC_RCMR_START_RF_HIGH, 
+    // Start after falling edge of RF
+    SSC_START_FALLING       = SSC_RCMR_START_RF_FALLING,
+    // Start after rising edge of RF
+    SSC_START_RISING        = SSC_RCMR_START_RF_RISING,  
+    // Start one clock after next rising or falling edge of RF
+    SSC_START_LEVEL_CHANGE  = SSC_RCMR_START_RF_LEVEL,
+    // Start after next rising or falling edge of RF
+    SSC_START_ANY_EDGE      = SSC_RCMR_START_RF_EDGE,
+    // Start when compare register 0 matches sync data
     SSC_START_COMPARE0      = SSC_RCMR_START_CMP_0        
 } ssc_start_mode_t;
-
 
 
 /* Frame sync output mode.  */
 typedef enum 
 {
-    SSC_FS_INPUT      = SSC_RFMR_FSOS_NONE,      // RF/TF pin is input
-    SSC_FS_NEGATIVE   = SSC_RFMR_FSOS_NEGATIVE,  // Negative pulse
-    SSC_FS_POSITIVE   = SSC_RFMR_FSOS_POSITIVE,  // Positive pulse
-    SSC_FS_LOW        = SSC_RFMR_FSOS_LOW,       // Driven low during transfer
-    SSC_FS_HIGH       = SSC_RFMR_FSOS_HIGH,      // Driven high during transfer
-    SSC_FS_TOGGLE     = SSC_RFMR_FSOS_TOGGLING   // Toggle to begin transfer
+    // RF/TF pin is input
+    SSC_FS_INPUT      = SSC_RFMR_FSOS_NONE,    
+    // Output negative pulse before data transfer
+    SSC_FS_NEGATIVE   = SSC_RFMR_FSOS_NEGATIVE,
+    // Output positive pulse before data transfer
+    SSC_FS_POSITIVE   = SSC_RFMR_FSOS_POSITIVE,
+    // Drive RF/TF low when first transfer starts (and it appears keep it low)
+    SSC_FS_LOW        = SSC_RFMR_FSOS_LOW,
+    // Drive RF/TF high when first transfer starts (and it appears keep it high)
+    SSC_FS_HIGH       = SSC_RFMR_FSOS_HIGH,
+    // Toggle RF/TF at start of each transfer
+    SSC_FS_TOGGLE     = SSC_RFMR_FSOS_TOGGLING
 }  ssc_fs_mode_t;
 
 
 /* Frame sync edge detect which generates interrupts.  */
 typedef enum 
 {
-    SSC_FS_EDGE_POSITIVE, SSC_FS_EDGE_NEGATIVE
+    SSC_FS_EDGE_POSITIVE = 0,
+    SSC_FS_EDGE_NEGATIVE = SSC_RFMR_FSEDGE
 } ssc_fs_edge_t;
 
 
-/* What happens when the frame sync signal happens.  */
+/* Frame sync data enable.  */
 typedef enum 
 {
-    SSC_FSDEN_DEFAULT = 0x0u,
+    // The default value is output on TD during the frame sync period
+    SSC_FSDEN_DEFAULT = 0,
+    // The value in TSHR is output on TD during the frame sync period
     SSC_FSDEN_SHIFT = SSC_TFMR_FSDEN
 } ssc_tx_fs_data_enable_t;
 

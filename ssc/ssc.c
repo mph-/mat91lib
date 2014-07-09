@@ -1,16 +1,23 @@
 /** @file    ssc.c
     @author  Stuart Duncan, Michael Hayes
     @date    10 January 2012
-    @brief   Routines for control and configuration of the AT91SAM7's SSC
+    @brief   Routines for control and configuration of the AT91SAM SSC
    
    */
 
 #include "ssc.h"
 #include "mcu.h"
+#include "pio.h"
 #include "bits.h"
 
 
-ssc_t ssc_dev;
+/* A word can be transmitted over TD during the frame sync period,
+   using the contents of the 16-bit TSHR register.  Similarly, RD can
+   be sampled during the frame sync period and stored in the 16-bit
+   RSHR.  */
+
+
+static ssc_t ssc_dev;
 
 
 /* Set the clock divider.  */
@@ -59,63 +66,33 @@ ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module)
     else
         period = (cfg->fs_period >> 1) - 1;
 
-    cmr = (period << 24) | (cfg->start_delay << 16) | cfg->start_mode
-        | cfg->clock_edge;
+    /* Set frame sync period.  */
+    cmr = period << 24;
+
+    cmr |= cfg->start_delay << 16;
+
+    cmr |= cfg->start_mode;
+    /* If start mode is SSC_START_COMPARE0 then should load RC0R
+       and perhaps RC1R (the compare reigister).  */
+       
+
+    cmr |= cfg->clock_edge;
+
+    /* Select clock source.  */
+    cmr |= cfg->clock_select;
     
-    switch (cfg->clock_select)
-    {
-    case SSC_CLOCK_INTERNAL:
-        // Use internally generated clock
-        break;
-        
-    case SSC_CLOCK_OTHER:
-        // Use clock from other module
-        cmr |= SSC_RCMR_CKS_TK;
-        break;
-        
-    case SSC_CLOCK_PIN:
-        // Use clock from clock pin
-        cmr |= SSC_RCMR_CKS_RK;
-        break;
-        }
-    
-    switch (cfg->clock_out_mode)
-    {
-    case SSC_CLOCK_INPUT:
-        // External clock - no clock control
-        cmr |= SSC_RCMR_CKO_NONE;
-        break;
-        
-    case SSC_CLOCK_CONTINUOUS:
-        // Continuous clock output
-        cmr |= SSC_RCMR_CKO_CONTINUOUS;
-        break;
-        
-    case SSC_CLOCK_TRANSFER:
-        // Clock output only for data transfers
-        cmr |= SSC_RCMR_CKO_TRANSFER;
-        break;
-    }
-    
-    switch (cfg->clock_gate_mode)
-    {
-    case SSC_CLOCK_GATE_NONE:
-        break;
-        
-    case SSC_CLOCK_GATE_RF_LOW:
-        cmr |= 1 << 7;
-        break;
-        
-    case SSC_CLOCK_GATE_RF_HIGH:
-        cmr |= 2 << 7;
-        break;
-    }
+    /* Select clock output mode.  */
+    cmr |= cfg->clock_out_mode;
+
+    /* Select gating of the clock by the frame sync.  */
+    cmr |= cfg->clock_gate_mode;
     
     if (cfg->fs_length < 1)
         cfg->fs_length = 1;
 
-    fslen = (cfg->fs_length - 1) & 0x0f;
-    fslen_ext = (cfg->fs_length - 1) >> 4;
+    fslen = cfg->fs_length - 1;
+    fslen_ext = fslen >> 4;
+    fslen = fslen & 0x0f;
 
     /* datlen must be greater than 0 (at least 2 bits transferred).
        If datlen is smaller than 8, data transfers are in bytes, else
@@ -125,17 +102,9 @@ ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module)
 
     fmr = cfg->fs_mode | (fslen << 16) | (fslen_ext << 28)
         | ((cfg->data_num - 1) << 8) | datlen;
-    
 
-    switch (cfg->fs_edge)
-    {
-    case SSC_FS_EDGE_POSITIVE:
-        break;
-        
-    case SSC_FS_EDGE_NEGATIVE:
-        fmr |= SSC_RFMR_FSEDGE;
-        break;
-    }
+    /* Select frame sync edge that will generate interrupt.  */
+    fmr |= cfg->fs_edge;
     
     if (cfg->data_msb_first)
         fmr |= SSC_RFMR_MSBF;
