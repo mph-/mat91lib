@@ -40,6 +40,7 @@ SECTIONS
     *(.ramfunc)
     /* Initialized data stored in FLASH that gets relocated into SRAM.  */
     *(.data)
+    *(.data.*)
     SORT(CONSTRUCTORS)
     . = ALIGN(4);
     __data_end__ = .;
