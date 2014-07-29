@@ -27,7 +27,11 @@
    channels are enumerated TC0, TC1, TC2..., TC5 but perversely the
    controllers are also named TC0 and TC1.  This driver only supports
    TC0, TC1, and TC2.
- */
+
+   In Capture Mode, TIOA and TIOB are configured as inputs.  In
+   Waveform Mode, TIOA is always configured to be an output and TIOB
+   is an output if it is not selected to be the external trigger.
+   However, this driver does not support TIOB.  */
 
 #define TC_CHANNEL(TC) ((TC) - tc_devices)
 
@@ -50,8 +54,6 @@ static const pinmap_t tc_pins[] =
     {1, PA15_PIO, PIO_PERIPH_B}, /* TIOA1 */
     {2, PA26_PIO, PIO_PERIPH_B}, /* TIOA2 */
 };
-
-
 #define TC_PINS_NUM ARRAY_SIZE (tc_pins)
 
 #define TC_DEVICES_NUM TC_PINS_NUM
@@ -59,7 +61,8 @@ static const pinmap_t tc_pins[] =
 static tc_dev_t tc_devices[TC_DEVICES_NUM];
 
 
-bool tc_start (tc_t tc)
+bool
+tc_start (tc_t tc)
 {
     /* The TC_CCR register is write only.  */
     tc->base->TC_CCR |= TC_CCR_CLKEN | TC_CCR_SWTRG; 
@@ -67,18 +70,62 @@ bool tc_start (tc_t tc)
 }
 
 
-bool tc_stop (tc_t tc)
+bool
+tc_stop (tc_t tc)
 {
     tc->base->TC_CCR |= TC_CCR_CLKDIS; 
     return 1;
 }
 
 
-uint16_t tc_counter_get (tc_t tc)
+tc_period_t
+tc_counter_get (tc_t tc)
 {
     return tc->base->TC_CV;
 }
 
+
+tc_period_t
+tc_capture_get (tc_t tc, tc_capture_t reg)
+{
+    switch (reg)
+    {
+    case TC_CAPTURE_A:
+        return tc->captureA;
+
+    case TC_CAPTURE_B:
+        return tc->captureB;
+        
+    default:
+        return ~0u;
+}
+
+
+/** Poll to see if the capture registers have been loaded.  */
+tc_capture_t
+tc_capture_poll (tc_t tc)
+{
+    uint32_t status = 0;
+    int return_val = 0;
+    
+    /* When the status register is read, the capture status
+       flags are cleared!  */
+    status = tc->base->TC_SR;
+    
+    if (status & BIT(6))
+    {
+        tc->captureA = tc->base->TC_RA;
+        return_val |= BIT (TC_CAPTURE_A);
+    }
+    
+    if (status & BIT(5))
+    {
+        tc->captureB = tc->base->TC_RB;
+        return_val |= BIT (TC_CAPTURE_B);
+    }
+    
+    return return_val;
+}
 
 
 /** Configure TC with specified mode.  The delay and period are in
@@ -133,11 +180,47 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
         break;
 
     case TC_MODE_DELAY_ONESHOT:
-        /* Don't change TIOAx.  Stop clock when RC matches.   */
+        /* Don't change TIOAx.  Stop clock when RC matches.  */
         tc->base->TC_CMR = TC_CMR_BURST_NONE | TC_CMR_WAVE
             | TC_CMR_CPCSTOP | TC_CMR_WAVSEL_UP_RC;
         break;
 
+        /* In the capture modes, the time clock is not stopped or
+           disabled when RB loaded.  The capture trigger can only be
+           controlled by TIOAx.  Either TIOAx or TIOBx can be used to
+           reset the counter (this is called external trigger).
+           ABETRG = 1 specifies TIOAx for external trigger.  There are
+           many possible combinations of reset and capture.  This
+           driver does not support resetting of the counter.  
+
+           The docs say that the external trigger gates the clock but
+           it appears that it resets the counter.  bSpecifying
+           TC_CMR_ETRGEDG_NONE disables this.  */
+
+    case TC_MODE_CAPTURE_RISE_RISE:
+        tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
+            | TC_CMR_LDRA_RISING | TC_CMR_LDRB_RISING
+            | TC_CMR_ABETRG | TC_CMR_ETRGEDG_NONE;
+        break;
+
+    case TC_MODE_CAPTURE_RISE_FALL:
+        tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
+            | TC_CMR_LDRA_RISING | TC_CMR_LDRB_FALLING
+            | TC_CMR_ABETRG | TC_CMR_ETRGEDG_NONE;
+        break;
+
+    case TC_MODE_CAPTURE_FALL_RISE:
+        tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
+            | TC_CMR_LDRA_FALLING | TC_CMR_LDRB_RISING
+            | TC_CMR_ABETRG | TC_CMR_ETRGEDG_NONE;
+        break;
+
+    case TC_MODE_CAPTURE_FALL_FALL:
+        tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
+            | TC_CMR_LDRA_FALLING | TC_CMR_LDRB_FALLING
+            | TC_CMR_ABETRG | TC_CMR_ETRGEDG_NONE;
+        break;
+        
     default:
         return 0;
     }
@@ -183,8 +266,6 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
 
     return 1;
 }
-
-
 void
 tc_shutdown (tc_t tc)
 {
@@ -231,8 +312,10 @@ tc_init (const tc_cfg_t *cfg)
 
     /* Enable TCx peripheral clock.  */
     mcu_pmc_enable (ID_TC0 + pin->channel);
+    
 
     tc_config (tc, cfg->mode, cfg->period, cfg->delay);
+   
 
     return tc;
 }
@@ -246,7 +329,6 @@ tc_clock_sync_handler (void)
     TC1_BASE->TC_SR;
     TC2_BASE->TC_SR;
 }
-
 
 /* Sleep for specified period.  This is useful for synchronising the
    CPU clock MCK to the timer clock, especially since the fastest
