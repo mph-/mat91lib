@@ -12,6 +12,8 @@
 typedef struct
 {
     TcChannel *base;
+    tc_counter_t captureA;
+    tc_counter_t captureB;
 } tc_dev_t;
 
 #endif

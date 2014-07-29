@@ -78,14 +78,14 @@ tc_stop (tc_t tc)
 }
 
 
-tc_period_t
+tc_counter_t
 tc_counter_get (tc_t tc)
 {
     return tc->base->TC_CV;
 }
 
 
-tc_period_t
+tc_counter_t
 tc_capture_get (tc_t tc, tc_capture_t reg)
 {
     switch (reg)
@@ -97,12 +97,12 @@ tc_capture_get (tc_t tc, tc_capture_t reg)
         return tc->captureB;
         
     default:
-        return ~0u;
+        return 0;
 }
 
 
 /** Poll to see if the capture registers have been loaded.  */
-tc_capture_t
+tc_capture_mask_t
 tc_capture_poll (tc_t tc)
 {
     uint32_t status = 0;

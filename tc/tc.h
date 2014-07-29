@@ -52,7 +52,12 @@ typedef enum
 
 
 /* The counters are only 16 bit.  */
-typedef uint16_t tc_period_t;
+typedef uint16_t tc_counter_t;
+
+typedef tc_counter_t tc_period_t;
+
+
+typedef uint16_t tc_capture_mask_t;
 
 
 /** TC configuration structure.  */
@@ -62,8 +67,6 @@ typedef struct
     tc_mode_t mode;
     tc_period_t period;
     tc_period_t delay;
-    tc_period_t captureA;
-    tc_period_t captureB;
 } tc_cfg_t;
 
 
@@ -91,15 +94,15 @@ bool
 tc_stop (tc_t tc);
 
 
-tc_period_t
+tc_counter_t
 tc_counter_get (tc_t tc);
 
 
-tc_period_t
+tc_counter_t
 tc_capture_get (tc_t tc, tc_capture_t reg);
               
 
-tc_capture_t
+tc_capture_mask_t
 tc_capture_poll (tc_t tc);
 
 
