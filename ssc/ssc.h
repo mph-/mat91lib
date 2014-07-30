@@ -146,7 +146,7 @@ typedef enum
 }  ssc_fs_mode_t;
 
 
-/* Frame sync edge detect which generates interrupts.  */
+/* Frame sync edge which generates interrupts.  */
 typedef enum 
 {
     SSC_FS_EDGE_POSITIVE = 0,
