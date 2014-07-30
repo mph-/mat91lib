@@ -98,6 +98,7 @@ tc_capture_get (tc_t tc, tc_capture_t reg)
         
     default:
         return 0;
+    }
 }
 
 
