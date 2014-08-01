@@ -255,12 +255,12 @@ pwm_init (const pwm_cfg_t *cfg)
     pwm->pin = pin;
     pwm->base = &PWM->PWM_CH_NUM[pin->channel];
     pwm->stop_state = cfg->stop_state;
-    if (pwm->stop_state)
-        pio_config_set (pwm->pin->pio, pwm->stop_state);
 
     /* Enable PWM peripheral clock (this is not required to configure
        the PWM).  */
     mcu_pmc_enable (ID_PWM);
+
+    pwm_stop (pwm);
 
     pwm_config (pwm, cfg->period, cfg->duty, cfg->align, cfg->polarity);
 
