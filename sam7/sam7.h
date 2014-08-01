@@ -60,9 +60,12 @@
 #define PWM_ENA PWMC_ENA
 #define PWM_DIS PWMC_DIS
 #define PWM_ISR1 PWMC_ISR
-#define PWM_CPRD PWMC_CUPDR
-#define PWM_CPRDUPD PWMC_CUPDR 
+/* Period register.  */
+#define PWM_CPRD PWMC_CPRDR
+/* Duty register.  */
 #define PWM_CDTY PWMC_CDTYR
+/* Period/duty update register.  */
+#define PWM_CPRDUPD PWMC_CUPDR 
 #define PWM_CDTYUPD PWMC_CUPDR
 #define PwmCh_num AT91S_PWMC_CH
 #define PWM_CH_NUM PWMC_CH
