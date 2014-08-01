@@ -1,4 +1,4 @@
-CFLAGS += -mcpu=arm7tdmi -Wall -Wstrict-prototypes -W -gdwarf-2 -D$(RUN_MODE) $(sort $(INCLUDES)) $(OPT) -mthumb-interwork -D__$(MCU)__ -D__SAM7__ -Wno-unused
+CFLAGS += -mcpu=arm7tdmi -Wall -Wstrict-prototypes -W -g3 -D$(RUN_MODE) $(sort $(INCLUDES)) $(OPT) -mthumb-interwork -D__$(MCU)__ -D__SAM7__ -Wno-unused
 
 LDFLAGS += -mthumb-interwork -nostartfiles -lm -lc
 
