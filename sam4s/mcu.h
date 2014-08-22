@@ -1,4 +1,4 @@
-/** @file   sys.h
+/** @file   mcu.h
     @author M. P. Hayes, UCECE
     @date   13 July 2013
     @brief  System routines for SAM4S processors
@@ -10,8 +10,15 @@
 
 
 #ifndef MCU_FLASH_READ_CYCLES 
-#define MCU_FLASH_READ_CYCLES 2
+#define MCU_FLASH_READ_CYCLES 6
 #endif
+
+
+static inline void
+mcu_delay_loop (unsigned int loops)
+{
+    __asm__ volatile ("\t subs %0, %0, #1;\n\t bcs . - 2" : "=r" (loops) : "0" (loops));
+}
 
 
 void
