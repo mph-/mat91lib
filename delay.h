@@ -14,19 +14,8 @@
 #ifdef RAM_RUN
 #define DELAY_LOOP_CYCLES 4
 #else
-#define DELAY_LOOP_CYCLES (4 * MCU_FLASH_READ_CYCLES)
+#define DELAY_LOOP_CYCLES (1 * MCU_FLASH_READ_CYCLES)
 #endif
-
-
-static inline void
-_delay_loop (unsigned int loops)
-{
-#ifdef __THUMBEL__
-    __asm__ volatile ("\t sub %0, %0, #1;\n\t bcs . - 2" : "=r" (loops) : "0" (loops));
-#else
-    __asm__ volatile ("\t subs %0, %0, #1;\n\t bcs . - 4" : "=r" (loops) : "0" (loops));
-#endif
-}
 
 
 static inline unsigned int 
@@ -54,7 +43,7 @@ do                                              \
         __ticks1 = 1;                           \
     else                                        \
         __ticks1 = (unsigned int)__tmp1;        \
-    _delay_loop (__ticks1);                     \
+    mcu_delay_loop (__ticks1);                  \
 }                                               \
 while (0)
 

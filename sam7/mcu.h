@@ -15,6 +15,19 @@
 #define MCU_FLASH_READ_CYCLES 2
 #endif
 
+
+static inline void
+mcu_delay_loop (unsigned int loops)
+{
+#ifdef __THUMBEL__
+    __asm__ volatile ("\t sub %0, %0, #1;\n\t bcs . - 2" : "=r" (loops) : "0" (loops));
+#else
+    __asm__ volatile ("\t subs %0, %0, #1;\n\t bcs . - 4" : "=r" (loops) : "0" (loops));
+#endif
+}
+
+
+
 /** Remap SRAM that SRAM exists at 0x200000 as well as at 0x000000.  On
     reset the Flash at 0x100000 is mapped to address 0x00000 as well as
     0x100000.  Note writing to the remap bit a second time toggles the
