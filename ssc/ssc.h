@@ -51,19 +51,19 @@ typedef enum
 
 
 /* Stop condition select.  This only applies if a data transfer has
- * started with a compare register 0 match.  */
+   started with a compare register 0 match.  */
 typedef enum 
 {
     // Wait for next compare register 0 match
     SSC_STOP_WAIT       = (0 << 12),       
     // Operate continuously until a compare register 1 match
     SSC_STOP_CONTINUOUS = (1 << 12)        
-} ssc_stop_t;
+} ssc_stop_mode_t;
 
 
 typedef enum 
 {
-   SSC_TX, SSC_RX
+    SSC_TX, SSC_RX
 } ssc_module_t;
 
 
@@ -110,7 +110,7 @@ typedef enum
     // enabling receiver for receive
     SSC_START_CONTINUOUS    = SSC_RCMR_START_CONTINUOUS,
     // Transmit/Receive start
-    SSC_START_TX            = SSC_RCMR_START_TRANSMIT,
+    SSC_START_TRANSMIT      = SSC_RCMR_START_TRANSMIT,
     // Start one clock after falling edge of RF
     SSC_START_LOW           = SSC_RCMR_START_RF_LOW,
     // Start one clock after rising edge of RF
@@ -178,11 +178,11 @@ typedef struct
     /* Number of words per frame.  */
     ssc_data_num_t       data_num;
     ssc_clock_edge_t     clock_edge;
-    ssc_stop_t           stop_mode;
     ssc_clock_select_t   clock_select;
     ssc_clock_out_mode_t clock_out_mode;
     ssc_clock_gate_mode_t clock_gate_mode;
     ssc_start_mode_t     start_mode;
+    ssc_stop_mode_t      stop_mode;
     ssc_fs_mode_t        fs_mode;
     ssc_fs_edge_t        fs_edge;
     bool                 loop_mode;

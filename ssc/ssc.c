@@ -114,7 +114,7 @@ ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module)
     {
         if (cfg->td_default)
             fmr |= SSC_TFMR_DATDEF;
-        
+
         SSC->SSC_TFMR = fmr | cfg->sync_data_enable;
         SSC->SSC_TCMR = cmr;
     }
@@ -136,7 +136,10 @@ ssc_config (ssc_t *ssc, const ssc_cfg_t *cfg)
 {
     /* Enable the peripheral clock.  */
     mcu_pmc_enable (ID_SSC);
-    
+
+    /* Reset receiver and transmitter.  */
+    SSC->SSC_CR = SSC_CR_SWRST | SSC_CR_RXDIS | SSC_CR_TXDIS;        
+
     /* Set the clock divider.  */
     ssc_clock_speed_kHz_set (ssc, cfg->clock_speed_kHz);
     
