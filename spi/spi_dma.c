@@ -34,19 +34,14 @@
 #endif
 
 
-/* Number of channels per controller.  */
-#define SPI_CHANNELS_NUM 4
-
-
-#define SPI_BASE_GET(spi) (((spi)->channel < SPI_CHANNELS_NUM) ? SPI0 : SPI1)
-#define PDC_BASE_GET(spi) (((spi)->channel < SPI_CHANNELS_NUM) ? PDC_SPI0 : PDC_SPI1)
+#define PDC_BASE_GET(spi) (((spi)->base == SPI0) ? PDC_SPI0 : PDC_SPI1)
 
 
 /** Return true if DMA has finished writing a buffer.  */
 bool
 spi_dma_write_finished_p (spi_t spi)
 {
-    Spi *pSPI = SPI_BASE_GET (spi);
+    Spi *pSPI = spi->base;
 
     return (pSPI->SPI_SR & SPI_SR_ENDTX) != 0;
 }
@@ -56,7 +51,7 @@ spi_dma_write_finished_p (spi_t spi)
 bool
 spi_dma_read_finished_p (spi_t spi)
 {
-    Spi *pSPI = SPI_BASE_GET (spi);
+    Spi *pSPI = spi->base;
 
     return (pSPI->SPI_SR & SPI_SR_ENDRX) != 0;
 }
@@ -144,7 +139,7 @@ spi_dma_read_disable (spi_t spi)
 static void
 spi_dma_multichannel_select (spi_t spi)
 {
-    Spi *pSPI = SPI_BASE_GET (spi);
+    Spi *pSPI = spi->base;
 
     pSPI->SPI_MR |= SPI_MR_PS;
 }
@@ -155,7 +150,7 @@ spi_dma_multichannel_select (spi_t spi)
 static void
 spi_dma_multichannel_deselect (spi_t spi)
 {
-    Spi *pSPI = SPI_BASE_GET (spi);
+    Spi *pSPI = spi->base;
 
     BITS_INSERT (pSPI->SPI_MR, 0x0f, 16, 19);
 }

@@ -873,7 +873,7 @@ spi_read_ready_p (spi_t spi)
 #if HOSTED
     return 1;
 #else
-    return SPI_READY_P (SPI_BASE_GET (spi->channel));
+    return SPI_READY_P (spi->base);
 #endif
 }
 
@@ -882,7 +882,7 @@ spi_read_ready_p (spi_t spi)
 bool
 spi_write_ready_p (spi_t spi)
 {
-    return SPI_READY_P (SPI_BASE_GET (spi->channel));
+    return SPI_READY_P (spi->base);
 }
 
 
