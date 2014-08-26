@@ -99,6 +99,7 @@ SECTIONS
     . = ALIGN(4);
     __bss_start__ = .;
     *(.bss)
+    *(.bss.*)
     *(COMMON)
     . = ALIGN(4);
     __bss_end__ = .;
