@@ -352,7 +352,7 @@ _gettimeofday (void *tp __UNUSED__, void *tzp __UNUSED__)
 }
 
 
-/* Return a clock that ticks at 100Hz.  */
+/* Return a clock that ticks at 100 Hz.  */
 clock_t 
 _times (void *tp __UNUSED__)
 {

@@ -106,7 +106,7 @@ tc_capture_mask_t
 tc_capture_poll (tc_t tc);
 
 
-tc_t
+tc_t 
 tc_init (const tc_cfg_t *cfg);
 
 

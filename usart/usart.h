@@ -17,7 +17,7 @@ typedef usart_dev_t *usart_t;
 
 
 /* Initialise UART for desired channel, baud rate, etc.  */
-usart_t
+usart_t 
 usart_init (uint8_t channel,
             uint16_t baud_divisor);
 

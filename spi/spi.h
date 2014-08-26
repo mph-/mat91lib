@@ -147,7 +147,7 @@ typedef spi_dev_t *spi_t;
 
 
 /** Create new SPI device instance.  */
-spi_t
+spi_t 
 spi_init (const spi_cfg_t *cfg);
 
 

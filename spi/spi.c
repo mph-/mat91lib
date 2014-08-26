@@ -569,7 +569,7 @@ spi_wakeup (spi_t spi)
 
 
 /** Initialise SPI for master mode.  */
-spi_t
+spi_t 
 spi_init (const spi_cfg_t *cfg)
 {
     spi_dev_t *spi;
