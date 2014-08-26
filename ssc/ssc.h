@@ -201,13 +201,14 @@ typedef struct
     ssc_module_cfg_t *rx;
 
     uint16_t clock_divisor;
-} ssc_t;
+} ssc_dev_t;
 
+
+typedef ssc_dev_t *ssc_t;
 
 
 /* SSC configuration structure, allows tx and rx modules to be independently
- * configured.
- */
+   configured.  */
 typedef struct 
 {
     // Transmitter configuration
@@ -225,24 +226,22 @@ typedef struct
 /* Function Prototypes */
 
 
-/** Enable all the modules.
- */
+/** Enable all the modules.   */
 void
-ssc_enable (ssc_t *ssc);
+ssc_enable (ssc_t ssc);
 
 
-/** Disable all the modules
- */
+/** Disable all the modules.   */
 void
-ssc_disable (ssc_t *ssc);
+ssc_disable (ssc_t ssc);
 
 
 bool
-ssc_read_ready_p (ssc_t *ssc);
+ssc_read_ready_p (ssc_t ssc);
 
 
 bool
-ssc_write_ready_p (ssc_t *ssc);
+ssc_write_ready_p (ssc_t ssc);
 
 
 /** Read the data in the rx buffer TODO (test)
@@ -250,24 +249,24 @@ ssc_write_ready_p (ssc_t *ssc);
    @param boolean wait for buffer ready, true = wait, false = don't wait
  */
 uint16_t
-ssc_read (ssc_t *ssc, void *buffer, uint16_t length);
+ssc_read (ssc_t ssc, void *buffer, uint16_t length);
 
 
 /** Write to the tx buffer TODO (test)
-   @param the data to write
-   @param boolean wait for ready, true = wait, false = don't wait
+    @param the data to write
+    @param boolean wait for ready, true = wait, false = don't wait
  */
 uint16_t
-ssc_write (ssc_t *ssc, void *buffer, uint16_t length);
+ssc_write (ssc_t ssc, void *buffer, uint16_t length);
 
 
 /** Initialize/configure the SSC. You still need to enable the
-   appropriate modules.  If a module is to be disabled then the
-   pointer to its configuration from within the ssc config should be
-   null. 
-   @param pointer to the ssc configuration structure to apply
- */
-ssc_t *
+    appropriate modules.  If a module is to be disabled then the
+    pointer to its configuration from within the ssc config should be
+    null. 
+    @param pointer to the ssc configuration structure to apply
+*/
+ssc_t 
 ssc_init (const ssc_cfg_t *);
 
 

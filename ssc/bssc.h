@@ -15,7 +15,7 @@ typedef struct bssc_struct bssc_t;
 struct bssc_struct
 {
     ssc_cfg_t  cfg;
-    ssc_t      *ssc;
+    ssc_t      ssc;
     ring_t     *ring;
     void       *buffer;
     uint16_t   dma_size;
@@ -30,6 +30,6 @@ int bspi_read (bssc_t *dev, void *buffer, int size);
 
 
 void
-bssc_init (bssc_t*, const ssc_cfg_t*, char*, uint16_t, uint16_t );
+bssc_init (bssc_t *, const ssc_cfg_t *, char *, uint16_t, uint16_t );
 
 #endif

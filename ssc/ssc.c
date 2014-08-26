@@ -17,12 +17,12 @@
    RSHR.  */
 
 
-static ssc_t ssc_dev;
+static ssc_dev_t ssc_dev;
 
 
 /* Set the clock divider.  */
 static void
-ssc_clock_divisor_set (ssc_t *ssc, ssc_clock_divisor_t clock_divisor) 
+ssc_clock_divisor_set (ssc_t ssc, ssc_clock_divisor_t clock_divisor) 
 {
    SSC->SSC_CMR = clock_divisor;
    ssc->clock_divisor = clock_divisor;
@@ -30,7 +30,7 @@ ssc_clock_divisor_set (ssc_t *ssc, ssc_clock_divisor_t clock_divisor)
 
 
 ssc_clock_speed_t
-ssc_clock_speed_kHz_set (ssc_t *ssc, ssc_clock_speed_t clock_speed_kHz)
+ssc_clock_speed_kHz_set (ssc_t ssc, ssc_clock_speed_t clock_speed_kHz)
 {
     uint32_t clock_speed;
 
@@ -132,7 +132,7 @@ ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module)
 
 /* Configure the ssc peripheral, null pointer = don't use a module.  */
 static void
-ssc_config (ssc_t *ssc, const ssc_cfg_t *cfg) 
+ssc_config (ssc_t ssc, const ssc_cfg_t *cfg) 
 {
     /* Enable the peripheral clock.  */
     mcu_pmc_enable (ID_SSC);
@@ -153,7 +153,7 @@ ssc_config (ssc_t *ssc, const ssc_cfg_t *cfg)
 
 /* Check if a buffer (tx or rx) is ready (empty or full respectively).  */
 static bool
-ssc_module_ready_p (ssc_t *ssc, ssc_module_t tx_rx)
+ssc_module_ready_p (ssc_t ssc, ssc_module_t tx_rx)
 {
     unsigned int mask = 0;
 
@@ -173,14 +173,14 @@ ssc_module_ready_p (ssc_t *ssc, ssc_module_t tx_rx)
 
 
 bool
-ssc_read_ready_p (ssc_t *ssc)
+ssc_read_ready_p (ssc_t ssc)
 {
     return ssc_module_ready_p (ssc, SSC_RX);
 }
 
 
 bool
-ssc_write_ready_p (ssc_t *ssc)
+ssc_write_ready_p (ssc_t ssc)
 {
     return ssc_module_ready_p (ssc, SSC_TX);
 }
@@ -188,7 +188,7 @@ ssc_write_ready_p (ssc_t *ssc)
 
 /* Enable an SSC module.  */
 static void
-ssc_module_enable (ssc_t *ssc, ssc_module_t tx_rx) 
+ssc_module_enable (ssc_t ssc, ssc_module_t tx_rx) 
 {
     switch (tx_rx) 
     {
@@ -213,7 +213,7 @@ ssc_module_enable (ssc_t *ssc, ssc_module_t tx_rx)
 
 /* Disable an SSC module.  */
 static void
-ssc_module_disable (ssc_t *ssc, ssc_module_t tx_rx) 
+ssc_module_disable (ssc_t ssc, ssc_module_t tx_rx) 
 {
     switch (tx_rx)
     {
@@ -238,7 +238,7 @@ ssc_module_disable (ssc_t *ssc, ssc_module_t tx_rx)
 
 /* Disable all of the modules.  */
 void
-ssc_disable (ssc_t *ssc)
+ssc_disable (ssc_t ssc)
 {
     if (ssc->tx)
         ssc_module_disable (ssc, SSC_TX);
@@ -250,7 +250,7 @@ ssc_disable (ssc_t *ssc)
 
 /* Enable all of the modules.  */
 void
-ssc_enable (ssc_t *ssc)
+ssc_enable (ssc_t ssc)
 {
     if (ssc->tx)
         ssc_module_enable (ssc, SSC_TX);
@@ -262,7 +262,7 @@ ssc_enable (ssc_t *ssc)
 
 /* Read data from the rx buffer.  */
 static uint16_t
-ssc_read_8 (ssc_t *ssc, void *buffer, uint16_t length)
+ssc_read_8 (ssc_t ssc, void *buffer, uint16_t length)
 {
     uint8_t *dst = buffer;
     int i;
@@ -279,7 +279,7 @@ ssc_read_8 (ssc_t *ssc, void *buffer, uint16_t length)
 
 /* Read data from the rx buffer.  */
 static uint16_t
-ssc_read_16 (ssc_t *ssc, void *buffer, uint16_t length)
+ssc_read_16 (ssc_t ssc, void *buffer, uint16_t length)
 {
     uint16_t *dst = buffer;
     int i;
@@ -297,7 +297,7 @@ ssc_read_16 (ssc_t *ssc, void *buffer, uint16_t length)
 
 /* Read data from the rx buffer.  */
 static uint16_t
-ssc_read_32 (ssc_t *ssc, void *buffer, uint16_t length)
+ssc_read_32 (ssc_t ssc, void *buffer, uint16_t length)
 {
     uint8_t *dst = buffer;
     int i;
@@ -314,7 +314,7 @@ ssc_read_32 (ssc_t *ssc, void *buffer, uint16_t length)
 
 /* Read data from the rx buffer.  */
 uint16_t
-ssc_read (ssc_t *ssc, void *buffer, uint16_t bytes)
+ssc_read (ssc_t ssc, void *buffer, uint16_t bytes)
 {
     if (ssc->rx->data_length <= 8)
         return ssc_read_8 (ssc, buffer, bytes);
@@ -326,7 +326,7 @@ ssc_read (ssc_t *ssc, void *buffer, uint16_t bytes)
 
 /* Write to the transmit buffer.  */
 static uint16_t
-ssc_write_8 (ssc_t *ssc, void *buffer, uint16_t length)
+ssc_write_8 (ssc_t ssc, void *buffer, uint16_t length)
 {
     uint8_t *src = buffer;
     int i;
@@ -343,7 +343,7 @@ ssc_write_8 (ssc_t *ssc, void *buffer, uint16_t length)
 
 /* Write to the transmit buffer.  */
 static uint16_t
-ssc_write_16 (ssc_t *ssc, void *buffer, uint16_t length)
+ssc_write_16 (ssc_t ssc, void *buffer, uint16_t length)
 {
     uint16_t *src = buffer;
     int i;
@@ -360,7 +360,7 @@ ssc_write_16 (ssc_t *ssc, void *buffer, uint16_t length)
 
 /* Write to the transmit buffer.  */
 static uint16_t
-ssc_write_32 (ssc_t *ssc, void *buffer, uint16_t length)
+ssc_write_32 (ssc_t ssc, void *buffer, uint16_t length)
 {
     uint32_t *src = buffer;
     int i;
@@ -377,7 +377,7 @@ ssc_write_32 (ssc_t *ssc, void *buffer, uint16_t length)
 
 /* Write to the transmit buffer.  */
 uint16_t
-ssc_write (ssc_t *ssc, void *buffer, uint16_t bytes)
+ssc_write (ssc_t ssc, void *buffer, uint16_t bytes)
 {
     if (ssc->tx->data_length <= 8)
         return ssc_write_8 (ssc, buffer, bytes);
@@ -387,11 +387,10 @@ ssc_write (ssc_t *ssc, void *buffer, uint16_t bytes)
 }
 
 
-/* Init and configure, still need to be enabled after calling this.  */
-ssc_t *
+ssc_t 
 ssc_init (const ssc_cfg_t *cfg)
 {
-    ssc_t *ssc;
+    ssc_t ssc;
 
     ssc = &ssc_dev;
 

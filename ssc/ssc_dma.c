@@ -7,7 +7,7 @@
     This DMA driver is essentially the same as the SPI one, but with
     different base controller addresses.  It could be neater to have
     one PDC driver with its own configuration structure rather than a
-    separate DMA driver for each peripheral with a DMA interface.  */
+    separate DMA driver for each peripheral with a PDC interface.  */
 
 #include "ssc.h"
 #include "ssc_dma.h"
