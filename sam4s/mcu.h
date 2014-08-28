@@ -38,6 +38,10 @@ mcu_sleep (void);
 
 
 void
+mcu_reset (void);
+
+
+void
 mcu_udp_disable (void);
 
 

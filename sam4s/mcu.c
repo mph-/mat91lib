@@ -159,14 +159,21 @@ mcu_clock_init (void)
        Here we assume that an external crystal is used for the MAINCK
        and this is multipled by PLLA to drive MCK.
 
-       Initially MCK is driven from the 4 MHZ internal fast RC oscillator.
+       Initially MCK is driven from the 4 MHz internal fast RC oscillator.
     */
+
+    /* Hack to handle JTAG reset when the PLLA is still operating.
+       Without this call to mcu_reset, the PLLA is not enabled after
+       every second reset.  */
+    if ((PMC->PMC_MCKR & PMC_MCKR_CSS_Msk) == PMC_MCKR_CSS_PLLA_CLK)
+        mcu_reset ();
 
     /* Start xtal oscillator and select as MAINCK.  */
     mcu_xtal_mainck_start ();
     
     /* Select MAINCK for MCK (this should already be selected).  */
-    PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_CSS_Msk)) | PMC_MCKR_CSS_MAIN_CLK;
+    PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_CSS_Msk))
+        | PMC_MCKR_CSS_MAIN_CLK;
     if (!mcu_mck_ready_wait ())
         return 0;
 
@@ -181,9 +188,11 @@ mcu_clock_init (void)
     /* Disable PLLA if it is running and reset fields.  */
     PMC->CKGR_PLLAR = CKGR_PLLAR_ONE | CKGR_PLLAR_MULA (0);
 
-    /* Configure and start PLLA.  The PLL start delay is MCU_PLL_COUNT SLCK cycles.  
-       Note, PLLA (but not PLBB) needs the mysterious bit CKGR_PLLAR_ONE set.  */
-    PMC->CKGR_PLLAR = CKGR_PLLAR_MULA (MCU_PLL_MUL - 1) | CKGR_PLLAR_DIVA (MCU_PLL_DIV) 
+    /* Configure and start PLLA.  The PLL start delay is MCU_PLL_COUNT
+       SLCK cycles.  Note, PLLA (but not PLBB) needs the mysterious
+       bit CKGR_PLLAR_ONE set.  */
+    PMC->CKGR_PLLAR = CKGR_PLLAR_MULA (MCU_PLL_MUL - 1) 
+        | CKGR_PLLAR_DIVA (MCU_PLL_DIV) 
         | CKGR_PLLAR_PLLACOUNT (MCU_PLL_COUNT) | CKGR_PLLAR_ONE;
 
     /* Wait for PLLA to start up.  */
@@ -191,7 +200,8 @@ mcu_clock_init (void)
         continue;
 
     /* Switch to PLLA_CLCK for MCK.  */
-    PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_CSS_Msk)) | PMC_MCKR_CSS_PLLA_CLK;
+    PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_CSS_Msk)) 
+        | PMC_MCKR_CSS_PLLA_CLK;
     if (!mcu_mck_ready_wait ())
         return 0;
     
@@ -269,7 +279,6 @@ mcu_init (void)
 
     irq_global_enable ();
 }
-
 
 
 void

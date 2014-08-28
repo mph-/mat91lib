@@ -7,3 +7,23 @@ TODO
 Convert files to use doxygen markup
 
 Perhaps use CMSIS - Cortex Microcontroller Software Interface Standard
+
+
+A note on handles.  These are designed to be opaque pointers or
+integers and to provide a consistent interface.  This improves
+portability but can be unnecessarily confusing.  Moreover, opaque
+pointers hinter debugging.
+
+From a consistent interface point of view, the only exception is
+pio_t.  Dereferencing a pointer stymies many optimisations, especially
+for low performance microcontrollers.
+
+adc_t
+pwm_t
+spi_t
+ssc_t
+tc_t
+udp_t
+usart_t
+
+pio_t  (uint32)
