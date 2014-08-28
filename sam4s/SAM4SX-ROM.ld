@@ -14,6 +14,7 @@ SECTIONS
   {
     . = ALIGN(4);
     *(.text)
+    *(.text.*)
     *(.glue_7t) *(.glue_7)
 
         /* Support C constructors, and C destructors in both user code
