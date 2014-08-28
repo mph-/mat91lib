@@ -29,7 +29,7 @@ enum {PORT_A, PORT_B, PORT_C};
 
 
 /** Private macro to lookup bitmask.  */
-#define PIO_BITMASK_(PIO) (BIT(PIO & 0x1F))
+#define PIO_BITMASK_(PIO) (BIT((PIO) & 0x1F))
 
 
 /** Private macro to lookup port register.  */
