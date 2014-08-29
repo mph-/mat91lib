@@ -19,18 +19,22 @@ typedef struct pdc_descriptor_struct
 } pdc_descriptor_t;
 
 
+typedef struct pdc_module_struct
+{
+    pdc_descriptor_t *current;
+    uint32_t count;
+} pdc_module_t;
+
+
 typedef struct pdc_dev_struct
 {
     Pdc *base;
-    pdc_descriptor_t *tx;
-    pdc_descriptor_t *rx;
-    uint32_t tx_count;
-    uint32_t rx_count;
+    pdc_module_t tx;
+    pdc_module_t rx;
 } pdc_dev_t;
 
 
 typedef pdc_dev_t *pdc_t;
-
 
 
 /** Return true if DMA has finished writing a buffer.  */
@@ -78,19 +82,19 @@ pdc_read_disable (pdc_t pdc);
 
 
 void
-pdc_write_init (pdc_t pdc, void *buffer, uint16_t size);
-
-
-void
-pdc_read_init (pdc_t pdc, void *buffer, uint16_t size);
-
-
-void
 pdc_write_next (pdc_t pdc, void *buffer, uint16_t size);
 
 
 void
 pdc_read_next (pdc_t pdc, void *buffer, uint16_t size);
+
+
+pdc_descriptor_t *
+pdc_read_poll (pdc_t pdc);
+
+
+pdc_descriptor_t *
+pdc_write_poll (pdc_t pdc);
 
 
 pdc_t

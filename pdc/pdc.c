@@ -98,32 +98,6 @@ pdc_read_disable (pdc_t pdc)
 
 
 void
-pdc_write_init (pdc_t pdc, void *buffer, uint16_t size)
-{
-    pdc_write_disable (pdc);
-
-    pdc->base->PERIPH_TNPR = 0;
-    pdc->base->PERIPH_TNCR = 0;
-
-    pdc->base->PERIPH_TPR = (uint32_t) buffer;
-    pdc->base->PERIPH_TCR = size;
-}
-
-
-void
-pdc_read_init (pdc_t pdc, void *buffer, uint16_t size)
-{
-    pdc_read_disable (pdc);
-
-    pdc->base->PERIPH_RNPR = 0;
-    pdc->base->PERIPH_RNCR = 0;
-
-    pdc->base->PERIPH_RPR = (uint32_t) buffer;
-    pdc->base->PERIPH_RCR = size;
-}
-
-
-void
 pdc_write_next (pdc_t pdc, void *buffer, uint16_t size)
 {
     pdc->base->PERIPH_TNPR = (uint32_t) buffer;
@@ -139,11 +113,127 @@ pdc_read_next (pdc_t pdc, void *buffer, uint16_t size)
 }
 
 
-void
-pdc_next (pdc_t pdc, void *txbuffer, void *rxbuffer, uint16_t size)
+
+pdc_descriptor_t *
+pdc_read_poll (pdc_t pdc)
 {
-    pdc_read_next (pdc, rxbuffer, size);
-    pdc_write_next (pdc, txbuffer, size);
+    pdc_descriptor_t *current;
+
+    current = pdc->rx.current;
+
+    if (!current)
+        return 0;
+
+    if (pdc->base->PERIPH_RCR != 0)
+        return 0;
+        
+    pdc->rx.count++;
+
+    pdc->rx.current = current->next;
+
+    if (!pdc->rx.current)
+    {
+        pdc_read_disable (pdc);
+        return current;
+    }
+    
+    if (pdc->rx.current->next)
+        pdc_read_next (pdc, pdc->rx.current->next->buffer, 
+                       pdc->rx.current->next->size);
+
+    return current;
+}
+
+
+pdc_descriptor_t *
+pdc_write_poll (pdc_t pdc)
+{
+    pdc_descriptor_t *current;
+
+    current = pdc->tx.current;
+
+    if (!current)
+        return 0;
+
+    if (pdc->base->PERIPH_TCR != 0)
+        return 0;
+        
+    pdc->tx.count++;
+
+    pdc->tx.current = current->next;
+
+    if (!pdc->tx.current)
+    {
+        pdc_write_disable (pdc);
+        return current;
+    }
+    
+    if (pdc->tx.current->next)
+        pdc_write_next (pdc, pdc->tx.current->next->buffer, 
+                        pdc->tx.current->next->size);
+
+    return current;
+}
+
+
+void
+pdc_write_init (pdc_t pdc, pdc_descriptor_t *tx)
+{
+    pdc_write_disable (pdc);
+
+    pdc->tx.current = tx;
+    pdc->tx.count = 0;
+
+    if (!tx)
+        return;
+        
+    pdc->base->PERIPH_TPR = (uint32_t) tx->buffer;
+    /* This starts the transfer if channel active.  */
+    pdc->base->PERIPH_TCR = tx->size;
+    
+    if (tx->next)
+    {
+        pdc->base->PERIPH_TNPR = (uint32_t) tx->next->buffer;
+        pdc->base->PERIPH_TNCR = tx->next->size;
+    }
+    else
+    {
+        pdc->base->PERIPH_TNPR = 0;
+        pdc->base->PERIPH_TNCR = 0;
+    }
+    
+    pdc_write_enable (pdc);
+}
+
+
+void
+pdc_read_init (pdc_t pdc, pdc_descriptor_t *rx)
+{
+    pdc_read_disable (pdc);
+
+    pdc->rx.current = rx;
+    pdc->rx.count = 0;
+    if (!rx)
+        return;
+
+    /* Need to write to RNCR before RCR otherwise RNCR gets set to 0.  */
+    
+    pdc->base->PERIPH_RPR = (uint32_t) rx->buffer;
+    /* This starts the transfer if channel active.  */
+    pdc->base->PERIPH_RCR = rx->size;
+    
+    if (rx->next)
+    {
+        pdc->base->PERIPH_RNPR = (uint32_t) rx->next->buffer;
+        pdc->base->PERIPH_RNCR = rx->next->size;
+    }
+    else
+    {
+        pdc->base->PERIPH_RNPR = 0;
+        pdc->base->PERIPH_RNCR = 0;
+    }
+    
+    pdc_read_enable (pdc);
 }
 
 
@@ -158,37 +248,9 @@ pdc_init (void *base, pdc_descriptor_t *tx, pdc_descriptor_t *rx)
     pdc = &pdc_dev[pdc_num++];
 
     pdc->base = base;
-    pdc->rx_count = 0;
-    pdc->tx_count = 0;
 
-    if (tx)
-    {
-        pdc_write_init (pdc, tx->buffer, tx->size);
-        tx = tx->next;
-        if (tx)
-        {
-            pdc_write_next (pdc, tx->buffer, tx->size);
-            tx = tx->next;
-        }
-        pdc_write_enable (pdc);
-    }
-    pdc->tx = tx;
-
-    if (rx)
-    {
-        pdc_read_init (pdc, rx->buffer, rx->size);
-        rx = rx->next;
-        if (rx)
-        {
-            pdc_read_next (pdc, rx->buffer, rx->size);
-            rx = rx->next;
-        }
-        pdc_read_enable (pdc);
-    }
-    pdc->rx = rx;
-
-
-
+    pdc_write_init (pdc, tx);
+    pdc_read_init (pdc, rx);
 
     return pdc;
 }
