@@ -260,6 +260,10 @@ uint16_t
 ssc_write (ssc_t ssc, void *buffer, uint16_t length);
 
 
+Pdc *
+ssc_pdc_get (ssc_t ssc);
+
+
 /** Initialize/configure the SSC. You still need to enable the
     appropriate modules.  If a module is to be disabled then the
     pointer to its configuration from within the ssc config should be

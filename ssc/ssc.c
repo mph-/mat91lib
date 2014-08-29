@@ -387,6 +387,14 @@ ssc_write (ssc_t ssc, void *buffer, uint16_t bytes)
 }
 
 
+Pdc *
+ssc_pdc_get (ssc_t ssc)
+{
+    return (Pdc *)((char *)SSC + 0x100);
+}
+
+
+
 ssc_t 
 ssc_init (const ssc_cfg_t *cfg)
 {
