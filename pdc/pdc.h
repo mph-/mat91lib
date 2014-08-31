@@ -82,11 +82,11 @@ pdc_read_disable (pdc_t pdc);
 
 
 void
-pdc_write_next (pdc_t pdc, void *buffer, uint16_t size);
+pdc_start (pdc_t pdc);
 
 
 void
-pdc_read_next (pdc_t pdc, void *buffer, uint16_t size);
+pdc_stop (pdc_t pdc);
 
 
 pdc_descriptor_t *
@@ -97,12 +97,12 @@ pdc_descriptor_t *
 pdc_write_poll (pdc_t pdc);
 
 
+void
+pdc_config (pdc_t pdc, pdc_descriptor_t *tx, pdc_descriptor_t *rx);
+
+
 pdc_t
 pdc_init (void *base, pdc_descriptor_t *tx, pdc_descriptor_t *rx);
-
-
-void
-pdc_next (pdc_t pdc, void *txbuffer, void *rxbuffer, uint16_t size);
 
 
 void

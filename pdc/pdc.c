@@ -177,7 +177,7 @@ pdc_write_poll (pdc_t pdc)
 
 
 void
-pdc_write_init (pdc_t pdc, pdc_descriptor_t *tx)
+pdc_write_config (pdc_t pdc, pdc_descriptor_t *tx)
 {
     pdc_write_disable (pdc);
 
@@ -201,13 +201,11 @@ pdc_write_init (pdc_t pdc, pdc_descriptor_t *tx)
         pdc->base->PERIPH_TNPR = 0;
         pdc->base->PERIPH_TNCR = 0;
     }
-    
-    pdc_write_enable (pdc);
 }
 
 
 void
-pdc_read_init (pdc_t pdc, pdc_descriptor_t *rx)
+pdc_read_config (pdc_t pdc, pdc_descriptor_t *rx)
 {
     pdc_read_disable (pdc);
 
@@ -232,8 +230,36 @@ pdc_read_init (pdc_t pdc, pdc_descriptor_t *rx)
         pdc->base->PERIPH_RNPR = 0;
         pdc->base->PERIPH_RNCR = 0;
     }
-    
-    pdc_read_enable (pdc);
+}
+
+
+void
+pdc_config (pdc_t pdc, pdc_descriptor_t *tx, pdc_descriptor_t *rx)
+{
+    pdc_write_config (pdc, tx);
+    pdc_read_config (pdc, rx);
+}
+
+
+void
+pdc_start (pdc_t pdc)
+{
+    if (pdc->rx.current)
+        pdc_read_enable (pdc);
+
+    if (pdc->tx.current)
+        pdc_write_enable (pdc);
+}
+
+
+void
+pdc_stop (pdc_t pdc)
+{
+    if (pdc->rx.current)
+        pdc_read_disable (pdc);
+
+    if (pdc->tx.current)
+        pdc_write_disable (pdc);
 }
 
 
@@ -249,8 +275,7 @@ pdc_init (void *base, pdc_descriptor_t *tx, pdc_descriptor_t *rx)
 
     pdc->base = base;
 
-    pdc_write_init (pdc, tx);
-    pdc_read_init (pdc, rx);
+    pdc_config (pdc, tx, rx);
 
     return pdc;
 }
