@@ -274,5 +274,8 @@ ssc_t
 ssc_init (const ssc_cfg_t *);
 
 
+void
+ssc_shutdown (ssc_t ssc);
+
 #endif //SSC_H
 
