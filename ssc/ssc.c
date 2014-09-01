@@ -412,3 +412,19 @@ ssc_init (const ssc_cfg_t *cfg)
     return ssc;
 }
 
+
+void
+ssc_shutdown (ssc_t ssc)
+{
+    ssc_disable (ssc);
+
+    /* Perhaps configure as inputs with pullups?  */
+
+    pio_config_set (RD_PIO, PIO_OUTPUT_LOW);
+    pio_config_set (RK_PIO, PIO_OUTPUT_LOW);
+    pio_config_set (RF_PIO, PIO_OUTPUT_LOW);
+    
+    pio_config_set (TD_PIO, PIO_OUTPUT_LOW);
+    pio_config_set (TK_PIO, PIO_OUTPUT_LOW);
+    pio_config_set (TF_PIO, PIO_OUTPUT_LOW);
+}
