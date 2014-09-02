@@ -98,6 +98,10 @@ tc_counter_t
 tc_counter_get (tc_t tc);
 
 
+void
+tc_counter_set (tc_t tc, uint16_t value);
+
+
 tc_counter_t
 tc_capture_get (tc_t tc, tc_capture_t reg);
               

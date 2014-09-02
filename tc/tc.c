@@ -85,6 +85,13 @@ tc_counter_get (tc_t tc)
 }
 
 
+void
+tc_counter_set (tc_t tc, uint16_t value)
+{
+    tc->base->TC_CV = value;
+}
+
+
 tc_counter_t
 tc_capture_get (tc_t tc, tc_capture_t reg)
 {
@@ -267,6 +274,8 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
 
     return 1;
 }
+
+
 void
 tc_shutdown (tc_t tc)
 {
@@ -314,9 +323,7 @@ tc_init (const tc_cfg_t *cfg)
     /* Enable TCx peripheral clock.  */
     mcu_pmc_enable (ID_TC0 + pin->channel);
     
-
     tc_config (tc, cfg->mode, cfg->period, cfg->delay);
-   
 
     return tc;
 }
@@ -330,6 +337,7 @@ tc_clock_sync_handler (void)
     TC1_BASE->TC_SR;
     TC2_BASE->TC_SR;
 }
+
 
 /* Sleep for specified period.  This is useful for synchronising the
    CPU clock MCK to the timer clock, especially since the fastest
