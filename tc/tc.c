@@ -140,7 +140,7 @@ tc_capture_poll (tc_t tc)
     terms of the CPU clock.  The pulse width is period - delay.  */
 bool
 tc_config (tc_t tc, tc_mode_t mode, tc_period_t period, 
-           tc_period_t delay)
+           tc_period_t delay, tc_prescale_t prescale)
 {
     /* Many timer counters can only generate a pulse with a single
        timer clock period.  This timer counter allows the pulse width
@@ -233,10 +233,20 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
         return 0;
     }
 
-    /* TODO: If period > 65536 then need to select a slower timer
-       clock.  For now use MCK / 2.  Other prescale factors are 8, 32,
-       128, and 1024.  */
-    tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK1;
+
+    /* TODO: If period > 65536 then need to increase prescale.  */
+
+    /* The available prescaler values are 1, 8, 32, 128, 1024.  */
+    if (prescale > 128)
+        tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK5;
+    else if (prescale > 32 && prescale < 128)
+        tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK4;
+    else if (prescale > 8 && prescale < 32)
+        tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK3;
+    else if (prescale > 1 && prescale < 8)
+        tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK2;
+    else
+        tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK1;
 
     /* These registers are read only when not in wave mode.  */
     tc->base->TC_RA = delay >> 1;
@@ -323,7 +333,7 @@ tc_init (const tc_cfg_t *cfg)
     /* Enable TCx peripheral clock.  */
     mcu_pmc_enable (ID_TC0 + pin->channel);
     
-    tc_config (tc, cfg->mode, cfg->period, cfg->delay);
+    tc_config (tc, cfg->mode, cfg->period, cfg->delay, cfg->prescale);
 
     return tc;
 }
@@ -347,7 +357,7 @@ tc_clock_sync (tc_t tc, tc_period_t period)
 {
     uint32_t id;
 
-    tc_config (tc, TC_MODE_DELAY_ONESHOT, period, period);
+    tc_config (tc, TC_MODE_DELAY_ONESHOT, period, period, 1);
 
     id = ID_TC0 + TC_CHANNEL (tc);
 

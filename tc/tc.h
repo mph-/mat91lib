@@ -60,6 +60,9 @@ typedef tc_counter_t tc_period_t;
 typedef uint16_t tc_capture_mask_t;
 
 
+typedef uint16_t tc_prescale_t;
+
+
 /** TC configuration structure.  */
 typedef struct
 {
@@ -67,6 +70,7 @@ typedef struct
     tc_mode_t mode;
     tc_period_t period;
     tc_period_t delay;
+    tc_prescale_t prescale;
 } tc_cfg_t;
 
 
@@ -83,7 +87,7 @@ typedef tc_dev_t *tc_t;
     terms of the CPU clock.  The pulse width is period - delay.  */
 bool
 tc_config (tc_t tc, tc_mode_t mode, 
-           tc_period_t period, tc_period_t delay);
+           tc_period_t period, tc_period_t delay, tc_prescale_t prescale);
 
 
 bool
