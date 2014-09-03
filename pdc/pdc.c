@@ -24,6 +24,11 @@
 
   Unfortunately, the ISR, IER, IDR, and IMR, have different offsets
   for different peripherals.
+
+  The transfer count specifies the number of transfers.
+
+  The memory pointer is incremented by 1, 2 or 4 bytes for byte,
+  half-word or word transfers.
 */
 
 #ifndef PDC_NUM
