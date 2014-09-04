@@ -51,10 +51,12 @@ typedef enum
 } tc_capture_t;
 
 
-/* The counters are only 16 bit.  */
-typedef uint16_t tc_counter_t;
+/* The counters are only 16 bit but we synthesise a large counter
+   by counting timer overflows.  */
+typedef uint32_t tc_counter_t;
 
-typedef tc_counter_t tc_period_t;
+
+typedef uint16_t tc_period_t;
 
 
 typedef uint16_t tc_capture_mask_t;
@@ -100,10 +102,6 @@ tc_stop (tc_t tc);
 
 tc_counter_t
 tc_counter_get (tc_t tc);
-
-
-void
-tc_counter_set (tc_t tc, uint16_t value);
 
 
 tc_counter_t

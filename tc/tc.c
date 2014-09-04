@@ -74,10 +74,10 @@ void tc_handler (tc_t tc)
         tc->overflows++;
 
     if (status & TC_SR_LDRAS)
-        tc->captureA = ((tc->overflows & 0xffff) << 16) | tc->base->TC_RA;
+        tc->captureA = (tc->overflows << 16) | tc->base->TC_RA;
 
     if (status & TC_SR_LDRBS)
-        tc->captureB = ((tc->overflows & 0xffff) << 16) | tc->base->TC_RB;
+        tc->captureB = (tc->overflows << 16) | tc->base->TC_RB;
 
 }
 
@@ -123,14 +123,7 @@ tc_stop (tc_t tc)
 tc_counter_t
 tc_counter_get (tc_t tc)
 {
-    return tc->base->TC_CV;
-}
-
-
-void
-tc_counter_set (tc_t tc, uint16_t value)
-{
-    tc->base->TC_CV = value;
+    return (tc->overflows << 16) | tc->base->TC_CV;
 }
 
 
