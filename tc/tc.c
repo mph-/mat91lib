@@ -61,6 +61,48 @@ static const pinmap_t tc_pins[] =
 static tc_dev_t tc_devices[TC_DEVICES_NUM];
 
 
+static
+void tc_handler (tc_t tc)
+{
+    uint32_t status = 0;
+    
+    /* When the status register is read, the capture status
+       flags are cleared!  */
+    status = tc->base->TC_SR;
+
+    if (status & TC_SR_COVFS)
+        tc->overflows++;
+
+    if (status & TC_SR_LDRAS)
+        tc->captureA = ((tc->overflows & 0xffff) << 16) | tc->base->TC_RA;
+
+    if (status & TC_SR_LDRBS)
+        tc->captureB = ((tc->overflows & 0xffff) << 16) | tc->base->TC_RB;
+
+}
+
+
+static
+void tc_handler0 (void)
+{
+    tc_handler (&tc_devices[0]);
+}
+
+
+static
+void tc_handler1 (void)
+{
+    tc_handler (&tc_devices[1]);
+}
+
+
+static
+void tc_handler2 (void)
+{
+    tc_handler (&tc_devices[2]);
+}
+
+
 bool
 tc_start (tc_t tc)
 {
@@ -120,13 +162,13 @@ tc_capture_poll (tc_t tc)
        flags are cleared!  */
     status = tc->base->TC_SR;
     
-    if (status & BIT(6))
+    if (status & TC_SR_LDRAS)
     {
         tc->captureA = tc->base->TC_RA;
         return_val |= BIT (TC_CAPTURE_A);
     }
     
-    if (status & BIT(5))
+    if (status & TC_SR_LDRBS)
     {
         tc->captureB = tc->base->TC_RB;
         return_val |= BIT (TC_CAPTURE_B);
@@ -209,24 +251,28 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
         tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
             | TC_CMR_LDRA_RISING | TC_CMR_LDRB_RISING
             | TC_CMR_ABETRG | TC_CMR_ETRGEDG_NONE;
+        tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS | TC_IER_LDRBS;
         break;
 
     case TC_MODE_CAPTURE_RISE_FALL:
         tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
             | TC_CMR_LDRA_RISING | TC_CMR_LDRB_FALLING
             | TC_CMR_ABETRG | TC_CMR_ETRGEDG_NONE;
+        tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS | TC_IER_LDRBS;
         break;
 
     case TC_MODE_CAPTURE_FALL_RISE:
         tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
             | TC_CMR_LDRA_FALLING | TC_CMR_LDRB_RISING
             | TC_CMR_ABETRG | TC_CMR_ETRGEDG_NONE;
+        tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS | TC_IER_LDRBS;
         break;
 
     case TC_MODE_CAPTURE_FALL_FALL:
         tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
             | TC_CMR_LDRA_FALLING | TC_CMR_LDRB_FALLING
             | TC_CMR_ABETRG | TC_CMR_ETRGEDG_NONE;
+        tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS | TC_IER_LDRBS;
         break;
         
     default:
@@ -236,10 +282,9 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
 
     /* TODO: If period > 65536 then need to increase prescale.  */
 
-    /* The available prescaler values are 1, 8, 32, 128, 1024.  */
-    if (prescale > 128)
-        tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK5;
-    else if (prescale > 32 && prescale < 128)
+    /* The available prescaler values are 1, 8, 32, 128.  On the SAM7
+       TIMER_CLOCK5 is MCK / 1024 but on the SAM4S it is SLCK.  */
+    if (prescale > 32 && prescale < 128)
         tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK4;
     else if (prescale > 8 && prescale < 32)
         tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK3;
@@ -292,6 +337,8 @@ tc_shutdown (tc_t tc)
     /* Disable peripheral clock.  */
     mcu_pmc_disable (ID_TC0 + TC_CHANNEL (tc));
 
+    irq_disable (ID_TC0 + TC_CHANNEL (tc));
+
     /* Perhaps should force TC output pin low?  */
 }
 
@@ -319,14 +366,17 @@ tc_init (const tc_cfg_t *cfg)
     {
     case TC_CHANNEL_0:
         tc->base = TC0_BASE;
+        irq_config (ID_TC0, 7, tc_handler0);
         break;
 
     case TC_CHANNEL_1:
         tc->base = TC1_BASE;
+        irq_config (ID_TC1, 7, tc_handler1);
         break;
 
     case TC_CHANNEL_2:
         tc->base = TC2_BASE;
+        irq_config (ID_TC2, 7, tc_handler2);
         break;
     }
 
@@ -334,6 +384,10 @@ tc_init (const tc_cfg_t *cfg)
     mcu_pmc_enable (ID_TC0 + pin->channel);
     
     tc_config (tc, cfg->mode, cfg->period, cfg->delay, cfg->prescale);
+
+    tc->overflows = 0;
+
+    irq_enable (ID_TC0 + TC_CHANNEL (tc));
 
     return tc;
 }
