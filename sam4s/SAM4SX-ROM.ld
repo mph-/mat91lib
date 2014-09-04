@@ -70,21 +70,19 @@ SECTIONS
 
   __text_end__ = .;
 
-  .dynamic_vectors :
-  {
-    . = ALIGN(64);
-    *(.dynamic_vectors)
-  } >SRAM = 0
-
   /* Data/code stored in FLASH that gets relocated into SRAM
      (__data_start__ and __data_end__ are addresses in SRAM).  */
   .data : AT (__text_end__)
   {
-    . = ALIGN(4);   
+    . = ALIGN(64);
     __data_start__ = .;
+    /* Vectors that can be modified at run-time.  */
+    *(.dynamic_vectors)
+
     /* Program code stored in FLASH that gets relocated into SRAM.  */
     *(.ramtext)
     *(.ramfunc)
+
     /* Initialized data stored in FLASH that gets relocated into SRAM.  */
     *(.data)
     *(.data.*)

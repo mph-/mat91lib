@@ -53,7 +53,7 @@ typedef enum
 
 /* The counters are only 16 bit but we synthesise a large counter
    by counting timer overflows.  */
-typedef uint32_t tc_counter_t;
+typedef uint64_t tc_counter_t;
 
 
 typedef uint16_t tc_period_t;
