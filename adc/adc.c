@@ -6,6 +6,7 @@
 
 #include "adc.h"
 #include "bits.h"
+#include "mcu.h"
 
 /* On reset the the PIO pins are configured as inputs with pullups.
    To make a PIO pin an ADC pin requires programming ADC_CHER.
@@ -104,7 +105,13 @@ adc_resolution_set (uint8_t resolution)
 {
     switch (resolution)
     {
-        /* ADC clock has to be 5MHz in high resolution mode, a prescale of 4.  */
+        /* The SAM4S has a 12 bit ADC with 16 to 1 analog mux., 1 MHz
+         sampling, 1/2, 1, 2, 4 times PGA, and programmable offset.
+         It can also operate in a 10 bit mode.  The SAM7 has a 10 bit
+         ADC that can also operate in 8 bit mode.  */
+
+        /* ADC clock has to be 5 MHz in high resolution mode, a
+           prescale of 4.  */
         case 10:
 
             ADC->ADC_MR &= ~ADC_MR_LOWRES;
@@ -117,7 +124,8 @@ adc_resolution_set (uint8_t resolution)
             BITS_INSERT (ADC->ADC_MR, ADC_10BIT_SHTIM, 24, 27);
             break;
 
-        /* ADC clock has to be 8MHz in low resolution mode, a prescale of 2.  */
+        /* ADC clock has to be 8 MHz in low resolution mode, a
+           prescale of 2.  */
         case 8:
             ADC->ADC_MR |= ADC_MR_LOWRES;
 
@@ -157,8 +165,15 @@ adc_init (uint8_t channels __UNUSED__)
 {
     adc_sample_t dummy;
 
+    /* The clock only needs to be enabled when sampling.  The clock is
+       automatically started for the SAM7.  */
+    mcu_pmc_enable (ID_ADC);
+
     adc_reset ();
+
     adc_resolution_set (10);
+    /* I'm not sure why a dummy read is required; it is probably a
+       quirk of the SAM7.  */
     adc_read_wait (0, &dummy);
 }
 
@@ -189,7 +204,7 @@ bool
 adc_ready_p (void)
 {
     /* FIXME for SAM4S.  */
-    return (ADC->ADC_SR & AT91C_ADC_DRDY) != 0;
+    return (ADC->ADC_ISR & ADC_ISR_DRDY) != 0;
 }
 
 

@@ -192,5 +192,8 @@
 #define PMC_SCDR_UDP AT91C_PMC_UDP
 #define PMC_SCER_UDP AT91C_PMC_UDP
 
+#define ADC_ISR_DRDY AT91C_ADC_DRDY
+#define ADC_ISR ADC_SR
+
 
 #endif
