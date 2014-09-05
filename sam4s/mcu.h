@@ -17,7 +17,10 @@
 static inline void
 mcu_delay_loop (unsigned int loops)
 {
-    __asm__ volatile ("\t subs %0, %0, #1;\n\t bcs . - 2" : "=r" (loops) : "0" (loops));
+    /* Need to use l constraint to select a low register otherwise a
+       32-bit subs instruction may be selected instead of a 16-bit
+       instruction.  */
+    __asm__ volatile ("\t subs %0, %0, #1;\n\t bcs . - 2" : "=l" (loops) : "0" (loops));
 }
 
 
