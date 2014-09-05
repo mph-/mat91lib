@@ -32,8 +32,17 @@ enum {PORT_A, PORT_B, PORT_C};
 #define PIO_BITMASK_(PIO) (BIT((PIO) & 0x1F))
 
 
-/** Private macro to lookup port register.  */
-#define PIO_PORT_(PIO) (((PIO) >> 5) == PORT_A ? PIOA : ((PIO) >> 5) == PORT_B ? PIOB : PIOC)
+/** Private macro to lookup PIO controller base address.  */
+#define PIO_PORT(PIO) ((PIO) >> 5)
+
+
+/** Private macro to lookup PIO controller base address.  */
+#define PIO_BASE(PIO) (PIO_PORT (PIO) == PORT_A ? PIOA : PIO_PORT (PIO) == PORT_B ? PIOB : PIOC)
+
+
+/** Private macro to lookup PIO controller ID.  */
+#define PIO_ID(PIO) (PIO_PORT (PIO) == PORT_A ? ID_PIOA : PIO_PORT (PIO) == PORT_B ? ID_PIOB : ID_PIOC)
+
 
 typedef uint32_t pio_mask_t;
 
@@ -145,57 +154,57 @@ bool pio_config_set (pio_t pio, pio_config_t config)
     switch (config)
     {
     case PIO_OUTPUT_HIGH:
-        PIO_PORT_ (pio)->PIO_SODR = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PER = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_OER = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_SODR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PER = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_OER = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_OUTPUT_LOW:
-        PIO_PORT_ (pio)->PIO_CODR = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PER = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_OER = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_CODR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PER = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_OER = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_INPUT:
-        PIO_PORT_ (pio)->PIO_ODR = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PER = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_ODR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PER = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_PULLUP:
-        PIO_PORT_ (pio)->PIO_ODR = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PER = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PUER = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_ODR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PER = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_PERIPH_A:
-        PIO_PORT_ (pio)->PIO_ABCDSR[0] &= ~PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_ABCDSR[1] &= ~PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PDR = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_ABCDSR[0] &= ~PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_ABCDSR[1] &= ~PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_PERIPH_B:
-        PIO_PORT_ (pio)->PIO_ABCDSR[0] |= PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_ABCDSR[1] &= ~PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PDR = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_ABCDSR[0] |= PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_ABCDSR[1] &= ~PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_PERIPH_A_PULLUP:
-        PIO_PORT_ (pio)->PIO_ABCDSR[0] &= ~PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_ABCDSR[1] &= ~PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PDR = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PUER = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_ABCDSR[0] &= ~PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_ABCDSR[1] &= ~PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_PERIPH_B_PULLUP:
-        PIO_PORT_ (pio)->PIO_ABCDSR[0] &= ~PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_ABCDSR[1] |= PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PDR = PIO_BITMASK_ (pio);
-        PIO_PORT_ (pio)->PIO_PUER = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_ABCDSR[0] &= ~PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_ABCDSR[1] |= PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
         return 1;
 
     default:
@@ -209,7 +218,7 @@ bool pio_config_set (pio_t pio, pio_config_t config)
 static inline
 void pio_output_high (pio_t pio)
 {
-    PIO_PORT_ (pio)->PIO_SODR = PIO_BITMASK_ (pio);
+    PIO_BASE (pio)->PIO_SODR = PIO_BITMASK_ (pio);
 }
 
 
@@ -218,7 +227,7 @@ void pio_output_high (pio_t pio)
 static inline
 void pio_output_low (pio_t pio)
 {
-    PIO_PORT_ (pio)->PIO_CODR = PIO_BITMASK_ (pio);
+    PIO_BASE (pio)->PIO_CODR = PIO_BITMASK_ (pio);
 }
 
 
@@ -238,7 +247,7 @@ void pio_output_set (pio_t pio, bool state)
 static inline
 bool pio_output_get (pio_t pio)
 {
-    return (PIO_PORT_ (pio)->PIO_ODSR & PIO_BITMASK_ (pio)) != 0;
+    return (PIO_BASE (pio)->PIO_ODSR & PIO_BITMASK_ (pio)) != 0;
 }
 
 
@@ -248,7 +257,7 @@ bool pio_output_get (pio_t pio)
 static inline
 bool pio_input_get (pio_t pio)
 {
-    return (PIO_PORT_ (pio)->PIO_PDSR & PIO_BITMASK_ (pio)) != 0;
+    return (PIO_BASE (pio)->PIO_PDSR & PIO_BITMASK_ (pio)) != 0;
 }
 
 
@@ -266,11 +275,7 @@ void pio_output_toggle (pio_t pio)
 static inline
 void pio_init (pio_t pio)
 {
-    mcu_pmc_enable (ID_PIOA);
-    mcu_pmc_enable (ID_PIOB);
-#ifdef PIOC
-    mcu_pmc_enable (ID_PIOC);
-#endif
+    mcu_pmc_enable (PIO_ID (pio));
 }
 
 
@@ -278,11 +283,7 @@ void pio_init (pio_t pio)
 static inline
 void pio_shutdown (pio_t pio)
 {
-    mcu_pmc_disable (ID_PIOA);
-    mcu_pmc_disable (ID_PIOB);
-#ifdef PIOC
-    mcu_pmc_disable (ID_PIOC);
-#endif
+    mcu_pmc_disable (PIO_ID (pio));
 }
 
 #endif
