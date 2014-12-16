@@ -1,6 +1,7 @@
 #ifndef SYS_H
 #define SYS_H
 
+#include "config.h"
 #include <unistd.h>
 
 typedef ssize_t (*sys_write_t) (void *file, const void *buffer, size_t size);
