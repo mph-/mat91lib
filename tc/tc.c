@@ -275,8 +275,10 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
 
     /* TODO: If period > 65536 then need to increase prescale.  */
 
-    /* The available prescaler values are 1, 8, 32, 128.  On the SAM7
-       TIMER_CLOCK5 is MCK / 1024 but on the SAM4S it is SLCK.  */
+    /* The available prescaler values are 1, 8, 32, 128 for MCK / 2.
+       Thus the effective prescaler values are 2, 16, 64, and 256.  On
+       the SAM7 TIMER_CLOCK5 is MCK / 1024 but on the SAM4S it is
+       SLCK.  */
     if (prescale > 32 && prescale < 128)
         tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK4;
     else if (prescale > 8 && prescale < 32)
