@@ -878,33 +878,54 @@ udp_endpoint_read_ready_p (udp_t udp, udp_ep_t endpoint)
  * 
  */
 static unsigned int 
-udp_endpoint_fifo_read (udp_t udp, udp_ep_t endpoint)
+udp_endpoint_fifo_read1 (udp_t udp, udp_ep_t endpoint, uint8_t *buffer, int len)
 {
     udp_ep_info_t *pep = &udp->eps[endpoint];
     unsigned int bytes;
     unsigned int i;
     uint8_t *dst;
 
-    /* Assume that something in buffer.  */
+    if (! udp_endpoint_read_ready_p (udp, endpoint))
+        return 0;
 
-    if (pep->buffered == 0 && udp_endpoint_read_ready_p (udp, endpoint))
+    /* Note that the number of bytes in the buffer is not decremented when the FIFO is read
+       so we need to store this count in the buffered field.  */
+    if (pep->buffered == 0)
         pep->buffered = udp_endpoint_read_bytes (udp, endpoint);
 
     /* Get number of bytes to retrieve.  */
-    bytes = MIN (pep->remaining, pep->buffered);
+    bytes = MIN (len, pep->buffered);
 
     TRACE_DEBUG (UDP, "UDP:Read%d %d\n", endpoint, bytes);
 
     /* Read from FIFO buffer.  */
-    dst = pep->pdata;
     for (i = 0; i < bytes; i++) 
-        *dst++ = UDP->UDP_FDR[endpoint];
-    pep->pdata = dst;
-
-    pep->remaining -= bytes;
-    pep->transferred += bytes;
+        *buffer++ = UDP->UDP_FDR[endpoint];
 
     pep->buffered -= bytes;
+
+    if (!pep->buffered)
+    {
+        /* The FIFO buffer is empty so tell controller.  */
+        udp_rx_flag_clear (udp, endpoint);
+    }
+
+    return bytes;
+}
+
+
+
+static unsigned int 
+udp_endpoint_fifo_read (udp_t udp, udp_ep_t endpoint)
+{
+    udp_ep_info_t *pep = &udp->eps[endpoint];
+    unsigned int bytes;
+
+    bytes = udp_endpoint_fifo_read1 (udp, endpoint, pep->pdata, pep->remaining);
+    pep->remaining -= bytes;
+    pep->transferred += bytes;
+    pep->pdata += bytes;
+
     return bytes;
 }
 
@@ -946,12 +967,6 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pdata, unsigned int len,
     if (udp_endpoint_read_ready_p (udp, endpoint))
     {
         udp_endpoint_fifo_read (udp, endpoint);
-
-        if (!pep->buffered)
-        {
-            /* The FIFO buffer is empty so tell controller.  */
-            udp_rx_flag_clear (udp, endpoint);
-        }
 
         if (pep->remaining == 0)
         {
@@ -1103,16 +1118,10 @@ udp_endpoint_read_handler (udp_t udp, udp_ep_t endpoint)
         udp_endpoint_fifo_read (udp, endpoint);
         
         if (pep->remaining == 0)
-            udp_endpoint_interrupt_disable (udp, endpoint);
-
-        if (!pep->buffered)
         {
-            /* The FIFO buffer is empty so tell controller.  */
-            udp_rx_flag_clear (udp, endpoint);
-        }
-
-        if (pep->remaining == 0)
+            udp_endpoint_interrupt_disable (udp, endpoint);
             udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
+        }
     }
     else
     {
@@ -1427,33 +1436,22 @@ udp_read_ready_p (udp_t udp)
 }
 
 
-/* Blocking read from endpoint (with timeout).  */
+/* Non-blocking read from endpoint.  */
 udp_size_t
 udp_endpoint_read (udp_t udp, udp_ep_t endpoint, void *buffer, udp_size_t len)
 {
-    unsigned int timeout;
+    udp_size_t buffered;
+    udp_size_t bytes;
+    udp_size_t i;
     udp_ep_info_t *pep = &udp->eps[endpoint];
 
-    if (udp_read_async (udp, endpoint, buffer, len, 0, 0) != UDP_STATUS_SUCCESS)
+    if (pep->state != UDP_EP_STATE_IDLE)
         return 0;
 
-    /* We may have a race condition if someone else grabs the endpoint
-       as soon as it goes idle.  I'm not sure if this can happen.  */
+    /* Perhaps should have a lock in case someone else grabs the
+       endpoint?  */
 
-    timeout = UDP_TIMEOUT_US;
-    while (pep->state != UDP_EP_STATE_IDLE)
-    {
-        timeout--;
-        if (!timeout || ! udp_configured_p (udp))
-        {
-            udp_endpoint_interrupt_disable (udp, endpoint);
-            udp_endpoint_error (udp, endpoint, UDP_ERROR_READ_TIMEOUT);
-            udp_endpoint_complete (udp, endpoint, UDP_STATUS_TIMEOUT);
-            break;
-        }
-        DELAY_US (1);
-    }
-    return pep->transferred;
+    return udp_endpoint_fifo_read1 (udp, endpoint, buffer, len);
 }
 
 
@@ -1480,7 +1478,7 @@ udp_endpoint_write (udp_t udp, udp_ep_t endpoint,
     while (pep->state != UDP_EP_STATE_IDLE)
     {
         timeout--;
-        if (!timeout || ! udp_configured_p (udp))
+        if (! timeout || ! udp_configured_p (udp))
         {
             udp_endpoint_error (udp, endpoint, UDP_ERROR_WRITE_TIMEOUT);
             udp_endpoint_complete (udp, endpoint, UDP_STATUS_TIMEOUT);
@@ -1502,7 +1500,7 @@ udp_read (udp_t udp, void *buffer, udp_size_t len)
 udp_size_t
 udp_write (udp_t udp, const void *buffer, udp_size_t len)
 {
-    return udp_endpoint_write(udp, UDP_EP_IN, buffer, len);
+    return udp_endpoint_write (udp, UDP_EP_IN, buffer, len);
 }
 
 
