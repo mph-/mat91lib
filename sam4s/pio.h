@@ -148,8 +148,8 @@ typedef uint32_t pio_t;
 
 /** Configure PIO
     @param pio  */
-static inline
-bool pio_config_set (pio_t pio, pio_config_t config)
+static inline bool
+pio_config_set (pio_t pio, pio_config_t config)
 {
     switch (config)
     {
@@ -285,5 +285,58 @@ void pio_shutdown (pio_t pio)
 {
     mcu_pmc_disable (PIO_ID (pio));
 }
+
+
+
+typedef enum pio_irq_config_enum 
+{
+    PIO_IRQ_FALLING_EDGE = 1, 
+    PIO_IRQ_RISING_EDGE, 
+    PIO_IRQ_ANY_EDGE, 
+    PIO_IRQ_LOW_LEVEL, 
+    PIO_IRQ_HIGH_LEVEL
+} pio_irq_config_t;
+
+
+/** Configure PIO for interrupt
+    @param pio  */
+static inline bool 
+pio_irq_config_set (pio_t pio, pio_irq_config_t config)
+{
+    switch (config)
+    {
+    case PIO_IRQ_FALLING_EDGE:
+        PIO_BASE (pio)->PIO_ESR = PIO_BITMASK_ (WAKEUP_PIO);
+        PIO_BASE (pio)->PIO_FELLSR = PIO_BITMASK_ (WAKEUP_PIO);
+        PIO_BASE (pio)->PIO_AIMDR = PIO_BITMASK_ (WAKEUP_PIO);
+        return 1;
+
+    case PIO_IRQ_RISING_EDGE:
+        PIO_BASE (pio)->PIO_ESR = PIO_BITMASK_ (WAKEUP_PIO);
+        PIO_BASE (pio)->PIO_REHLSR = PIO_BITMASK_ (WAKEUP_PIO);
+        PIO_BASE (pio)->PIO_AIMDR = PIO_BITMASK_ (WAKEUP_PIO);
+        return 1;
+
+    case PIO_IRQ_ANY_EDGE:
+        PIO_BASE (pio)->PIO_AIMER = PIO_BITMASK_ (WAKEUP_PIO);
+        return 1;
+
+    case PIO_IRQ_LOW_LEVEL:
+        PIO_BASE (pio)->PIO_LSR = PIO_BITMASK_ (WAKEUP_PIO);
+        PIO_BASE (pio)->PIO_FELLSR = PIO_BITMASK_ (WAKEUP_PIO);
+        PIO_BASE (pio)->PIO_AIMDR = PIO_BITMASK_ (WAKEUP_PIO);
+        return 1;
+
+    case PIO_IRQ_HIGH_LEVEL:
+        PIO_BASE (pio)->PIO_LSR = PIO_BITMASK_ (WAKEUP_PIO);
+        PIO_BASE (pio)->PIO_REHLSR = PIO_BITMASK_ (WAKEUP_PIO);
+        PIO_BASE (pio)->PIO_AIMDR = PIO_BITMASK_ (WAKEUP_PIO);
+        return 1;
+
+    default:
+        return 0;
+    }
+}
+
 
 #endif
