@@ -303,39 +303,61 @@ typedef enum pio_irq_config_enum
 static inline bool 
 pio_irq_config_set (pio_t pio, pio_irq_config_t config)
 {
+
+    /* The PIO Controller can be programmed to generate an interrupt
+       when it detects an edge or a level on an I/O line, regardless
+       of how it is configured: input, output, peripheral, etc.
+
+       For input change detection, the PIO controller clock must be
+       enabled.  */
+
     switch (config)
     {
     case PIO_IRQ_FALLING_EDGE:
-        PIO_BASE (pio)->PIO_ESR = PIO_BITMASK_ (WAKEUP_PIO);
-        PIO_BASE (pio)->PIO_FELLSR = PIO_BITMASK_ (WAKEUP_PIO);
-        PIO_BASE (pio)->PIO_AIMDR = PIO_BITMASK_ (WAKEUP_PIO);
+        PIO_BASE (pio)->PIO_ESR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_FELLSR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_AIMDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_IRQ_RISING_EDGE:
-        PIO_BASE (pio)->PIO_ESR = PIO_BITMASK_ (WAKEUP_PIO);
-        PIO_BASE (pio)->PIO_REHLSR = PIO_BITMASK_ (WAKEUP_PIO);
-        PIO_BASE (pio)->PIO_AIMDR = PIO_BITMASK_ (WAKEUP_PIO);
+        PIO_BASE (pio)->PIO_ESR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_REHLSR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_AIMDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_IRQ_ANY_EDGE:
-        PIO_BASE (pio)->PIO_AIMER = PIO_BITMASK_ (WAKEUP_PIO);
+        PIO_BASE (pio)->PIO_AIMER = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_IRQ_LOW_LEVEL:
-        PIO_BASE (pio)->PIO_LSR = PIO_BITMASK_ (WAKEUP_PIO);
-        PIO_BASE (pio)->PIO_FELLSR = PIO_BITMASK_ (WAKEUP_PIO);
-        PIO_BASE (pio)->PIO_AIMDR = PIO_BITMASK_ (WAKEUP_PIO);
+        PIO_BASE (pio)->PIO_LSR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_FELLSR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_AIMDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_IRQ_HIGH_LEVEL:
-        PIO_BASE (pio)->PIO_LSR = PIO_BITMASK_ (WAKEUP_PIO);
-        PIO_BASE (pio)->PIO_REHLSR = PIO_BITMASK_ (WAKEUP_PIO);
-        PIO_BASE (pio)->PIO_AIMDR = PIO_BITMASK_ (WAKEUP_PIO);
+        PIO_BASE (pio)->PIO_LSR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_REHLSR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_AIMDR = PIO_BITMASK_ (pio);
         return 1;
 
     default:
         return 0;
     }
+}
+
+
+static inline void
+pio_irq_enable (pio_t pio)
+{
+    PIO_BASE (pio)->PIO_IER = PIO_BITMASK_ (pio);
+}
+
+
+static inline void
+pio_irq_disable (pio_t pio)
+{
+    PIO_BASE (pio)->PIO_IDR = PIO_BITMASK_ (pio);
 }
 
 
