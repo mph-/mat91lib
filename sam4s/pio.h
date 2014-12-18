@@ -316,29 +316,29 @@ pio_irq_config_set (pio_t pio, pio_irq_config_t config)
     case PIO_IRQ_FALLING_EDGE:
         PIO_BASE (pio)->PIO_ESR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_FELLSR = PIO_BITMASK_ (pio);
-        PIO_BASE (pio)->PIO_AIMDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_AIMER = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_IRQ_RISING_EDGE:
         PIO_BASE (pio)->PIO_ESR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_REHLSR = PIO_BITMASK_ (pio);
-        PIO_BASE (pio)->PIO_AIMDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_AIMER = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_IRQ_ANY_EDGE:
-        PIO_BASE (pio)->PIO_AIMER = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_AIMDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_IRQ_LOW_LEVEL:
         PIO_BASE (pio)->PIO_LSR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_FELLSR = PIO_BITMASK_ (pio);
-        PIO_BASE (pio)->PIO_AIMDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_AIMER = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_IRQ_HIGH_LEVEL:
         PIO_BASE (pio)->PIO_LSR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_REHLSR = PIO_BITMASK_ (pio);
-        PIO_BASE (pio)->PIO_AIMDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_AIMER = PIO_BITMASK_ (pio);
         return 1;
 
     default:
