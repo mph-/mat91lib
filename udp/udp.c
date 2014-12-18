@@ -22,8 +22,8 @@
    FIFOs.  EP1 is the bulk IN endpoint (to host) and EP2 is the bulk
    OUT endpoint (from host).
 
-   EP0 is the default control endpoint used for the enumeration process.  This
-   is bidirectional with an 8-byte FIFO.
+   EP0 is the default control endpoint used for the enumeration
+   process.  This is bidirectional with an 8-byte FIFO.
 
    EP0 and EP3 cannot be ping-ponged.
 
@@ -38,8 +38,10 @@
    GND by 15 K pull-down resistors integrated in the hub downstream
    ports.   The USB device is in the not powered state.
 
-   When a device is connected to a hub downstream port, VBUS goes to 5V
-   and the device is in the powered state.
+   When a device is connected to a hub downstream port, VBUS goes to
+   5V and the device is in the powered state.  Currently, this has to
+   be polled; perhaps an interrupt can be used to detect the change?
+   TODO.
 
    The device then connects a 1.5 K pull-up resistor on D+ (this might
    be switched using a MOSFET or connected to VBUS).  The USB bus line
@@ -262,6 +264,11 @@
 
 
 #define UDP_TIMEOUT_US 500000
+
+
+#ifdef USB_PIO_DETECT
+#define USB_VBUS_PIO USB_PIO_DETECT
+#endif
 
 
 /* When setting or clearing bits in the CSR of and endpoint we need to jump
@@ -1538,8 +1545,8 @@ udp_unsignal (udp_t udp __unused__)
 static bool
 udp_attached_p (udp_t udp __unused__)
 {
-#ifdef USB_PIO_DETECT
-    return pio_input_get (USB_PIO_DETECT) != 0;
+#ifdef USB_VBUS_PIO
+    return pio_input_get (USB_VBUS_PIO) != 0;
 #else
     /* Assume that we are connected.  */
     return 1;
@@ -1599,53 +1606,45 @@ udp_disable (udp_t udp)
 }
 
 
-/** Check UDP bus status.  Return non-zero if attached.  */
 static bool
-udp_bus_status_check (udp_t udp)
+udp_attach (udp_t udp)
 {
-    bool attached;
+    if (udp->state != UDP_STATE_NOT_POWERED)
+        return 0;
 
-    attached = udp_attached_p (udp);
+    udp->state = UDP_STATE_ATTACHED;
+    
+    udp_enable (udp);
+    
+    /* Signal the host by pulling D+ high.  This might be
+       permanently pulled high with an external 1k5
+       resistor.  */
+    udp_signal (udp);            
+    
+    /* Clear all UDP interrupts.  */
+    UDP->UDP_ICR = 0;
+    
+    /* Set up interrupt handler.  */
+    irq_config (ID_UDP, 7, udp_interrupt_handler);
+    
+    irq_enable (ID_UDP);
 
-    if (attached)
-    {
-        /*  If UDP is deactivated enable it.  */
-        if (udp->state == UDP_STATE_NOT_POWERED)
-        {
-            udp->state = UDP_STATE_ATTACHED;
+    /* Enable UDP peripheral interrupts.  */
+    UDP->UDP_IER = UDP_ISR_ENDBUSRES | UDP_IER_WAKEUP | UDP_IER_RXSUSP;
 
-            udp_enable (udp);
+    udp->state = UDP_STATE_POWERED;
+    return 1;
+}
 
-            /* Signal the host by pulling D+ high.  This might be
-               permanently pulled high with an external 1k5
-               resistor.  */
-            udp_signal (udp);            
 
-            /* Clear all UDP interrupts.  */
-            UDP->UDP_ICR = 0;
+static bool
+udp_detach (udp_t udp)
+{
+    if (udp->state == UDP_STATE_NOT_POWERED)
+        return 0;
 
-            /* Set up interrupt handler.  */
-            irq_config (ID_UDP, 7, 
-                        udp_interrupt_handler);
-            
-            irq_enable (ID_UDP);
-
-            /* Enable UDP peripheral interrupts.  */
-            UDP->UDP_IER = UDP_ISR_ENDBUSRES | UDP_IER_WAKEUP
-                | UDP_IER_RXSUSP;
-
-            udp->state = UDP_STATE_POWERED;
-        }   
-    }
-    else
-    {
-        if (udp->state != UDP_STATE_NOT_POWERED)
-        {
-            udp_disable (udp);
-            udp->state = UDP_STATE_NOT_POWERED;
-        }         
-    }
-    return attached;
+    udp_disable (udp);
+    return 1;
 }
 
 
@@ -1653,7 +1652,8 @@ udp_bus_status_check (udp_t udp)
 bool
 udp_poll (udp_t udp)
 {
-    udp_bus_status_check (udp);
+    /* This does no polling now but check if configured for
+       compatibility with old code.  */
     return udp_configured_p (udp);
 }
 
@@ -1711,6 +1711,20 @@ udp_bus_reset_handler (udp_t udp)
 }
 
 
+#ifdef USB_VBUS_PIO
+static void
+udp_vbus_interrupt_handler (void)
+{
+    udp_t udp = &udp_dev;
+
+    if (pio_input_get (USB_VBUS_PIO) != 0)
+        udp_attach (udp);
+    else
+        udp_detach (udp);
+}
+#endif
+
+
 udp_t udp_init (udp_request_handler_t request_handler, void *arg)
 {
     udp_t udp = &udp_dev;
@@ -1725,6 +1739,27 @@ udp_t udp_init (udp_request_handler_t request_handler, void *arg)
     udp->state = UDP_STATE_NOT_POWERED;
     
     udp_unsignal (udp);
+
+#ifdef USB_VBUS_PIO
+    pio_init (USB_VBUS_PIO);
+    pio_config_set (USB_VBUS_PIO, PIO_INPUT);
+
+    pio_irq_config_set (USB_VBUS_PIO, PIO_IRQ_EDGE);
+
+    irq_config (PIO_ID (USB_VBUS_PIO), 1, udp_vbus_interrupt_handler);
+    
+    irq_enable (PIO_ID (USB_VBUS_PIO));
+
+    pio_irq_enable (USB_VBUS_PIO);
+
+    /* If already connected, swing into action...  */
+    if (pio_input_get (USB_VBUS_PIO) != 0)
+        udp_attach (udp);
+
+#else
+    /* Assume that always connected.  */
+    udp_attach (udp);
+#endif
 
     return udp;
 }
