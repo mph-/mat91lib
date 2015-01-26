@@ -347,6 +347,10 @@ pio_irq_config_set (pio_t pio, pio_irq_config_t config)
 }
 
 
+/** Enable PIO input change interrupt for specified PIO.  Note, it is
+    necessary to read PIO_ISR to clear the interrupt source.
+    Unfortunately, this will clear other pending input change
+    interrupts from the same PIO controller.  */
 static inline void
 pio_irq_enable (pio_t pio)
 {
@@ -354,6 +358,7 @@ pio_irq_enable (pio_t pio)
 }
 
 
+/** Disable PIO input change interrupt for specified PIO.   */
 static inline void
 pio_irq_disable (pio_t pio)
 {
