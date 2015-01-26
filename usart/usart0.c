@@ -34,7 +34,10 @@ usart0_init (uint16_t baud_divisor)
     USART0->US_CR = US_CR_RSTRX | US_CR_RSTTX          
         | US_CR_RXDIS | US_CR_TXDIS;           
 
-    /* Set normal mode, clock = MCK, 8-bit data, no parity, 1 stop bit.  */
+    /* Set normal mode, clock = MCK, 8-bit data, no parity, 1 stop
+       bit.  Note, the OVER bit is set to 0 so the baud rate
+       calculation is further divided by 16.  The UCLCKS field is 0 so
+       the MCK is used as the clock source.  */
     USART0->US_MR = US_MR_USART_MODE_NORMAL
         | US_MR_CHRL_8_BIT | US_MR_PAR_NO | US_MR_NBSTOP_1_BIT;
 
