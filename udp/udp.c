@@ -895,8 +895,9 @@ udp_endpoint_fifo_read1 (udp_t udp, udp_ep_t endpoint, uint8_t *buffer, int len)
     if (! udp_endpoint_read_ready_p (udp, endpoint))
         return 0;
 
-    /* Note that the number of bytes in the buffer is not decremented when the FIFO is read
-       so we need to store this count in the buffered field.  */
+    /* Note that the number of bytes in the buffer is not decremented
+       when the FIFO is read so we need to store this count in the
+       buffered field.  */
     if (pep->buffered == 0)
         pep->buffered = udp_endpoint_read_bytes (udp, endpoint);
 
