@@ -10,6 +10,14 @@
 #include "usart0_defs.h"
 
 
+/* Define in target.h to use hardware flow control.   */
+#ifdef USART0_USE_HANDSHAKING
+#define USART0_MODE US_MR_USART_MODE_HW_HANDSHAKING
+#else
+#define USART0_MODE US_MR_USART_MODE_NORMAL
+#endif
+
+
 void
 usart0_baud_divisor_set (uint16_t baud_divisor)
 {
@@ -38,7 +46,7 @@ usart0_init (uint16_t baud_divisor)
        bit.  Note, the OVER bit is set to 0 so the baud rate
        calculation is further divided by 16.  The UCLCKS field is 0 so
        the MCK is used as the clock source.  */
-    USART0->US_MR = US_MR_USART_MODE_NORMAL
+    USART0->US_MR = USART0_MODE
         | US_MR_CHRL_8_BIT | US_MR_PAR_NO | US_MR_NBSTOP_1_BIT;
 
     usart0_baud_divisor_set (baud_divisor);
