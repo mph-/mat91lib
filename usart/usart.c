@@ -1,136 +1,137 @@
-/** @file   usart0.c
-    @author Michael Hayes
-    @date   10 March 2005
-    @brief  Routines for interfacing with the usart0 on an AT91 ARM
-*/
+/** @file   usart.c
+    @author M. P. Hayes, UCECE
+    @date   21 June 2007
+    @brief  Unbuffered USART implementation.  */
 
-#include "mcu.h"
-#include "pio.h"
-#include "usart0.h"
-#include "usart0_defs.h"
+#include "usart.h"
+#include "peripherals.h"
 
+/* This needs updating to be more general and to provide
+   support for synchronous operation.  You probably should use
+   uart.c  */
 
-/* Define in target.h to use hardware flow control.  */
-#ifdef USART0_USE_HANDSHAKING
-#define USART0_MODE US_MR_USART_MODE_HW_HANDSHAKING
-#else
-#define USART0_MODE US_MR_USART_MODE_NORMAL
+/* A USART can be disabled in the target.h file, e.g., using
+   #define USART0_ENABLE 0.  */
+
+#ifndef USART0_ENABLE
+#define USART0_ENABLE (USART_NUM >= 1)
+#endif
+
+#ifndef USART1_ENABLE
+#define USART1_ENABLE (USART_NUM >= 2)
 #endif
 
 
-void
-usart0_baud_divisor_set (uint16_t baud_divisor)
+struct usart_dev_struct
 {
-    USART0_BAUD_DIVISOR_SET (baud_divisor);
-}
+    int8_t (*putch) (char ch);
+    int8_t (*getch) (void);
+    bool (*read_ready_p) (void);
+    bool (*write_ready_p) (void);
+    bool (*write_finished_p) (void);
+};
 
 
-uint8_t
-usart0_init (uint16_t baud_divisor)
+/* Include machine dependent usart definitions.  */
+#if USART0_ENABLE
+#include "usart0.h"
+
+static usart_dev_t usart0_dev = {usart0_putc, usart0_getc,
+                                 usart0_read_ready_p, usart0_write_ready_p,
+                                 usart0_write_finished_p};
+#endif
+
+#if USART1_ENABLE
+#include "usart1.h"
+
+static usart_dev_t usart1_dev = {usart1_putc, usart1_getc,
+                                 usart1_read_ready_p, usart1_write_ready_p,
+                                 usart1_write_finished_p};
+#endif
+
+
+usart_t 
+usart_init (uint8_t channel,
+            uint16_t baud_divisor)
 {
-    /* Disable interrupts.  */
-    USART0->US_IDR = ~0;
+    usart_dev_t *dev = 0;
 
-    /* Enable RxD0 and TxD0 pins and disable pullups.  */
-    pio_config_set (PA5_PIO, PIO_PERIPH_A);
-    pio_config_set (PA6_PIO, PIO_PERIPH_A);
+#if USART0_ENABLE
+    if (channel == 0)
+    {
+        usart0_init (baud_divisor);
+        dev = &usart0_dev;
+    }
+#endif
 
-    /* Enable USART0 clock.  */
-    mcu_pmc_enable (ID_USART0);
-    
-    /* Reset and disable receiver and transmitter.  */
-    USART0->US_CR = US_CR_RSTRX | US_CR_RSTTX          
-        | US_CR_RXDIS | US_CR_TXDIS;           
+#if USART1_ENABLE
+    if (channel == 1)
+    {
+        usart1_init (baud_divisor);
+        dev = &usart1_dev;
+    }
+#endif
 
-    /* Set normal mode, clock = MCK, 8-bit data, no parity, 1 stop
-       bit.  Note, the OVER bit is set to 0 so the baud rate
-       calculation is further divided by 16.  The UCLCKS field is 0 so
-       the MCK is used as the clock source.  */
-    USART0->US_MR = USART0_MODE
-        | US_MR_CHRL_8_BIT | US_MR_PAR_NO | US_MR_NBSTOP_1_BIT;
-
-    usart0_baud_divisor_set (baud_divisor);
-
-    /* Enable receiver and transmitter.  */
-    USART0->US_CR = US_CR_RXEN | US_CR_TXEN; 
-    
-    return 1;
-}
-
-
-void
-usart0_shutdown (void)
-{
-    /* Disable RxD0 and TxD0 pins.  */
-    pio_config_set (PA5_PIO, PIO_PULLUP);
-    pio_config_set (PA6_PIO, PIO_OUTPUT_LOW);
-
-    /* Disable USART0 clock.  */
-    mcu_pmc_disable (ID_USART0);
-    
-    /* Reset and disable receiver and transmitter.  */
-    USART0->US_CR = US_CR_RSTRX | US_CR_RSTTX          
-        | US_CR_RXDIS | US_CR_TXDIS;           
+    return dev;
 }
 
 
 /* Return non-zero if there is a character ready to be read.  */
 bool
-usart0_read_ready_p (void)
+usart_read_ready_p (usart_t usart)
 {
-#if HOSTED
-    return 1;
-#else
-    return USART0_READ_READY_P ();
-#endif
+    usart_dev_t *dev = usart;
+
+    return dev->read_ready_p ();
 }
 
 
 /* Return non-zero if a character can be written without blocking.  */
 bool
-usart0_write_ready_p (void)
+usart_write_ready_p (usart_t usart)
 {
-    return USART0_WRITE_READY_P ();
+    usart_dev_t *dev = usart;
+
+    return dev->write_ready_p ();
 }
 
 
 /* Return non-zero if transmitter finished.  */
 bool
-usart0_write_finished_p (void)
+usart_write_finished_p (usart_t usart)
 {
-    return USART0_WRITE_FINISHED_P ();
+    usart_dev_t *dev = usart;
+
+    return dev->write_finished_p ();
 }
 
 
-/* Write character to USART0.  */
-int8_t 
-usart0_putc (char ch)
-{
-    if (ch == '\n')
-        usart0_putc ('\r');
-
-    USART0_PUTC (ch);
-    return ch;
-}
-
-
-/* Read character from USART0.  This blocks until a character is read.  */
+/* Read character.  This blocks.  */
 int8_t
-usart0_getc (void)
+usart_getc (usart_t usart)
 {
-    /* Wait for something in receive buffer.  */
-    while (!USART0_READ_READY_P ())
-        continue;
+    usart_dev_t *dev = usart;
 
-    return USART0_READ ();
+    return dev->getch ();
 }
 
 
-/* Write string to USART0.  This blocks until the string is written.  */
-void 
-usart0_puts (const char *str)
+/* Write character.  This blocks.  */
+int8_t
+usart_putc (usart_t usart, char ch)
+{
+    usart_dev_t *dev = usart;
+
+    return dev->putch (ch);
+}
+
+
+/* Write string.  This blocks.  */
+int8_t
+usart_puts (usart_t usart, const char *str)
 {
     while (*str)
-        usart0_putc (*str++);
-}
+        usart_putc (usart, *str++);
 
+    return 1;
+}
