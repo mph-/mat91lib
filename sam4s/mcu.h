@@ -44,6 +44,10 @@ void
 mcu_reset (void);
 
 
+uint8_t
+mcu_reset_type_get (void);
+
+
 void
 mcu_udp_disable (void);
 

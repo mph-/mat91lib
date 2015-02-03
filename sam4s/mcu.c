@@ -233,7 +233,7 @@ mcu_reset_disable (void)
 
 
 uint8_t
-cpu_reset_type_get (void)
+mcu_reset_type_get (void)
 {
     return (RSTC->RSTC_SR >> 8) & 0x07;
 }
