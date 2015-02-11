@@ -42,24 +42,11 @@ ssc_clock_speed_kHz_set (ssc_t ssc, ssc_clock_speed_t clock_speed_kHz)
 }
 
 
-/* Configure a module.  */
-static uint8_t
-ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module) 
+void
+ssc_fs_period_set (ssc_t ssc, ssc_fs_period_t fs_period, ssc_module_t module)
 {
-    /* Select options to apply to clock mode register.  */
-    uint32_t cmr;
-    uint32_t fmr;
-    uint8_t fslen;
-    uint8_t fslen_ext;
-    uint8_t datlen;
     uint8_t period;
-    uint8_t fs_period;
-    
-    if (!cfg)
-        return 0;
-        
-    /* Check maximum frame sync period in rx clocks.  */
-    fs_period = cfg->fs_period;
+
     if (fs_period > 512)
         fs_period = 512;
 
@@ -68,10 +55,44 @@ ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module)
     else
         period = (fs_period >> 1) - 1;
 
-    /* Set frame sync period.  */
-    cmr = period << 24;
+    if (module == SSC_TX)
+        BITS_INSERT (SSC->SSC_TCMR, period, 24, 31);
+    else 
+        BITS_INSERT (SSC->SSC_RCMR, period, 24, 31);
+}
 
-    cmr |= cfg->start_delay << 16;
+
+ssc_fs_period_t 
+ssc_fs_period_get (ssc_t ssc, ssc_module_t module)
+{
+    uint8_t period;
+
+    if (module == SSC_TX)
+        period = BITS_EXTRACT (SSC->SSC_TCMR, 24, 31);
+    else 
+        period = BITS_EXTRACT (SSC->SSC_RCMR, 24, 31);
+
+    return (period + 1) << 1;
+}
+
+
+/* Configure a module.  */
+static uint8_t
+ssc_module_config (ssc_t ssc, ssc_module_cfg_t *cfg, ssc_module_t module) 
+{
+    /* Select options to apply to clock mode register.  */
+    uint32_t cmr;
+    uint32_t fmr;
+    uint8_t fslen;
+    uint8_t fslen_ext;
+    uint8_t datlen;
+    
+    if (!cfg)
+        return 0;
+
+    ssc_fs_period_set (ssc, cfg->fs_period, module);
+
+    cmr = cfg->start_delay << 16;
 
     cmr |= cfg->start_mode;
     /* If start mode is SSC_START_COMPARE0 then should load RC0R
@@ -146,10 +167,10 @@ ssc_config (ssc_t ssc, const ssc_cfg_t *cfg)
     ssc_clock_speed_kHz_set (ssc, cfg->clock_speed_kHz);
     
     /* Configure the receiver module if the configuration exists.  */
-    ssc_module_config (cfg->rx, SSC_RX);
+    ssc_module_config (ssc, cfg->rx, SSC_RX);
     
     /* Configure the transmit module if the configuration exists.  */
-    ssc_module_config (cfg->tx, SSC_TX);
+    ssc_module_config (ssc, cfg->tx, SSC_TX);
 }
 
 

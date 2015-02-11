@@ -260,6 +260,14 @@ uint16_t
 ssc_write (ssc_t ssc, void *buffer, uint16_t length);
 
 
+void
+ssc_fs_period_set (ssc_t ssc, ssc_fs_period_t fs_period, ssc_module_t module);
+
+
+ssc_fs_period_t 
+ssc_fs_period_get (ssc_t ssc, ssc_module_t module);
+
+
 Pdc *
 ssc_pdc_get (ssc_t ssc);
 
