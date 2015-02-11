@@ -53,18 +53,20 @@ ssc_module_config (ssc_module_cfg_t *cfg, ssc_module_t module)
     uint8_t fslen_ext;
     uint8_t datlen;
     uint8_t period;
+    uint8_t fs_period;
     
     if (!cfg)
         return 0;
         
     /* Check maximum frame sync period in rx clocks.  */
-    if (cfg->fs_period > 512)
-        cfg->fs_period = 512;
+    fs_period = cfg->fs_period;
+    if (fs_period > 512)
+        fs_period = 512;
 
-    if (cfg->fs_period == 0)
+    if (fs_period == 0)
         period = 0;
     else
-        period = (cfg->fs_period >> 1) - 1;
+        period = (fs_period >> 1) - 1;
 
     /* Set frame sync period.  */
     cmr = period << 24;
