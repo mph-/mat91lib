@@ -24,8 +24,10 @@ typedef enum {ADC_REF_EXT = 0} adc_ref_mode_t;
 
 typedef enum 
 {
-    ADC_TRIGGER_EXT, ADC_TRIGGER_TC0, ADC_TRIGGER_TC1, ADC_TRIGGER_TC2,
-    ADC_TRIGGER_PWM0, ADC_TRIGGER_PWM1, ADC_TRIGGER_SW = 7
+    ADC_TRIGGER_SW,
+    ADC_TRIGGER_EXT,
+    ADC_TRIGGER_TC0, ADC_TRIGGER_TC1, ADC_TRIGGER_TC2,
+    ADC_TRIGGER_PWM0, ADC_TRIGGER_PWM1
 } adc_trigger_t;
 
 
@@ -42,7 +44,9 @@ typedef uint32_t adc_clock_speed_t;
 typedef struct adc_dev_struct
 {
     adc_channel_t channel;
+    adc_trigger_t trigger;
     adc_clock_divisor_t clock_divisor;
+    uint8_t bits;
 } adc_dev_t;
 
 
@@ -63,14 +67,9 @@ typedef struct adc_cfg_struct
 } adc_cfg_t;
 
 
-
 /** Select ADC reference mode.  */
 void 
 adc_reference_select (adc_t adc, adc_ref_mode_t mode);
-
-
-uint8_t
-adc_bits_get (adc_t adc);
 
 
 uint8_t

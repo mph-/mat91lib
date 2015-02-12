@@ -38,48 +38,42 @@
    where SHTIM is the sample/hold time in ns.
 
    The SAM4S can tolerate higher impedance inputs.
+
+   The SAM4S requires 20 clocks per sample so for a maximum sample
+   rate of 1 MHz then a clock speed of 20 MHz is required.    
+
+   TODO. Add gain setting.
 */
 
 
-#define ADC_8BIT_CLOCK_MAX 8e6
-#define ADC_10BIT_CLOCK_MAX 5e6
+#ifdef __SAM4S__
+#define ADC_STARTUP_TIME_MIN 12e-6
+#define ADC_TRACK_TIME_MIN 160e-9
+#define ADC_SETTLE_TIME_MIN 200e-9
+#else
 #define ADC_STARTUP_TIME_MIN 20e-6
-#define ADC_SAMPLE_TIME_MIN 600e-9
-
-
-#ifndef ADC_8BIT_CLOCK
-#define ADC_8BIT_CLOCK ADC_8BIT_CLOCK_MAX
+#define ADC_TRACK_TIME_MIN 600e-9
+#define ADC_SETTLE_TIME_MIN 200e-9
 #endif
 
 
-#ifndef ADC_10BIT_CLOCK
-#define ADC_10BIT_CLOCK ADC_10BIT_CLOCK_MAX
-#endif
-
-
+/* Startup time from standby mode to normal mode.  */
 #ifndef ADC_STARTUP_TIME
 #define ADC_STARTUP_TIME ADC_STARTUP_TIME_MIN
 #endif
 
 
-#ifndef ADC_SAMPLE_TIME
-#define ADC_SAMPLE_TIME ADC_SAMPLE_TIME_MIN
+/* Track and hold time.  */
+#ifndef ADC_TRACK_TIME
+#define ADC_TRACK_TIME ADC_TRACK_TIME_MIN
 #endif
 
 
-#define ADC_8BIT_PRESCALE ((uint8_t)(F_CPU / (2 * ADC_8BIT_CLOCK) + 0.5 - 1))
-#define ADC_10BIT_PRESCALE ((uint8_t)(F_CPU / (2 * ADC_10BIT_CLOCK) + 0.5 - 1))
+/* Settling time after changing gain or offset.  */
+#ifndef ADC_SETTLE_TIME
+#define ADC_SETTLE_TIME ADC_SETTLE_TIME_MIN
+#endif
 
-
-/* Determine actual ADC clock.  */
-#define ADC_8BIT_CLOCK1 (F_CPU / ((ADC_8BIT_PRESCALE + 1) * 2))
-#define ADC_10BIT_CLOCK1 (F_CPU / ((ADC_10BIT_PRESCALE + 1) * 2))
-
-#define ADC_8BIT_STARTUP ((uint8_t)(ADC_STARTUP_TIME * ADC_8BIT_CLOCK1 / 8 + 0.5 - 1))
-#define ADC_10BIT_STARTUP ((uint8_t)(ADC_STARTUP_TIME * ADC_10BIT_CLOCK1 / 8 +0.5 - 1))
-
-#define ADC_8BIT_SHTIM ((uint8_t)(ADC_SAMPLE_TIME * ADC_8BIT_CLOCK1 + 0.5 - 1))
-#define ADC_10BIT_SHTIM ((uint8_t)(ADC_SAMPLE_TIME * ADC_10BIT_CLOCK1 + 0.5 - 1))
 
 static adc_dev_t adc_dev;
 
@@ -131,7 +125,15 @@ adc_trigger_set (adc_t adc, adc_trigger_t trigger)
 static void
 adc_clock_divisor_set (adc_t adc, adc_clock_divisor_t clock_divisor) 
 {
-    BITS_INSERT(ADC->ADC_MR, clock_divisor, 8, 15);
+    /* The SAM4S requires 20 clocks per sample. 
+
+       ADC_CLOCK = (F_CPU / 2) / clock_divisor.  
+    */
+
+    if (clock_divisor >= 256)
+        clock_divisor = 256;
+
+    BITS_INSERT(ADC->ADC_MR, clock_divisor - 1, 8, 15);
     adc->clock_divisor = clock_divisor;
 }
 
@@ -140,14 +142,36 @@ adc_clock_speed_t
 adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
 {
     uint32_t clock_speed;
-    
+    uint16_t settle_clocks;
+    uint16_t sample_clocks;
+    static const uint8_t adc_settle_table[] = {3, 5, 9, 17};
+    static const uint16_t adc_sample_table[] = 
+    {0, 8, 16, 24, 64, 80, 96, 112, 512, 576, 640, 704, 768, 832, 896, 960};
+
+    /* For the SAM7 the max clock speed is 5 MHz for 10 bit and 8 MHz
+       for 8 bit.  */
+
     clock_speed = clock_speed_kHz * 1000;
     adc_clock_divisor_set (adc, ((F_CPU / 2) + clock_speed - 1) / clock_speed);
     clock_speed = (F_CPU / 2) / adc->clock_divisor;
-    
+
+    /* With 24 MHz clock need 4.8 clocks to settle on SAM4S.  This is only
+       needed when switching gain or offset, say when converting a
+       sequence of channels.  Let's play safe and allocate the maximum
+       17 clocks.  */
+    BITS_INSERT (ADC->ADC_MR, 3, 20, 21);
+
+    /* With 24 MHz clock need 288 clocks to start up on SAM4S.  Let's
+       allocate 512.  TODO, scan through table to find appropriate
+       value.  */
+    BITS_INSERT (ADC->ADC_MR, 8, 16, 20);
+
+    /* With 24 MHz clock need 3.4 clocks to sample on SAM4S.   Let's
+       allocate 4.  */
+    BITS_INSERT (ADC->ADC_MR, 3, 24, 27);
+
     return clock_speed / 1000;
 }
-
 
 
 bool
@@ -188,75 +212,46 @@ adc_reference_select (adc_t adc, adc_ref_mode_t mode __UNUSED__)
 }
 
 
-#ifdef __SAM4S__
-static bool
-adc_resolution_set (adc_t adc, uint8_t resolution)
+
+bool
+adc_bits_set (adc_t adc, uint8_t bits)
 {
-    switch (resolution)
+    switch (bits)
     {
+#ifdef __SAM4S__
          case 12:
-
             ADC->ADC_MR &= ~ADC_MR_LOWRES;
-
-             /* Startup time.  */
-            BITS_INSERT (ADC->ADC_MR, ADC_10BIT_STARTUP, 16, 20);
-            /* Sample and hold time.  */
-            BITS_INSERT (ADC->ADC_MR, ADC_10BIT_SHTIM, 24, 27);
             break;
 
          case 10:
             ADC->ADC_MR |= ADC_MR_LOWRES;
-
-             /* Startup time.  */
-            BITS_INSERT (ADC->ADC_MR, ADC_8BIT_STARTUP, 16, 20);
-            /* Sample and hold time.  */
-            BITS_INSERT (ADC->ADC_MR, ADC_8BIT_SHTIM, 24, 27);
             break;
-
-        default:
-            return 0;
-            break;
-    }
-    return resolution;
-}
 #else
-static bool
-adc_resolution_set (adc_t adc, uint8_t resolution)
-{
-    switch (resolution)
-    {
          case 10:
 
             ADC->ADC_MR &= ~ADC_MR_LOWRES;
-
-             /* Startup time.  */
-            BITS_INSERT (ADC->ADC_MR, ADC_10BIT_STARTUP, 16, 20);
-            /* Sample and hold time.  */
-            BITS_INSERT (ADC->ADC_MR, ADC_10BIT_SHTIM, 24, 27);
             break;
 
          case 8:
             ADC->ADC_MR |= ADC_MR_LOWRES;
-
-             /* Startup time.  */
-            BITS_INSERT (ADC->ADC_MR, ADC_8BIT_STARTUP, 16, 20);
-            /* Sample and hold time.  */
-            BITS_INSERT (ADC->ADC_MR, ADC_8BIT_SHTIM, 24, 27);
-            break;
+            break;            
+#endif
 
         default:
             return 0;
             break;
     }
-    return resolution;
+
+    adc->bits = bits;
+    return bits;
 }
-#endif
+
 
 
 void 
 adc_config (adc_t adc, adc_cfg_t *cfg)
 {
-    adc_resolution_set (adc, cfg->bits);
+    adc_bits_set (adc, cfg->bits);
     adc_trigger_set (adc, cfg->trigger);
     adc_clock_speed_kHz_set (adc, cfg->clock_speed_kHz);
 }
@@ -277,13 +272,16 @@ adc_init (adc_cfg_t *cfg)
 
     adc_reset ();
 
+    /* The transfer field must have a value of 2.  */
+    BITS_INSERT(ADC->ADC_MR, 2, 28, 29);
+
     if (cfg)
     {
         adc_config (adc, cfg);
     }
     else
     {
-        adc_resolution_set (adc, 10);
+        adc_bits_set (adc, 10);
         adc_clock_speed_kHz_set (adc, 5000);
         adc_trigger_set (adc, ADC_TRIGGER_SW);
     }
@@ -319,7 +317,7 @@ adc_read (adc_t adc, adc_sample_t *buffer, uint16_t size)
 
     for (i = 0; i < samples; i++)
     {
-        if (adc->trigger = ADC_TRIGGER_SW)
+        if (adc->trigger == ADC_TRIGGER_SW)
             adc_conversion_start (adc);
 
         /* Should have timeout, especially for external trigger.  */
