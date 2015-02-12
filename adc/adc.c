@@ -175,11 +175,21 @@ adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
 
 
 bool
-adc_channel_enable (adc_t adc, adc_channel_t channel)
+adc_channel_set (adc_t adc, adc_channel_t channel)
 {
     if (channel >= ADC_CHANNEL_NUM)
 	return 0;
     adc->channel = channel;
+
+    return 1;
+}
+
+
+bool
+adc_channel_enable (adc_t adc, adc_channel_t channel)
+{
+    if (channel >= ADC_CHANNEL_NUM)
+	return 0;
 
     ADC->ADC_CHER = BIT (channel);
     return 1;
@@ -253,6 +263,7 @@ adc_config (adc_t adc, const adc_cfg_t *cfg)
     adc_bits_set (adc, cfg->bits);
     adc_trigger_set (adc, cfg->trigger);
     adc_clock_speed_kHz_set (adc, cfg->clock_speed_kHz);
+    adc_channel_set (adc, cfg->channel);
 }
 
 
@@ -317,15 +328,17 @@ adc_ready_p (adc_t adc)
 
 /** Blocking read.  */
 int8_t
-adc_read (adc_t adc, adc_sample_t *buffer, uint16_t size)
+adc_read (adc_t adc, void *buffer, uint16_t size)
 {
     uint16_t i;
     uint16_t samples;
-
-    samples = size / sizeof (adc_sample_t);
+    adc_sample_t *data;
 
     if (!adc_channel_enable (adc, adc->channel))
         return 0;
+
+    samples = size / sizeof (adc_sample_t);
+    data = buffer;
 
     for (i = 0; i < samples; i++)
     {
@@ -336,7 +349,7 @@ adc_read (adc_t adc, adc_sample_t *buffer, uint16_t size)
         while (!adc_ready_p (adc))
             continue;
 
-        buffer[i] = ADC->ADC_LCDR;
+        data[i] = ADC->ADC_LCDR;
     }
 
     /* Disable channel.  */
@@ -348,10 +361,10 @@ adc_read (adc_t adc, adc_sample_t *buffer, uint16_t size)
 
 /** Blocking read from specified ADC channel.  */
 int8_t
-adc_read_channel (adc_t adc, adc_channel_t channel, adc_sample_t *buffer,
+adc_read_channel (adc_t adc, adc_channel_t channel, void *buffer,
                   uint16_t size)
 {
-    adc_channel_enable (adc, channel);
+    adc_channel_set (adc, channel);
 
     return adc_read (adc, buffer, size);
 }

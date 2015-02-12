@@ -53,9 +53,12 @@ typedef struct adc_dev_struct
 typedef adc_dev_t *adc_t;
 
 
-
 typedef struct adc_cfg_struct
 {
+    /* Could have a channels field if need to convert multiple channels
+       in a sequence.  */
+    adc_channel_t channel;
+
     /* Conversion bits.  */
     uint8_t bits;
 
@@ -83,11 +86,11 @@ adc_ready_p (adc_t adc);
 
 /** Blocking read.  */
 int8_t
-adc_read (adc_t adc, adc_sample_t *buffer, uint16_t size);
+adc_read (adc_t adc, void *buffer, uint16_t size);
 
 
 int8_t
-adc_read_channel (adc_t adc, adc_channel_t channel, adc_sample_t *buffer,
+adc_read_channel (adc_t adc, adc_channel_t channel, void *buffer,
                   uint16_t size);
 
 
