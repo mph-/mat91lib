@@ -11,9 +11,11 @@
 /* On reset the the PIO pins are configured as inputs with pullups.
    To make a PIO pin an ADC pin requires programming ADC_CHER.
    
-   The ADC is 10 bit successive approximation so requires 10 ADC clock
-   cycles plus some clock cycles for the sample/hold.  The ADC clock
-   ranges from MCK/2 to MCK/128 depending on the prescale value.
+   SAM4S: 16 channels 10/12 bit (1 MHz max).
+   SAM7: 8 channels, 8/10 bits.
+
+   SAM4S: The ADC clock is MCK/2 to MCK/512.
+   SAM7: The ADC clock is MCK/2 to MCK/128.
 
    Each channel has its own channel data register ADC_CDR and an end
    of conversion (EOC) bit in the ADC status register ADC_SR.  When a
@@ -25,12 +27,17 @@
    channel in turn and writes to the corresponding ADC_CDR registers.
    It then waits for the next trigger.
 
-   The minimum impedance (ohms) driving the ADC is given by:
+   SAM4S: A repetitive 16 channel sequence can be programmed using
+   ADC_SEQR1 and ADC_SEQR2 (enabled by USEQ in ADC_MR).
+
+   The minimum impedance (ohms) for the SAM7S driving the ADC is given by:
    
    ZOUT <= (SHTIM - 470) x 10 in 8-bit resolution mode
    ZOUT <= (SHTIM - 589) x 7.69 in 10-bit resolution mode
    
    where SHTIM is the sample/hold time in ns.
+
+   The SAM4S can tolerate higher impedance inputs.
 */
 
 
@@ -74,6 +81,7 @@
 #define ADC_8BIT_SHTIM ((uint8_t)(ADC_SAMPLE_TIME * ADC_8BIT_CLOCK1 + 0.5 - 1))
 #define ADC_10BIT_SHTIM ((uint8_t)(ADC_SAMPLE_TIME * ADC_10BIT_CLOCK1 + 0.5 - 1))
 
+static adc_dev_t adc_dev;
 
 
 /* Resets ADC.  */
@@ -87,51 +95,116 @@ adc_reset (void)
 /** Puts ADC into sleep mode.
     It should wake on next trigger.  */
 void
-adc_sleep (void)
+adc_sleep (adc_t adc)
 {
     adc_sample_t dummy;
 
     /*  Errata for SAM7S256:RevisionB states that the ADC will not be
-        placed into sleep mode until a conversion has completed. */
+        placed into sleep mode until a conversion has completed.  */
     adc_init (0);
     ADC->ADC_MR |= ADC_MR_SLEEP;
-    adc_read_wait (0, &dummy);
+    adc_read_channel (adc, 0, &dummy, sizeof (dummy));
 }
 
 
-/* Set ADC resolution (10 bits by default).  */
+/* Set the ADC triggering.  */
+static void
+adc_trigger_set (adc_t adc, adc_trigger_t trigger) 
+{
+    /* Could also handle FREERUN here where no triggering is
+       required.  */
+
+    if (trigger == ADC_TRIGGER_SW)
+    {
+        BITS_INSERT(ADC->ADC_MR, 0, 0, 1);
+    }
+    else
+    {
+        BITS_INSERT(ADC->ADC_MR, trigger << 1, 0, 3);
+    }
+}
+
+
+/* Set the clock divider (prescaler).  */
+static void
+adc_clock_divisor_set (adc_t adc, adc_clock_divisor_t clock_divisor) 
+{
+    BITS_INSERT(ADC->ADC_MR, clock_divisor, 8, 15);
+    adc->clock_divisor = clock_divisor;
+}
+
+
+adc_clock_speed_t
+adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
+{
+    uint32_t clock_speed;
+    
+    clock_speed = clock_speed_kHz * 1000;
+    adc_clock_divisor_set (adc, ((F_CPU / 2) + clock_speed - 1) / clock_speed);
+    clock_speed = (F_CPU / 2) / adc->clock_divisor;
+    
+    return clock_speed / 1000;
+}
+
+
+
+bool
+adc_channel_enable (adc_t adc, adc_channel_t channel)
+{
+    if (channel >= ADC_CHANNEL_NUM)
+	return 0;
+    adc->channel = channel;
+
+    ADC->ADC_CHER = BIT (channel);
+    return 1;
+}
+
+
+bool
+adc_channel_disable (adc_t adc, adc_channel_t channel)
+{
+    if (channel >= ADC_CHANNEL_NUM)
+	return 0;
+
+    ADC->ADC_CHDR = BIT (channel);
+    return 1;
+}
+
+
+static void
+adc_conversion_start (adc_t adc)
+{
+    ADC->ADC_CR = ADC_CR_START;
+}
+
+
+/** Select ADC reference mode.  */
+void 
+adc_reference_select (adc_t adc, adc_ref_mode_t mode __UNUSED__)
+{
+}
+
+
+#ifdef __SAM4S__
 static bool
-adc_resolution_set (uint8_t resolution)
+adc_resolution_set (adc_t adc, uint8_t resolution)
 {
     switch (resolution)
     {
-        /* The SAM4S has a 12 bit ADC with 16 to 1 analog mux., 1 MHz
-         sampling, 1/2, 1, 2, 4 times PGA, and programmable offset.
-         It can also operate in a 10 bit mode.  The SAM7 has a 10 bit
-         ADC that can also operate in 8 bit mode.  */
-
-        /* ADC clock has to be 5 MHz in high resolution mode, a
-           prescale of 4.  */
-        case 10:
+         case 12:
 
             ADC->ADC_MR &= ~ADC_MR_LOWRES;
 
-            /* ADC clock.  */
-            BITS_INSERT (ADC->ADC_MR, ADC_10BIT_PRESCALE, 8, 13);
-            /* Startup time.  */
+             /* Startup time.  */
             BITS_INSERT (ADC->ADC_MR, ADC_10BIT_STARTUP, 16, 20);
             /* Sample and hold time.  */
             BITS_INSERT (ADC->ADC_MR, ADC_10BIT_SHTIM, 24, 27);
             break;
 
-        /* ADC clock has to be 8 MHz in low resolution mode, a
-           prescale of 2.  */
-        case 8:
+         case 10:
             ADC->ADC_MR |= ADC_MR_LOWRES;
 
-            /* ADC clock.  */
-            BITS_INSERT (ADC->ADC_MR, ADC_8BIT_PRESCALE, 8, 13);
-            /* Startup time.  */
+             /* Startup time.  */
             BITS_INSERT (ADC->ADC_MR, ADC_8BIT_STARTUP, 16, 20);
             /* Sample and hold time.  */
             BITS_INSERT (ADC->ADC_MR, ADC_8BIT_SHTIM, 24, 27);
@@ -143,27 +216,57 @@ adc_resolution_set (uint8_t resolution)
     }
     return resolution;
 }
-
-
-static void
-adc_start (void)
+#else
+static bool
+adc_resolution_set (adc_t adc, uint8_t resolution)
 {
-    ADC->ADC_CR = ADC_CR_START;
+    switch (resolution)
+    {
+         case 10:
+
+            ADC->ADC_MR &= ~ADC_MR_LOWRES;
+
+             /* Startup time.  */
+            BITS_INSERT (ADC->ADC_MR, ADC_10BIT_STARTUP, 16, 20);
+            /* Sample and hold time.  */
+            BITS_INSERT (ADC->ADC_MR, ADC_10BIT_SHTIM, 24, 27);
+            break;
+
+         case 8:
+            ADC->ADC_MR |= ADC_MR_LOWRES;
+
+             /* Startup time.  */
+            BITS_INSERT (ADC->ADC_MR, ADC_8BIT_STARTUP, 16, 20);
+            /* Sample and hold time.  */
+            BITS_INSERT (ADC->ADC_MR, ADC_8BIT_SHTIM, 24, 27);
+            break;
+
+        default:
+            return 0;
+            break;
+    }
+    return resolution;
 }
+#endif
 
 
-/** Select ADC reference mode.  */
 void 
-adc_reference_select (adc_ref_mode_t mode __UNUSED__)
+adc_config (adc_t adc, adc_cfg_t *cfg)
 {
+    adc_resolution_set (adc, cfg->bits);
+    adc_trigger_set (adc, cfg->trigger);
+    adc_clock_speed_kHz_set (adc, cfg->clock_speed_kHz);
 }
 
 
 /** Initalises the ADC registers for polling operation.  */
-void 
-adc_init (uint8_t channels __UNUSED__)
+adc_t
+adc_init (adc_cfg_t *cfg)
 {
     adc_sample_t dummy;
+    adc_dev_t *adc;
+
+    adc = &adc_dev;
 
     /* The clock only needs to be enabled when sampling.  The clock is
        automatically started for the SAM7.  */
@@ -171,82 +274,91 @@ adc_init (uint8_t channels __UNUSED__)
 
     adc_reset ();
 
-    adc_resolution_set (10);
+    if (cfg)
+    {
+        adc_config (adc, cfg);
+    }
+    else
+    {
+        adc_resolution_set (adc, 10);
+        adc_clock_speed_kHz_set (adc, 5000);
+        adc_trigger_set (adc, ADC_TRIGGER_SW); /* Default.  */
+    }
+
     /* I'm not sure why a dummy read is required; it is probably a
        quirk of the SAM7.  */
-    adc_read_wait (0, &dummy);
-}
+    adc_read_channel (adc, 0, &dummy, sizeof (dummy));
 
-
-/** Starts a conversion in the ADC on the specified channel.  */
-bool
-adc_conversion_start (adc_channel_t channel)
-{
-    if (channel >= ADC_CHANNEL_NUM)
-	return 0;
-
-    ADC->ADC_CHER = BIT (channel);
-
-#if 0
-    /* Check if conversion already in progress.  */
-    if (!adc_ready_p ())
-	return 0;
-#endif
-
-    /* Start conversion.  */
-    adc_start ();
-    return 1;
+    return adc;
 }
 
 
 /** Returns true if a conversion has finished.  */
 bool
-adc_ready_p (void)
+adc_ready_p (adc_t adc)
 {
     /* FIXME for SAM4S.  */
     return (ADC->ADC_ISR & ADC_ISR_DRDY) != 0;
 }
 
 
-/** Returns 1 if valid sample read.  */
+/** Blocking read.  */
 int8_t
-adc_read (adc_sample_t *pvalue)
+adc_read (adc_t adc, adc_sample_t *buffer, uint16_t size)
 {
-    if (!adc_ready_p ())
+    uint16_t i;
+    uint16_t samples;
+
+    samples = size / sizeof (adc_sample_t);
+
+    if (!adc_channel_enable (adc, adc->channel))
         return 0;
 
-    *pvalue = ADC->ADC_LCDR;
-    
+    for (i = 0; i < samples; i++)
+    {
+        adc_conversion_start (adc);
+
+        /* Should have timeout.  */
+        while (!adc_ready_p (adc))
+            continue;
+
+        buffer[i] = ADC->ADC_LCDR;
+    }
+
     /* Disable channel.  */
     ADC->ADC_CHDR = ~0;
-    return 1;
+
+    return samples * sizeof (adc_sample_t);
 }
 
 
-/** Start conversion on selected channel, wait until conversion finished.  */
+/** Blocking read from specified ADC channel.  */
 int8_t
-adc_read_wait (adc_channel_t channel, adc_sample_t *pvalue)
+adc_read_channel (adc_t adc, adc_channel_t channel, adc_sample_t *buffer,
+                  uint16_t size)
 {
-    if (!adc_conversion_start (channel))
-        return 0;
+    adc_channel_enable (adc, channel);
 
-    /* Should have timeout.  */
-    while (!adc_ready_p ())
-        continue;
+    return adc_read (adc, buffer, size);
+}
 
-    return adc_read (pvalue);
+
+bool
+adc_start (adc_t adc)
+{
+    return 0;
 }
 
 
 /** Halts any currently running conversion.  */
 void 
-adc_stop (void)
+adc_stop (adc_t adc)
 {
 }
 
 
 /** Disables the ADC from doing anything.  */
 void
-adc_disable (void)
+adc_disable (adc_t adc)
 {
 }

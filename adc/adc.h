@@ -19,58 +19,101 @@ typedef enum
 } adc_channel_t;
 
 /** ADC reference modes.  */
-typedef enum {ADC_REF_EXT = 0}
-    adc_ref_mode_t;
+typedef enum {ADC_REF_EXT = 0} adc_ref_mode_t;
 
-/** ADC bits per conversion.  */
-enum {ADC_BITS = 10};
+
+typedef enum 
+{
+    ADC_TRIGGER_EXT, ADC_TRIGGER_TC0, ADC_TRIGGER_TC1, ADC_TRIGGER_TC2,
+    ADC_TRIGGER_PWM0, ADC_TRIGGER_PWM1, ADC_TRIGGER_SW = 7
+} adc_trigger_t;
+
 
 /** ADC sample size.  */
 typedef uint16_t adc_sample_t;
 
 
+typedef uint16_t adc_clock_divisor_t;
+
+
+typedef uint32_t adc_clock_speed_t;
+
+
+typedef struct adc_dev_struct
+{
+    adc_channel_t channel;
+    adc_clock_divisor_t clock_divisor;
+} adc_dev_t;
+
+
+typedef adc_dev_t *adc_t;
+
+
+
+typedef struct adc_cfg_struct
+{
+    /* Conversion bits.  */
+    uint8_t bits;
+
+    /* Trigger source.  */
+    adc_trigger_t trigger;
+
+    /* Clock speed in kHz (maximum).  */
+    adc_clock_speed_t clock_speed_kHz;    
+} adc_cfg_t;
+
+
+
 /** Select ADC reference mode.  */
-extern void 
-adc_reference_select (adc_ref_mode_t mode);
+void 
+adc_reference_select (adc_t adc, adc_ref_mode_t mode);
 
 
-/** Initalises the ADC registers for polling operation.  */
-extern void 
-adc_init (uint8_t channels);
+uint8_t
+adc_bits_get (adc_t adc);
 
 
-/** Starts a conversion in the ADC on the specified channel.  */
-extern bool
-adc_conversion_start (adc_channel_t channel);
+uint8_t
+adc_bits_set (adc_t adc, uint8_t bits);
 
 
 /** Returns true if a conversion is not in progress.  */
-extern bool
-adc_ready_p (void);
+bool
+adc_ready_p (adc_t adc);
 
 
-/** Returns 1 if valid sample read.  */
-extern int8_t
-adc_read (adc_sample_t *value);
+/** Blocking read.  */
+int8_t
+adc_read (adc_t adc, adc_sample_t *buffer, uint16_t size);
+
+
+int8_t
+adc_read_channel (adc_t adc, adc_channel_t channel, adc_sample_t *buffer,
+                  uint16_t size);
 
 
 /** Start conversion on selected channel, wait until conversion finished.  */
-extern int8_t
-adc_read_wait (adc_channel_t channel, adc_sample_t *pvalue);
+int8_t
+adc_read_wait (adc_t adc, adc_channel_t channel, adc_sample_t *pvalue);
 
 
 /** Halts any currently running conversion.  */
-extern void 
-adc_stop (void);
+void 
+adc_stop (adc_t adc);
 
 
-/** Disables the ADC from doing anything.  Requires reinitalisation.  */
-extern void
-adc_disable (void);
+/** Disables the ADC from doing anything.  Requires reinitialisation.  */
+void
+adc_disable (adc_t adc);
 
 
 /** Puts ADC into sleep mode.  */
-extern void
-adc_sleep (void);
+void
+adc_sleep (adc_t adc);
+
+
+/** Initalises the ADC registers for polling operation.  */
+adc_t 
+adc_init (adc_cfg_t *cfg);
 
 #endif
