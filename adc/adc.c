@@ -111,6 +111,8 @@ adc_sleep (adc_t adc)
 static void
 adc_trigger_set (adc_t adc, adc_trigger_t trigger) 
 {
+    adc->trigger = trigger;
+
     /* Could also handle FREERUN here where no triggering is
        required.  */
 
@@ -120,7 +122,7 @@ adc_trigger_set (adc_t adc, adc_trigger_t trigger)
     }
     else
     {
-        BITS_INSERT(ADC->ADC_MR, trigger << 1, 0, 3);
+        BITS_INSERT(ADC->ADC_MR, (trigger - ADC_TRIGGER_EXT) << 1, 0, 3);
     }
 }
 
@@ -174,6 +176,7 @@ adc_channel_disable (adc_t adc, adc_channel_t channel)
 static void
 adc_conversion_start (adc_t adc)
 {
+    /* Software trigger.  */
     ADC->ADC_CR = ADC_CR_START;
 }
 
@@ -282,7 +285,7 @@ adc_init (adc_cfg_t *cfg)
     {
         adc_resolution_set (adc, 10);
         adc_clock_speed_kHz_set (adc, 5000);
-        adc_trigger_set (adc, ADC_TRIGGER_SW); /* Default.  */
+        adc_trigger_set (adc, ADC_TRIGGER_SW);
     }
 
     /* I'm not sure why a dummy read is required; it is probably a
@@ -316,9 +319,10 @@ adc_read (adc_t adc, adc_sample_t *buffer, uint16_t size)
 
     for (i = 0; i < samples; i++)
     {
-        adc_conversion_start (adc);
+        if (adc->trigger = ADC_TRIGGER_SW)
+            adc_conversion_start (adc);
 
-        /* Should have timeout.  */
+        /* Should have timeout, especially for external trigger.  */
         while (!adc_ready_p (adc))
             continue;
 
