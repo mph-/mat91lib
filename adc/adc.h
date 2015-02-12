@@ -101,6 +101,10 @@ void
 adc_stop (adc_t adc);
 
 
+void
+adc_enable (adc_t adc);
+
+
 /** Disables the ADC from doing anything.  Requires reinitialisation.  */
 void
 adc_disable (adc_t adc);
@@ -111,8 +115,16 @@ void
 adc_sleep (adc_t adc);
 
 
+Pdc *
+adc_pdc_get (adc_t adc);
+
+
 /** Initalises the ADC registers for polling operation.  */
 adc_t 
-adc_init (adc_cfg_t *cfg);
+adc_init (const adc_cfg_t *cfg);
+
+
+void
+adc_shutdown (adc_t adc);
 
 #endif

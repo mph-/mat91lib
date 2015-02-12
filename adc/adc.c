@@ -247,9 +247,8 @@ adc_bits_set (adc_t adc, uint8_t bits)
 }
 
 
-
 void 
-adc_config (adc_t adc, adc_cfg_t *cfg)
+adc_config (adc_t adc, const adc_cfg_t *cfg)
 {
     adc_bits_set (adc, cfg->bits);
     adc_trigger_set (adc, cfg->trigger);
@@ -257,9 +256,22 @@ adc_config (adc_t adc, adc_cfg_t *cfg)
 }
 
 
+Pdc *
+adc_pdc_get (adc_t adc)
+{
+    return PDC_ADC;
+}
+
+
+void
+adc_enable (adc_t adc)
+{
+}
+
+
 /** Initalises the ADC registers for polling operation.  */
 adc_t
-adc_init (adc_cfg_t *cfg)
+adc_init (const adc_cfg_t *cfg)
 {
     adc_sample_t dummy;
     adc_dev_t *adc;
@@ -363,4 +375,11 @@ adc_stop (adc_t adc)
 void
 adc_disable (adc_t adc)
 {
+}
+
+
+void
+adc_shutdown (adc_t adc)
+{
+    /* TODO.  */
 }
