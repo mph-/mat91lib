@@ -296,6 +296,15 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
        to desired state.  */
     tc->base->TC_CCR |= TC_CCR_CLKDIS | TC_CCR_SWTRG; 
 
+    /* Dummy read of status register.  This helps with debugging 
+       since can determine compare status.  */
+    tc->base->TC_SR;
+
+    
+    /* Don't drive PIO if triggering ADC.  */
+    if (mode == TC_MODE_ADC)
+        return 1;
+
     /* Make timer pin TIOAx a timer output.  Perhaps we could use
        different logical timer channels to generate pulses on TIOBx
        pins?  */
@@ -317,10 +326,6 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
     default:
         return 0;
     }
-
-    /* Dummy read of status register.  This helps with debugging 
-       since can determine compare status.  */
-    tc->base->TC_SR;
 
     return 1;
 }

@@ -40,7 +40,9 @@ typedef enum
     TC_MODE_CAPTURE_RISE_RISE,
     TC_MODE_CAPTURE_RISE_FALL,
     TC_MODE_CAPTURE_FALL_RISE,
-    TC_MODE_CAPTURE_FALL_FALL
+    TC_MODE_CAPTURE_FALL_FALL,
+    /** Triggering of ADC.  */
+    TC_MODE_ADC
 } tc_mode_t;
 
 
