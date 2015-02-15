@@ -47,6 +47,7 @@ typedef struct adc_dev_struct
     adc_trigger_t trigger;
     adc_clock_divisor_t clock_divisor;
     uint8_t bits;
+    uint32_t MR;
 } adc_dev_t;
 
 
@@ -89,30 +90,6 @@ int8_t
 adc_read (adc_t adc, void *buffer, uint16_t size);
 
 
-int8_t
-adc_read_channel (adc_t adc, adc_channel_t channel, void *buffer,
-                  uint16_t size);
-
-
-/** Start conversion on selected channel, wait until conversion finished.  */
-int8_t
-adc_read_wait (adc_t adc, adc_channel_t channel, adc_sample_t *pvalue);
-
-
-/** Halts any currently running conversion.  */
-void 
-adc_stop (adc_t adc);
-
-
-void
-adc_enable (adc_t adc);
-
-
-/** Disables the ADC from doing anything.  Requires reinitialisation.  */
-void
-adc_disable (adc_t adc);
-
-
 /** Puts ADC into sleep mode.  */
 void
 adc_sleep (adc_t adc);
@@ -121,6 +98,13 @@ adc_sleep (adc_t adc);
 Pdc *
 adc_pdc_get (adc_t adc);
 
+
+void
+adc_enable (adc_t adc);
+
+
+void
+adc_disable (adc_t adc);
 
 /** Initalises the ADC registers for polling operation.  */
 adc_t 

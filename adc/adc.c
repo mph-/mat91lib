@@ -46,6 +46,12 @@
 */
 
 
+/* There is no limit.  */
+#ifndef ADC_DEVICES_NUM
+#define ADC_DEVICES_NUM 8
+#endif
+
+
 #ifdef __SAM4S__
 #define ADC_STARTUP_TIME_MIN 12e-6
 #define ADC_TRACK_TIME_MIN 160e-9
@@ -75,7 +81,10 @@
 #endif
 
 
-static adc_dev_t adc_dev;
+
+static uint8_t adc_devices_num = 0;
+static adc_dev_t adc_devices[ADC_DEVICES_NUM];
+static adc_dev_t *adc_config_last = 0;
 
 
 /* Resets ADC.  */
@@ -97,7 +106,7 @@ adc_sleep (adc_t adc)
         placed into sleep mode until a conversion has completed.  */
     adc_init (0);
     ADC->ADC_MR |= ADC_MR_SLEEP;
-    adc_read_channel (adc, 0, &dummy, sizeof (dummy));
+    adc_read (adc, &dummy, sizeof (dummy));
 }
 
 
@@ -112,11 +121,11 @@ adc_trigger_set (adc_t adc, adc_trigger_t trigger)
 
     if (trigger == ADC_TRIGGER_SW)
     {
-        BITS_INSERT(ADC->ADC_MR, 0, 0, 1);
+        BITS_INSERT(adc->MR, 0, 0, 1);
     }
     else
     {
-        BITS_INSERT(ADC->ADC_MR, (trigger - ADC_TRIGGER_EXT) << 1, 0, 3);
+        BITS_INSERT(adc->MR, (trigger - ADC_TRIGGER_EXT) << 1, 0, 3);
     }
 }
 
@@ -133,12 +142,12 @@ adc_clock_divisor_set (adc_t adc, adc_clock_divisor_t clock_divisor)
     if (clock_divisor >= 256)
         clock_divisor = 256;
 
-    BITS_INSERT(ADC->ADC_MR, clock_divisor - 1, 8, 15);
+    BITS_INSERT(adc->MR, clock_divisor - 1, 8, 15);
     adc->clock_divisor = clock_divisor;
 }
 
 
-adc_clock_speed_t
+static adc_clock_speed_t
 adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
 {
     uint32_t clock_speed;
@@ -159,16 +168,16 @@ adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
        needed when switching gain or offset, say when converting a
        sequence of channels.  Let's play safe and allocate the maximum
        17 clocks.  */
-    BITS_INSERT (ADC->ADC_MR, 3, 20, 21);
+    BITS_INSERT (adc->MR, 3, 20, 21);
 
     /* With 24 MHz clock need 288 clocks to start up on SAM4S.  Let's
        allocate 512.  TODO, scan through table to find appropriate
        value.  */
-    BITS_INSERT (ADC->ADC_MR, 8, 16, 20);
+    BITS_INSERT (adc->MR, 8, 16, 20);
 
     /* With 24 MHz clock need 3.4 clocks to sample on SAM4S.   Let's
        allocate 4.  */
-    BITS_INSERT (ADC->ADC_MR, 3, 24, 27);
+    BITS_INSERT (adc->MR, 3, 24, 27);
 
     return clock_speed / 1000;
 }
@@ -185,25 +194,17 @@ adc_channel_set (adc_t adc, adc_channel_t channel)
 }
 
 
-bool
-adc_channel_enable (adc_t adc, adc_channel_t channel)
+static void
+adc_channel_enable (adc_t adc)
 {
-    if (channel >= ADC_CHANNEL_NUM)
-	return 0;
-
-    ADC->ADC_CHER = BIT (channel);
-    return 1;
+    ADC->ADC_CHER = BIT (adc->channel);
 }
 
 
-bool
-adc_channel_disable (adc_t adc, adc_channel_t channel)
+static void
+adc_channel_disable (adc_t adc)
 {
-    if (channel >= ADC_CHANNEL_NUM)
-	return 0;
-
-    ADC->ADC_CHDR = BIT (channel);
-    return 1;
+    ADC->ADC_CHDR = BIT (adc->channel);
 }
 
 
@@ -222,28 +223,27 @@ adc_reference_select (adc_t adc, adc_ref_mode_t mode __UNUSED__)
 }
 
 
-
-bool
+uint8_t
 adc_bits_set (adc_t adc, uint8_t bits)
 {
     switch (bits)
     {
 #ifdef __SAM4S__
          case 12:
-            ADC->ADC_MR &= ~ADC_MR_LOWRES;
+            adc->MR &= ~ADC_MR_LOWRES;
             break;
 
          case 10:
-            ADC->ADC_MR |= ADC_MR_LOWRES;
+            adc->MR |= ADC_MR_LOWRES;
             break;
 #else
          case 10:
 
-            ADC->ADC_MR &= ~ADC_MR_LOWRES;
+            adc->MR &= ~ADC_MR_LOWRES;
             break;
 
          case 8:
-            ADC->ADC_MR |= ADC_MR_LOWRES;
+            adc->MR |= ADC_MR_LOWRES;
             break;            
 #endif
 
@@ -257,12 +257,27 @@ adc_bits_set (adc_t adc, uint8_t bits)
 }
 
 
-void 
-adc_config (adc_t adc, const adc_cfg_t *cfg)
+bool
+adc_config (adc_t adc)
+{
+    adc_channel_enable (adc);
+
+    if (adc == adc_config_last)
+        return 1;
+    adc_config_last = adc;
+
+    /* Set mode register.  */
+    ADC->ADC_MR = adc->MR;
+    return 1;
+}
+
+
+static void
+adc_config_set (adc_t adc, const adc_cfg_t *cfg)
 {
     adc_bits_set (adc, cfg->bits);
-    adc_trigger_set (adc, cfg->trigger);
     adc_clock_speed_kHz_set (adc, cfg->clock_speed_kHz);
+    adc_trigger_set (adc, cfg->trigger);
     adc_channel_set (adc, cfg->channel);
 }
 
@@ -277,6 +292,14 @@ adc_pdc_get (adc_t adc)
 void
 adc_enable (adc_t adc)
 {
+    /* Dummy function for symmetry with ssc driver.  */
+}
+
+
+void
+adc_disable (adc_t adc)
+{
+    /* Dummy function for symmetry with ssc driver.  */
 }
 
 
@@ -287,20 +310,28 @@ adc_init (const adc_cfg_t *cfg)
     adc_sample_t dummy;
     adc_dev_t *adc;
 
-    adc = &adc_dev;
+    if (adc_devices_num >= ADC_DEVICES_NUM)
+        return 0;
 
-    /* The clock only needs to be enabled when sampling.  The clock is
-       automatically started for the SAM7.  */
-    mcu_pmc_enable (ID_ADC);
+    if (adc_devices_num == 0)
+    {
+        /* The clock only needs to be enabled when sampling.  The clock is
+           automatically started for the SAM7.  */
+        mcu_pmc_enable (ID_ADC);
+        
+        adc_reset ();
+    }
 
-    adc_reset ();
-
+    adc = adc_devices + adc_devices_num;
+    adc_devices_num++;
+    
+    adc->MR = 0;
     /* The transfer field must have a value of 2.  */
-    BITS_INSERT(ADC->ADC_MR, 2, 28, 29);
+    BITS_INSERT(adc->MR, 2, 28, 29);
 
     if (cfg)
     {
-        adc_config (adc, cfg);
+        adc_config_set (adc, cfg);
     }
     else
     {
@@ -309,9 +340,13 @@ adc_init (const adc_cfg_t *cfg)
         adc_trigger_set (adc, ADC_TRIGGER_SW);
     }
 
+    /* Note, the ADC is not configured until adc_config is called.  */
+
+#if 0
     /* I'm not sure why a dummy read is required; it is probably a
-       quirk of the SAM7.  */
+       quirk of the SAM7.  This will require a software trigger... */
     adc_read_channel (adc, 0, &dummy, sizeof (dummy));
+#endif
 
     return adc;
 }
@@ -326,7 +361,8 @@ adc_ready_p (adc_t adc)
 }
 
 
-/** Blocking read.  */
+/** Blocking read.  This will hang if a trigger is not supplied
+    (except for software triggering mode).  */
 int8_t
 adc_read (adc_t adc, void *buffer, uint16_t size)
 {
@@ -334,8 +370,7 @@ adc_read (adc_t adc, void *buffer, uint16_t size)
     uint16_t samples;
     adc_sample_t *data;
 
-    if (!adc_channel_enable (adc, adc->channel))
-        return 0;
+    adc_config (adc);
 
     samples = size / sizeof (adc_sample_t);
     data = buffer;
@@ -359,40 +394,9 @@ adc_read (adc_t adc, void *buffer, uint16_t size)
 }
 
 
-/** Blocking read from specified ADC channel.  */
-int8_t
-adc_read_channel (adc_t adc, adc_channel_t channel, void *buffer,
-                  uint16_t size)
-{
-    adc_channel_set (adc, channel);
-
-    return adc_read (adc, buffer, size);
-}
-
-
-bool
-adc_start (adc_t adc)
-{
-    return 0;
-}
-
-
-/** Halts any currently running conversion.  */
-void 
-adc_stop (adc_t adc)
-{
-}
-
-
-/** Disables the ADC from doing anything.  */
-void
-adc_disable (adc_t adc)
-{
-}
-
-
 void
 adc_shutdown (adc_t adc)
 {
     /* TODO.  */
+    mcu_pmc_disable (ID_ADC);
 }
