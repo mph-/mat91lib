@@ -309,7 +309,13 @@ adc_init (const adc_cfg_t *cfg)
 {
     adc_sample_t dummy;
     adc_dev_t *adc;
-
+    const adc_cfg_t adc_default_cfg =
+        {
+            .bits = 10,
+            .channel = 0,
+            .clock_speed_kHz = 1000
+        };
+    
     if (adc_devices_num >= ADC_DEVICES_NUM)
         return 0;
 
@@ -329,23 +335,17 @@ adc_init (const adc_cfg_t *cfg)
     /* The transfer field must have a value of 2.  */
     BITS_INSERT(adc->MR, 2, 28, 29);
 
-    if (cfg)
-    {
-        adc_config_set (adc, cfg);
-    }
-    else
-    {
-        adc_bits_set (adc, 10);
-        adc_clock_speed_kHz_set (adc, 5000);
-        adc_trigger_set (adc, ADC_TRIGGER_SW);
-    }
+    if (!cfg)
+        cfg = &adc_default_cfg;
+
+    adc_config_set (adc, cfg);
 
     /* Note, the ADC is not configured until adc_config is called.  */
 
 #if 0
     /* I'm not sure why a dummy read is required; it is probably a
        quirk of the SAM7.  This will require a software trigger... */
-    adc_read_channel (adc, 0, &dummy, sizeof (dummy));
+    adc_read (adc, &dummy, sizeof (dummy));
 #endif
 
     return adc;

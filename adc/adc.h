@@ -80,6 +80,13 @@ uint8_t
 adc_bits_set (adc_t adc, uint8_t bits);
 
 
+/** Configure ADC peripheral registers in preparation for a conversion.
+    This is only needed for nefarious purposes since this gets performed
+    at the start of adc_read.  */
+bool
+adc_config (adc_t adc);
+
+
 /** Returns true if a conversion is not in progress.  */
 bool
 adc_ready_p (adc_t adc);
