@@ -219,13 +219,6 @@ adc_conversion_start (adc_t adc)
 }
 
 
-/** Select ADC reference mode.  */
-void 
-adc_reference_select (adc_t adc, adc_ref_mode_t mode __UNUSED__)
-{
-}
-
-
 uint8_t
 adc_bits_set (adc_t adc, uint8_t bits)
 {

@@ -18,9 +18,6 @@ typedef enum
     ADC_CHANNEL_NUM
 } adc_channel_t;
 
-/** ADC reference modes.  */
-typedef enum {ADC_REF_EXT = 0} adc_ref_mode_t;
-
 
 typedef enum 
 {
@@ -71,13 +68,20 @@ typedef struct adc_cfg_struct
 } adc_cfg_t;
 
 
-/** Select ADC reference mode.  */
-void 
-adc_reference_select (adc_t adc, adc_ref_mode_t mode);
+void
+adc_trigger_set (adc_t adc, adc_trigger_t trigger);
+
+
+adc_clock_speed_t
+adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz);
 
 
 uint8_t
 adc_bits_set (adc_t adc, uint8_t bits);
+
+
+bool
+adc_channel_set (adc_t adc, adc_channel_t channel);
 
 
 /** Configure ADC peripheral registers in preparation for a conversion.
@@ -87,7 +91,7 @@ bool
 adc_config (adc_t adc);
 
 
-/** Returns true if a conversion is not in progress.  */
+/** Returns true if a conversion has finished.  */
 bool
 adc_ready_p (adc_t adc);
 
@@ -113,7 +117,8 @@ adc_enable (adc_t adc);
 void
 adc_disable (adc_t adc);
 
-/** Initalises the ADC registers for polling operation.  */
+
+/** Initalises the ADC registers for specified configuration.  */
 adc_t 
 adc_init (const adc_cfg_t *cfg);
 
