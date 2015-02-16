@@ -81,7 +81,6 @@
 #endif
 
 
-
 static uint8_t adc_devices_num = 0;
 static adc_dev_t adc_devices[ADC_DEVICES_NUM];
 static adc_dev_t *adc_config_last = 0;
@@ -104,14 +103,14 @@ adc_sleep (adc_t adc)
 
     /*  Errata for SAM7S256:RevisionB states that the ADC will not be
         placed into sleep mode until a conversion has completed.  */
-    adc_init (0);
+    adc = adc_init (0);
     ADC->ADC_MR |= ADC_MR_SLEEP;
     adc_read (adc, &dummy, sizeof (dummy));
 }
 
 
 /* Set the ADC triggering.  */
-static void
+void
 adc_trigger_set (adc_t adc, adc_trigger_t trigger) 
 {
     adc->trigger = trigger;
@@ -121,15 +120,15 @@ adc_trigger_set (adc_t adc, adc_trigger_t trigger)
 
     if (trigger == ADC_TRIGGER_SW)
     {
-        BITS_INSERT(adc->MR, 0, 0, 1);
+        BITS_INSERT (adc->MR, 0, 0, 0);
     }
     else
     {
         /* Select trigger.  */
-        BITS_INSERT(adc->MR, (trigger - ADC_TRIGGER_EXT) << 1, 0, 3);
+        BITS_INSERT (adc->MR, trigger - ADC_TRIGGER_EXT, 1, 3);
 
         /* Enable trigger.  */
-        BITS_INSERT(adc->MR, 1, 0, 1);
+        BITS_INSERT (adc->MR, 1, 0, 0);
     }
 }
 
@@ -146,12 +145,12 @@ adc_clock_divisor_set (adc_t adc, adc_clock_divisor_t clock_divisor)
     if (clock_divisor >= 256)
         clock_divisor = 256;
 
-    BITS_INSERT(adc->MR, clock_divisor - 1, 8, 15);
+    BITS_INSERT (adc->MR, clock_divisor - 1, 8, 15);
     adc->clock_divisor = clock_divisor;
 }
 
 
-static adc_clock_speed_t
+adc_clock_speed_t
 adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
 {
     uint32_t clock_speed;
@@ -177,7 +176,7 @@ adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
     /* With 24 MHz clock need 288 clocks to start up on SAM4S.  Let's
        allocate 512.  TODO, scan through table to find appropriate
        value.  */
-    BITS_INSERT (adc->MR, 8, 16, 20);
+    BITS_INSERT (adc->MR, 8, 16, 19);
 
     /* With 24 MHz clock need 3.4 clocks to sample on SAM4S.   Let's
        allocate 4.  */
@@ -337,7 +336,7 @@ adc_init (const adc_cfg_t *cfg)
     
     adc->MR = 0;
     /* The transfer field must have a value of 2.  */
-    BITS_INSERT(adc->MR, 2, 28, 29);
+    BITS_INSERT (adc->MR, 2, 28, 29);
 
     if (!cfg)
         cfg = &adc_default_cfg;
@@ -345,6 +344,7 @@ adc_init (const adc_cfg_t *cfg)
     adc_config_set (adc, cfg);
 
     /* Note, the ADC is not configured until adc_config is called.  */
+    adc_config (adc);
 
 #if 0
     /* I'm not sure why a dummy read is required; it is probably a
@@ -380,6 +380,9 @@ adc_read (adc_t adc, void *buffer, uint16_t size)
 
     for (i = 0; i < samples; i++)
     {
+        /* When the ADC peripheral gets a trigger, it converts all the
+           enabled channels consecutively in numerical order.  */
+
         if (adc->trigger == ADC_TRIGGER_SW)
             adc_conversion_start (adc);
 
