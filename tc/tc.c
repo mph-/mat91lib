@@ -190,6 +190,7 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
         if (!delay)
             delay = period >> 1;
 
+    case TC_MODE_ADC:
     case TC_MODE_PULSE:
         /* Set TIOAx when RA matches and clear TIOAx when RC matches.  */
         tc->base->TC_CMR = TC_CMR_BURST_NONE | TC_CMR_WAVE
