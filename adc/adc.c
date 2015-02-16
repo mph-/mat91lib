@@ -125,7 +125,11 @@ adc_trigger_set (adc_t adc, adc_trigger_t trigger)
     }
     else
     {
+        /* Select trigger.  */
         BITS_INSERT(adc->MR, (trigger - ADC_TRIGGER_EXT) << 1, 0, 3);
+
+        /* Enable trigger.  */
+        BITS_INSERT(adc->MR, 1, 0, 1);
     }
 }
 
@@ -356,7 +360,6 @@ adc_init (const adc_cfg_t *cfg)
 bool
 adc_ready_p (adc_t adc)
 {
-    /* FIXME for SAM4S.  */
     return (ADC->ADC_ISR & ADC_ISR_DRDY) != 0;
 }
 
