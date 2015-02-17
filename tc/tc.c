@@ -78,7 +78,6 @@ void tc_handler (tc_t tc)
 
     if (status & TC_SR_LDRBS)
         tc->captureB = (tc->overflows << 16) | tc->base->TC_RB;
-
 }
 
 
@@ -123,7 +122,40 @@ tc_stop (tc_t tc)
 tc_counter_t
 tc_counter_get (tc_t tc)
 {
-    return (tc->overflows << 16) | tc->base->TC_CV;
+    tc_counter_t overflows;
+    uint16_t cv;
+
+    /* Unfortunately the hardware counter is only 16 bits.  We try to
+       synthesise a 64 bit counter using a count of overflows.  This
+       gets tricky due to a race condition with reading of the counter
+       value and reading of the status register to determine an
+       overflow.  We could pause the counter but this will drop
+       counts every time this function is read.  */
+
+    irq_disable (ID_TC0 + TC_CHANNEL (tc));
+    overflows = tc->overflows;
+
+    /* Read counter value.  */
+    cv = tc->base->TC_CV;
+
+    /* Check for overflows.  */
+    tc_handler (tc);
+
+    if (overflows != tc->overflows)
+    {
+        /* An overflow has occurred since disabling of interrupts.
+           Case 1.  The overflow occured before reading the counter
+           value.  This case can be detected by reading a small value.
+
+           Case 2.  The overflow occured after reading the counter.
+           This case can be detected by reading a large value.  */
+        if (cv < 32768)
+            overflows++;
+    }
+
+    irq_enable (ID_TC0 + TC_CHANNEL (tc));
+
+    return (overflows << 16) | cv;
 }
 
 
