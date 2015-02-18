@@ -70,14 +70,18 @@ void tc_handler (tc_t tc)
        flags are cleared!  */
     status = tc->base->TC_SR;
 
-    if (status & TC_SR_COVFS)
-        tc->overflows++;
-
+    /* There is a race condition to fix.  This can occur 
+       if an overflow occurs after the capture event but
+       before the status register is read.  */
+    
     if (status & TC_SR_LDRAS)
         tc->captureA = (tc->overflows << 16) | tc->base->TC_RA;
 
     if (status & TC_SR_LDRBS)
         tc->captureB = (tc->overflows << 16) | tc->base->TC_RB;
+
+    if (status & TC_SR_COVFS)
+        tc->overflows++;
 }
 
 
@@ -123,39 +127,52 @@ tc_counter_t
 tc_counter_get (tc_t tc)
 {
     tc_counter_t overflows;
-    uint16_t cv;
+    uint16_t counter_value;
 
     /* Unfortunately the hardware counter is only 16 bits.  We try to
-       synthesise a 64 bit counter using a count of overflows.  This
-       gets tricky due to a race condition with reading of the counter
-       value and reading of the status register to determine an
-       overflow.  We could pause the counter but this will drop
-       counts every time this function is read.  */
+       synthesise a 64 bit counter by counting overflows.  The
+       implementation gets tricky due two different race conditions.
 
+       The first is due to non-atomic reading of the 64 bit
+       tc->overflows.  This is avoided by reading tc->overflows in a
+       critical section.
+
+       The second is due to the non-atomic reading of the counter
+       value and reading of the status register to determine an
+       overflow.  This could be avoided by pausing the counter but
+       this will drop counts every time this function is read.  */
+
+    /* Disable interrupts to ensure that reading tc->overflows is atomic.  */
     irq_disable (ID_TC0 + TC_CHANNEL (tc));
     overflows = tc->overflows;
 
     /* Read counter value.  */
-    cv = tc->base->TC_CV;
+    counter_value = tc->base->TC_CV;
 
-    /* Check for overflows.  */
+    /* Check for overflows and service pending interrups.  */
     tc_handler (tc);
 
     if (overflows != tc->overflows)
     {
         /* An overflow has occurred since disabling of interrupts.
+           There are three cases:
            Case 1.  The overflow occured before reading the counter
            value.  This case can be detected by reading a small value.
 
            Case 2.  The overflow occured after reading the counter.
-           This case can be detected by reading a large value.  */
-        if (cv < 32768)
+           This case can be detected by reading a large value. 
+
+           Case 3.  Another interrupt handler has hogged the CPU
+           for at least half the counter rollover period.   This 
+           could be avoided by globally disabling interrupts.
+        */
+        if (counter_value < 32768)
             overflows++;
     }
 
     irq_enable (ID_TC0 + TC_CHANNEL (tc));
 
-    return (overflows << 16) | cv;
+    return (overflows << 16) | counter_value;
 }
 
 

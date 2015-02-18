@@ -12,9 +12,9 @@
 typedef struct
 {
     TcChannel *base;
-    tc_counter_t captureA;
-    tc_counter_t captureB;
-    tc_counter_t overflows;
+    volatile tc_counter_t captureA;
+    volatile tc_counter_t captureB;
+    volatile tc_counter_t overflows;
 } tc_dev_t;
 
 #endif
