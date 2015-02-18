@@ -87,6 +87,10 @@ static void
 ac_config_set (ac_t ac, const ac_cfg_t *cfg)
 {
     ac_channel_set (ac, cfg->channel);
+    ac_reference_set (ac, cfg->reference);
+    ac_edge_set (ac, cfg->edge);
+    ac_hysteresis_set (ac, cfg->hysteresis);
+    ac_current_set (ac, cfg->current);
 }
 
 
@@ -104,6 +108,28 @@ ac_disable (ac_t ac)
     BITS_INSERT (ac->MR, 0, 8, 8);
     ac_config (ac);
 }
+
+
+void
+ac_irq_enable (ac_t ac)
+{
+    ACC->ACC_IER = 1;
+}
+
+
+void
+ac_irq_disable (ac_t ac)
+{
+    ACC->ACC_IDR = 1;
+}
+
+
+bool
+ac_poll (ac_t ac)
+{
+    return (ACC->ACC_ISR & 1) != 0;
+}
+
 
 
 /** Initalises the AC registers for polling operation.  */

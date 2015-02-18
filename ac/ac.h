@@ -102,6 +102,18 @@ void
 ac_disable (ac_t ac);
 
 
+void
+ac_irq_enable (ac_t ac);
+
+
+void
+ac_irq_disable (ac_t ac);
+
+
+bool
+ac_poll (ac_t ac);
+
+
 ac_t 
 ac_init (const ac_cfg_t *cfg);
 
