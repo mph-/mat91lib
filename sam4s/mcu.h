@@ -37,10 +37,6 @@ mcu_power_mode_normal (void);
 
 
 void
-mcu_sleep (void);
-
-
-void
 mcu_reset (void);
 
 

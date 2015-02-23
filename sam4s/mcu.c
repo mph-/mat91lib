@@ -370,18 +370,6 @@ void mcu_cpu_idle (void)
 
 
 void
-mcu_sleep (void)
-{
-    mcu_power_mode_low ();
-
-    /* Disable processor clock and wait for interrupt.  */
-    mcu_cpu_idle ();
-
-    mcu_power_mode_normal ();
-}
-
-
-void
 mcu_watchdog_reset (void)
 {
     WDT->WDT_CR = 0xA5000000 | WDT_CR_WDRSTT;
