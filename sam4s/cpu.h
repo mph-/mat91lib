@@ -30,6 +30,13 @@ cpu_nop (void)
 }
 
 
+static inline void
+cpu_wfi (void)
+{
+    __asm__ ("\twfi");
+}
+
+
 /* Globally disable interrupts.  */
 __inline __attribute__ ((always_inline)) 
 void irq_global_disable (void)
