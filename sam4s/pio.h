@@ -9,7 +9,6 @@
 #define PIO_H
 
 #include "config.h"
-#include "mcu.h"
 
 
 #define PIO_SAM4S
@@ -129,11 +128,12 @@ typedef enum pio_config_enum
 #define PB30_PIO PIO_DEFINE(PORT_B, 30)
 #define PB31_PIO PIO_DEFINE(PORT_B, 31)
 
-
+/* SPI  */
 #define MOSI0_PIO PA13_PIO
 #define MISO0_PIO PA12_PIO
 #define SPCK0_PIO PA14_PIO
 
+/* SSC  */
 #define RD_PIO PA18_PIO
 #define RK_PIO PA19_PIO
 #define RF_PIO PA20_PIO
@@ -141,6 +141,38 @@ typedef enum pio_config_enum
 #define TD_PIO PA17_PIO
 #define TK_PIO PA16_PIO
 #define TF_PIO PA15_PIO
+
+/* USART0  */
+#define TXD0_PIO PA5_PIO
+#define TXD0_PERIPH PIO_PERIPH_A
+#define RXD0_PIO PA6_PIO
+#define RXD0_PERIPH PIO_PERIPH_A
+#define RTS0_PIO PA7_PIO
+#define RTS0_PERIPH PIO_PERIPH_A
+#define CTS0_PIO PA8_PIO
+#define CTS0_PERIPH PIO_PERIPH_A
+
+/* USART1  */
+#define TXD1_PIO PA22_PIO
+#define TXD1_PERIPH PIO_PERIPH_A
+#define RXD1_PIO PA21_PIO
+#define RXD1_PERIPH PIO_PERIPH_A
+#define RTS1_PIO PA24_PIO
+#define RTS1_PERIPH PIO_PERIPH_A
+#define CTS1_PIO PA25_PIO
+#define CTS1_PERIPH PIO_PERIPH_A
+
+/* UART0  */
+#define UTXD0_PIO PA10_PIO
+#define URXD0_PIO PA9_PIO
+
+/* TC  */
+#define TIOA0_PIO PA0_PIO
+#define TIOA0_PERIPH PIO_PERIPH_B
+#define TIOA1_PIO PA15_PIO
+#define TIOA1_PERIPH PIO_PERIPH_B
+#define TIOA2_PIO PA26_PIO
+#define TIOA2_PERIPH PIO_PERIPH_B
 
 
 typedef uint32_t pio_t;
@@ -215,8 +247,8 @@ pio_config_set (pio_t pio, pio_config_t config)
 
 /** Set PIO high.
     @param pio  */
-static inline
-void pio_output_high (pio_t pio)
+static inline void
+pio_output_high (pio_t pio)
 {
     PIO_BASE (pio)->PIO_SODR = PIO_BITMASK_ (pio);
 }
@@ -224,8 +256,8 @@ void pio_output_high (pio_t pio)
 
 /** Set PIO low.
     @param pio  */
-static inline
-void pio_output_low (pio_t pio)
+static inline void 
+pio_output_low (pio_t pio)
 {
     PIO_BASE (pio)->PIO_CODR = PIO_BITMASK_ (pio);
 }
@@ -234,8 +266,8 @@ void pio_output_low (pio_t pio)
 /** Set PIO to desired state.
     @param pio 
     @param state  */
-static inline
-void pio_output_set (pio_t pio, bool state)
+static inline void
+pio_output_set (pio_t pio, bool state)
 {
     state ? pio_output_high (pio) : pio_output_low (pio);
 }
@@ -244,8 +276,8 @@ void pio_output_set (pio_t pio, bool state)
 /** Get output state of PIO.
     @param pio
     @return state  */
-static inline
-bool pio_output_get (pio_t pio)
+static inline bool
+pio_output_get (pio_t pio)
 {
     return (PIO_BASE (pio)->PIO_ODSR & PIO_BITMASK_ (pio)) != 0;
 }
@@ -254,8 +286,8 @@ bool pio_output_get (pio_t pio)
 /** Read input state of PIO.
     @param pio
     @return state  */
-static inline
-bool pio_input_get (pio_t pio)
+static inline bool
+pio_input_get (pio_t pio)
 {
     return (PIO_BASE (pio)->PIO_PDSR & PIO_BITMASK_ (pio)) != 0;
 }
@@ -263,29 +295,19 @@ bool pio_input_get (pio_t pio)
 
 /** Toggle PIO.
     @param pio  */
-static inline
-void pio_output_toggle (pio_t pio)
+static inline void
+pio_output_toggle (pio_t pio)
 {
     pio_output_get (pio) ? pio_output_low (pio) : pio_output_high (pio);
 }
 
 
-/** Enable the clock for the port.  This is required for input
-    operations.  */
-static inline
-void pio_init (pio_t pio)
-{
-    mcu_pmc_enable (PIO_ID (pio));
-}
+void
+pio_init (pio_t pio);
 
 
-/** Disable the clock for the port.  */
-static inline
-void pio_shutdown (pio_t pio)
-{
-    mcu_pmc_disable (PIO_ID (pio));
-}
-
+void
+pio_shutdown (pio_t pio);
 
 
 typedef enum pio_irq_config_enum 

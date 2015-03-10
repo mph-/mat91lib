@@ -7,11 +7,27 @@
 #define MCU_H
 
 #include "config.h"
+#include "pio.h"
 
 
 #ifndef MCU_FLASH_READ_CYCLES 
 #define MCU_FLASH_READ_CYCLES 6
 #endif
+
+typedef enum 
+{
+    MCU_SLEEP_MODE_BACKUP,
+    MCU_SLEEP_MODE_WAIT,
+    MCU_SLEEP_MODE_SLEEP
+} mcu_sleep_mode_t;
+
+
+typedef struct mcu_sleep_cfg_struct
+{
+    mcu_sleep_mode_t mode;
+    pio_t pio;
+    bool active_high;
+} mcu_sleep_mode_cfg_t;
 
 
 static inline void
@@ -82,6 +98,10 @@ mcu_pmc_disable (uint8_t id)
 
 void
 mcu_cpu_idle (void);
+
+
+void
+mcu_sleep (mcu_sleep_mode_cfg_t *cfg);
 
 
 #endif /* MCU_H  */
