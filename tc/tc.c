@@ -50,9 +50,9 @@
 /* Define known TC pins.  */
 static const pinmap_t tc_pins[] = 
 {
-    {0, PA0_PIO, PIO_PERIPH_B},  /* TIOA0 */
-    {1, PA15_PIO, PIO_PERIPH_B}, /* TIOA1 */
-    {2, PA26_PIO, PIO_PERIPH_B}, /* TIOA2 */
+    {0, TIOA0_PIO, TIOA0_PERIPH},  /* TIOA0 */
+    {1, TIOA1_PIO, TIOA1_PERIPH}, /* TIOA1 */
+    {2, TIOA2_PIO, TIOA2_PERIPH}, /* TIOA2 */
 };
 #define TC_PINS_NUM ARRAY_SIZE (tc_pins)
 
@@ -362,15 +362,15 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
     {
     case TC_CHANNEL_0:
         /* Switch to peripheral B and disable pin as PIO.  */
-        pio_config_set (PA0_PIO, PIO_PERIPH_B);
+        pio_config_set (TIOA0_PIO, TIOA0_PERIPH);
         break;
 
     case TC_CHANNEL_1:
-        pio_config_set (PA15_PIO, PIO_PERIPH_B);
+        pio_config_set (TIOA1_PIO, TIOA1_PERIPH);
         break;
 
     case TC_CHANNEL_2:
-        pio_config_set (PA26_PIO, PIO_PERIPH_B);
+        pio_config_set (TIOA2_PIO, TIOA2_PERIPH);
         break;
 
     default:

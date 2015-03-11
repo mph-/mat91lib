@@ -541,9 +541,9 @@ spi_wakeup (spi_t spi)
         return;
 
     /* Configure PIO for MISO, MOSI, SPCK.    */
-    pio_config_set (MISO0_PIO, PIO_PERIPH_A);
-    pio_config_set (MOSI0_PIO, PIO_PERIPH_A);
-    pio_config_set (SPCK0_PIO, PIO_PERIPH_A);
+    pio_config_set (MISO0_PIO, MISO0_PERIPH);
+    pio_config_set (MOSI0_PIO, MOSI0_PERIPH);
+    pio_config_set (SPCK0_PIO, SPCK0_PERIPH);
 
     /* Enable SPI peripheral clock.  */
     mcu_pmc_enable (ID_SPI);
@@ -554,9 +554,9 @@ spi_wakeup (spi_t spi)
 
 #if SPI_CONTROLLERS_NUM == 2
     /* Configure PIO for MISO, MOSI, SPCK.    */
-    pio_config_set (MISO1_PIO, PIO_PERIPH_A);
-    pio_config_set (MOSI1_PIO, PIO_PERIPH_A);
-    pio_config_set (SPCK1_PIO, PIO_PERIPH_A);
+    pio_config_set (MISO1_PIO, MISO0_PERIPH);
+    pio_config_set (MOSI1_PIO, MOSI1_PERIPH);
+    pio_config_set (SPCK1_PIO, SPCK1_PERIPH);
 
     /* Enable SPI peripheral clock.  */
     mcu_pmc_enable (ID_SPI1);

@@ -216,17 +216,17 @@ ssc_module_enable (ssc_t ssc, ssc_module_t tx_rx)
     switch (tx_rx) 
     {
     case SSC_TX: 
-        pio_config_set (TD_PIO, PIO_PERIPH_A);
-        pio_config_set (TK_PIO, PIO_PERIPH_A);
-        pio_config_set (TF_PIO, PIO_PERIPH_A);
+        pio_config_set (TD_PIO, TD_PERIPH);
+        pio_config_set (TK_PIO, TK_PERIPH);
+        pio_config_set (TF_PIO, TF_PERIPH);
 
         SSC->SSC_CR |= SSC_CR_TXEN;
         break;
 
     case SSC_RX:
-        pio_config_set (RD_PIO, PIO_PERIPH_A);
-        pio_config_set (RK_PIO, PIO_PERIPH_A);
-        pio_config_set (RF_PIO, PIO_PERIPH_A);
+        pio_config_set (RD_PIO, TD_PERIPH);
+        pio_config_set (RK_PIO, RK_PERIPH);
+        pio_config_set (RF_PIO, RF_PERIPH);
 
         SSC->SSC_CR |= SSC_CR_RXEN;
         break;

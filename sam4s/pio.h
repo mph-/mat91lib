@@ -130,17 +130,26 @@ typedef enum pio_config_enum
 
 /* SPI  */
 #define MOSI0_PIO PA13_PIO
+#define MOSI0_PERIPH PIO_PERIPH_A
 #define MISO0_PIO PA12_PIO
+#define MISO0_PERIPH PIO_PERIPH_A
 #define SPCK0_PIO PA14_PIO
+#define SPCK0_PERIPH PIO_PERIPH_A
 
 /* SSC  */
 #define RD_PIO PA18_PIO
+#define RD_PERIPH PIO_PERIPH_A
 #define RK_PIO PA19_PIO
+#define RK_PERIPH PIO_PERIPH_A
 #define RF_PIO PA20_PIO
+#define RF_PERIPH PIO_PERIPH_A
 
 #define TD_PIO PA17_PIO
+#define TD_PERIPH PIO_PERIPH_A
 #define TK_PIO PA16_PIO
+#define TK_PERIPH PIO_PERIPH_A
 #define TF_PIO PA15_PIO
+#define TF_PERIPH PIO_PERIPH_A
 
 /* USART0  */
 #define TXD0_PIO PA5_PIO
