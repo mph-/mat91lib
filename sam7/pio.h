@@ -115,6 +115,54 @@ typedef uint32_t pio_t;
 #endif
 
 
+/* SSC  */
+#define RD_PIO PA18_PIO
+#define RD_PERIPH PIO_PERIPH_A
+#define RK_PIO PA19_PIO
+#define RK_PERIPH PIO_PERIPH_A
+#define RF_PIO PA20_PIO
+#define RF_PERIPH PIO_PERIPH_A
+
+#define TD_PIO PA17_PIO
+#define TD_PERIPH PIO_PERIPH_A
+#define TK_PIO PA16_PIO
+#define TK_PERIPH PIO_PERIPH_A
+#define TF_PIO PA15_PIO
+#define TF_PERIPH PIO_PERIPH_A
+
+/* USART0  */
+#define TXD0_PIO PA6_PIO
+#define TXD0_PERIPH PIO_PERIPH_A
+#define RXD0_PIO PA5_PIO
+#define RXD0_PERIPH PIO_PERIPH_A
+#define RTS0_PIO PA7_PIO
+#define RTS0_PERIPH PIO_PERIPH_A
+#define CTS0_PIO PA8_PIO
+#define CTS0_PERIPH PIO_PERIPH_A
+
+/* USART1  */
+#define TXD1_PIO PA22_PIO
+#define TXD1_PERIPH PIO_PERIPH_A
+#define RXD1_PIO PA21_PIO
+#define RXD1_PERIPH PIO_PERIPH_A
+#define RTS1_PIO PA24_PIO
+#define RTS1_PERIPH PIO_PERIPH_A
+#define CTS1_PIO PA25_PIO
+#define CTS1_PERIPH PIO_PERIPH_A
+
+/* UART0  */
+#define URXD0_PIO PA9_PIO
+#define UTXD0_PIO PA10_PIO
+
+/* TC  */
+#define TIOA0_PIO PA0_PIO
+#define TIOA0_PERIPH PIO_PERIPH_B
+#define TIOA1_PIO PA15_PIO
+#define TIOA1_PERIPH PIO_PERIPH_B
+#define TIOA2_PIO PA26_PIO
+#define TIOA2_PERIPH PIO_PERIPH_B
+
+
 
 /** Configure PIO
     @param pio  */
