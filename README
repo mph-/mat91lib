@@ -1,7 +1,9 @@
 This library provides low level hardware abstraction for an AT91SAM7S
 ARM microcontroller (with an ARM7TDMI ARM Thumb Processor).
 
-Tested on AT91 SAM7-H256 board from Olimex.
+These routines are design primarily for a bare-metal system.  The
+philosophy is not to block (well at not least for now).
+
 
 TODO
 Convert files to use doxygen markup
