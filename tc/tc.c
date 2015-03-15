@@ -226,6 +226,11 @@ bool
 tc_config_1 (tc_t tc, tc_mode_t mode, tc_period_t period, 
              tc_period_t delay, tc_prescale_t prescale)
 {
+    tc->mode = mode;
+    tc->period = period;
+    tc->delay = delay;
+    tc->prescale = prescale;
+
     /* Many timer counters can only generate a pulse with a single
        timer clock period.  This timer counter allows the pulse width
        to be varied.  It is specified by period - delay. 
@@ -385,6 +390,13 @@ bool
 tc_config_set (tc_t tc, const tc_cfg_t *cfg)
 {
     return tc_config_1 (tc, cfg->mode, cfg->period, cfg->delay, cfg->prescale);
+}
+
+
+bool
+tc_period_set (tc_t tc, tc_period_t period)
+{
+    return tc_config_1 (tc, tc->mode, period, tc->delay, tc->prescale);
 }
 
 

@@ -15,6 +15,10 @@ typedef struct
     volatile tc_counter_t captureA;
     volatile tc_counter_t captureB;
     volatile tc_counter_t overflows;
+    tc_mode_t mode;
+    tc_period_t period;         /* Clocks */
+    tc_period_t delay;          /* Clocks */
+    tc_prescale_t prescale;
 } tc_dev_t;
 
 #endif

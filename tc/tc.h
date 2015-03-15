@@ -112,6 +112,10 @@ tc_capture_mask_t
 tc_capture_poll (tc_t tc);
 
 
+bool
+tc_period_set (tc_t tc, tc_period_t period);
+
+
 tc_t 
 tc_init (const tc_cfg_t *cfg);
 
