@@ -97,7 +97,6 @@ ssc_module_config (ssc_t ssc, ssc_module_cfg_t *cfg, ssc_module_t module)
     cmr |= cfg->start_mode;
     /* If start mode is SSC_START_COMPARE0 then should load RC0R
        and perhaps RC1R (the compare reigister).  */
-       
 
     cmr |= cfg->clock_edge;
 
@@ -153,9 +152,9 @@ ssc_module_config (ssc_t ssc, ssc_module_cfg_t *cfg, ssc_module_t module)
 }
 
 
-/* Configure the ssc peripheral, null pointer = don't use a module.  */
+/* Configure the ssc peripheral.  */
 static void
-ssc_config (ssc_t ssc, const ssc_cfg_t *cfg) 
+ssc_config_set (ssc_t ssc, const ssc_cfg_t *cfg) 
 {
     /* Enable the peripheral clock.  */
     mcu_pmc_enable (ID_SSC);
@@ -317,7 +316,6 @@ ssc_read_16 (ssc_t ssc, void *buffer, uint16_t length)
 }
 
 
-
 /* Read data from the rx buffer.  */
 static uint16_t
 ssc_read_32 (ssc_t ssc, void *buffer, uint16_t length)
@@ -417,7 +415,6 @@ ssc_pdc_get (ssc_t ssc)
 }
 
 
-
 ssc_t 
 ssc_init (const ssc_cfg_t *cfg)
 {
@@ -425,7 +422,7 @@ ssc_init (const ssc_cfg_t *cfg)
 
     ssc = &ssc_dev;
 
-    ssc_config (ssc, cfg);
+    ssc_config_set (ssc, cfg);
 
     ssc->rx = cfg->rx;
     ssc->tx = cfg->tx;

@@ -72,8 +72,8 @@ typedef struct
 {
     pio_t pio;
     tc_mode_t mode;
-    tc_period_t period;
-    tc_period_t delay;
+    tc_period_t period;         /* Clocks */
+    tc_period_t delay;          /* Clocks */
     tc_prescale_t prescale;
 } tc_cfg_t;
 
@@ -87,11 +87,9 @@ typedef struct
 typedef tc_dev_t *tc_t;
 
 
-/** Configure TC with specified mode.  The delay and period are in
-    terms of the CPU clock.  The pulse width is period - delay.  */
+/** Change TC configuration.  */
 bool
-tc_config (tc_t tc, tc_mode_t mode, 
-           tc_period_t period, tc_period_t delay, tc_prescale_t prescale);
+tc_config_set (tc_t tc, const tc_cfg_t *cfg);
 
 
 bool
@@ -112,6 +110,10 @@ tc_capture_get (tc_t tc, tc_capture_t reg);
 
 tc_capture_mask_t
 tc_capture_poll (tc_t tc);
+
+
+bool
+tc_period_set (tc_t tc, tc_period_t period);
 
 
 tc_t 

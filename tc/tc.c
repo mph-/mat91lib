@@ -223,9 +223,14 @@ tc_capture_poll (tc_t tc)
 /** Configure TC with specified mode.  The delay and period are in
     terms of the CPU clock.  The pulse width is period - delay.  */
 bool
-tc_config (tc_t tc, tc_mode_t mode, tc_period_t period, 
-           tc_period_t delay, tc_prescale_t prescale)
+tc_config_1 (tc_t tc, tc_mode_t mode, tc_period_t period, 
+             tc_period_t delay, tc_prescale_t prescale)
 {
+    tc->mode = mode;
+    tc->period = period;
+    tc->delay = delay;
+    tc->prescale = prescale;
+
     /* Many timer counters can only generate a pulse with a single
        timer clock period.  This timer counter allows the pulse width
        to be varied.  It is specified by period - delay. 
@@ -381,6 +386,20 @@ tc_config (tc_t tc, tc_mode_t mode, tc_period_t period,
 }
 
 
+bool
+tc_config_set (tc_t tc, const tc_cfg_t *cfg)
+{
+    return tc_config_1 (tc, cfg->mode, cfg->period, cfg->delay, cfg->prescale);
+}
+
+
+bool
+tc_period_set (tc_t tc, tc_period_t period)
+{
+    return tc_config_1 (tc, tc->mode, period, tc->delay, tc->prescale);
+}
+
+
 void
 tc_shutdown (tc_t tc)
 {
@@ -433,7 +452,7 @@ tc_init (const tc_cfg_t *cfg)
     /* Enable TCx peripheral clock.  */
     mcu_pmc_enable (ID_TC0 + pin->channel);
     
-    tc_config (tc, cfg->mode, cfg->period, cfg->delay, cfg->prescale);
+    tc_config_set (tc, cfg);
 
     tc->overflows = 0;
 
@@ -461,7 +480,7 @@ tc_clock_sync (tc_t tc, tc_period_t period)
 {
     uint32_t id;
 
-    tc_config (tc, TC_MODE_DELAY_ONESHOT, period, period, 1);
+    tc_config_1 (tc, TC_MODE_DELAY_ONESHOT, period, period, 1);
 
     id = ID_TC0 + TC_CHANNEL (tc);
 
