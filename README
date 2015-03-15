@@ -2,7 +2,7 @@ This library provides low level hardware abstraction for an AT91SAM7S
 ARM microcontroller (with an ARM7TDMI ARM Thumb Processor).
 
 These routines are design primarily for a bare-metal system.  The
-philosophy is not to block (well at not least for now).
+philosophy is not to block (well at not least for long).
 
 
 TODO
@@ -14,7 +14,7 @@ Perhaps use CMSIS - Cortex Microcontroller Software Interface Standard
 A note on handles.  These are designed to be opaque pointers or
 integers and to provide a consistent interface.  This improves
 portability but can be unnecessarily confusing.  Moreover, opaque
-pointers hinter debugging.
+pointers hinder debugging.  In hindsight, I'd remove the opacity.
 
 From a consistent interface point of view, the only exception is
 pio_t.  Dereferencing a pointer stymies many optimisations, especially
