@@ -7,7 +7,6 @@
 #define CPU_H
 
 #include "config.h"
-#include "irq.h"
 #include "bits.h"
 
 
@@ -197,30 +196,6 @@ cpu_reset_disable (void)
     /* Enable NRST pin.  */
     RSTC->RSTC_RMR =
         (RSTC->RSTC_RMR & ~AT91C_RSTC_URSTEN) | (0xa5 << 24);
-}
-
-
-/* Globally disable interrupts.  This only works in ARM mode.  */
-__inline __attribute__ ((always_inline)) 
-void irq_global_disable (void)
-{
-    uint32_t cpsr;
-
-    cpsr = cpu_cpsr_get ();
-    cpsr |= CPU_I_BIT | CPU_F_BIT;
-    cpu_cpsr_set (cpsr);
-}
-
-
-/* Globally enable interrupts.  This only works in ARM mode.  */
-__inline __attribute__ ((always_inline)) 
-void irq_global_enable (void)
-{
-    uint32_t cpsr;
-
-    cpsr = cpu_cpsr_get ();
-    cpsr &= ~(CPU_I_BIT | CPU_F_BIT);
-    cpu_cpsr_set (cpsr);
 }
 
 

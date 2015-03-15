@@ -7,7 +7,6 @@
 #define CPU_H
 
 #include "config.h"
-#include "irq.h"
 #include "bits.h"
 
 
@@ -35,21 +34,4 @@ cpu_wfi (void)
 {
     __asm__ ("\twfi");
 }
-
-
-/* Globally disable interrupts.  */
-__inline __attribute__ ((always_inline)) 
-void irq_global_disable (void)
-{
-    __asm__ ("\tcpsie f");
-}
-
-
-/* Globally enable interrupts.  */
-__inline __attribute__ ((always_inline)) 
-void irq_global_enable (void)
-{
-    __asm__ ("\tcpsie i");
-}
-
 #endif /* CPU_H  */

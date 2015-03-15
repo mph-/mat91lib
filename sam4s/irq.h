@@ -86,4 +86,21 @@ static inline void irq_config (irq_id_t id, irq_priority_t priority,
     irq_vector_set (id, isr);
     irq_clear (id);
 }
+
+
+
+/* Globally disable interrupts.  */
+__inline __attribute__ ((always_inline)) 
+void irq_global_disable (void)
+{
+    __asm__ ("\tcpsie f");
+}
+
+
+/* Globally enable interrupts.  */
+__inline __attribute__ ((always_inline)) 
+void irq_global_enable (void)
+{
+    __asm__ ("\tcpsie i");
+}
 #endif /* IRQ_H  */

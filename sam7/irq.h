@@ -8,6 +8,7 @@
 
 #include "config.h"
 #include "bits.h"
+#include "cpu.h"
 
 typedef void (* irq_vector_t) (void);
 
@@ -82,5 +83,29 @@ static inline void irq_config (irq_id_t id, irq_priority_t priority,
     irq_type_set (id, AT91C_AIC_SRCTYPE_INT_HIGH_LEVEL);
     irq_vector_set (id, isr);
     irq_clear (id);
+}
+
+
+/* Globally disable interrupts.  This only works in ARM mode.  */
+__inline __attribute__ ((always_inline)) 
+void irq_global_disable (void)
+{
+    uint32_t cpsr;
+
+    cpsr = cpu_cpsr_get ();
+    cpsr |= CPU_I_BIT | CPU_F_BIT;
+    cpu_cpsr_set (cpsr);
+}
+
+
+/* Globally enable interrupts.  This only works in ARM mode.  */
+__inline __attribute__ ((always_inline)) 
+void irq_global_enable (void)
+{
+    uint32_t cpsr;
+
+    cpsr = cpu_cpsr_get ();
+    cpsr &= ~(CPU_I_BIT | CPU_F_BIT);
+    cpu_cpsr_set (cpsr);
 }
 #endif /* IRQ_H  */
