@@ -143,7 +143,7 @@ tc_counter_get (tc_t tc)
        this will drop counts every time this function is read.  */
 
     /* Disable interrupts to ensure that reading tc->overflows is atomic.  */
-    irq_disable (ID_TC0 + TC_CHANNEL (tc));
+    irq_global_disable ();
     overflows = tc->overflows;
 
     /* Read counter value.  */
@@ -164,13 +164,13 @@ tc_counter_get (tc_t tc)
 
            Case 3.  Another interrupt handler has hogged the CPU
            for at least half the counter rollover period.   This 
-           could be avoided by globally disabling interrupts.
+           is avoided by globally disabling interrupts.
         */
         if (counter_value < 32768)
             overflows++;
     }
 
-    irq_enable (ID_TC0 + TC_CHANNEL (tc));
+    irq_global_enable ();
 
     return (overflows << 16) | counter_value;
 }
