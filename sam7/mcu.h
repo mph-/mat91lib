@@ -209,6 +209,10 @@ extern void _irq_unexpected_handler (void);
 extern void _irq_spurious_handler (void);
 
 
+void
+mcu_reset (void);
+
+
 /* Enable NRST pin.  */
 static inline void
 mcu_reset_enable (void)

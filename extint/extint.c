@@ -85,9 +85,7 @@ extint_t extint_init (const extint_cfg_t *cfg)
             if (!handler)
                 handler = extint_default_handler;
             
-            irq_config (dev->irq_id, 1,
-                        AT91C_AIC_SRCTYPE_EXT_LOW_LEVEL, 
-                        handler);
+            irq_config (dev->irq_id, 1, handler);
 
             return dev;
         }
