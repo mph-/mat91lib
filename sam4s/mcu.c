@@ -157,7 +157,12 @@ mcu_clock_init (void)
        The PLL frequency can range from 80--240 MHz.
 
        Here we assume that an external crystal is used for the MAINCK
-       and this is multipled by PLLA to drive MCK.
+       and this is multiplied by PLLA to drive MCK.
+
+       PLLB is not touched here.  Currently, the USB clock is derived
+       from PLLA; this restricts MCK to be a multiple of 48 MHz
+       required for the USB clock.  This restriction could be relaxed
+       using PLLB for the USB.
 
        Initially MCK is driven from the 4 MHz internal fast RC oscillator.
     */
