@@ -30,8 +30,8 @@
 #endif
 
 
-#define F_PLL_IN = F_XTAL / MCU_PLL_DIV
-#define F_PLL_OUT = F_PLL_IN * MCU_PLL_MUL
+#define F_PLL_IN  (F_XTAL / MCU_PLL_DIV)
+#define F_PLL_OUT  (F_PLL_IN * MCU_PLL_MUL)
 
 /* The PLL input frequency needs to be between 3 and 32 MHz.  This is
    the frequency after the divider and before the frequency
@@ -43,6 +43,17 @@
 /* The PLL output frequency needs to be between 80 and 240 MHz.   */
 #define F_PLL_OUT_MIN  80000000
 #define F_PLL_OUT_MAX 240000000
+
+#if 0
+/* Not all C preprocessors can handle floating point macros.  */
+#if F_PLL_IN < F_PLL_IN_MIN
+#error MCU_PLL_MUL is too large, the PLL input frequency is too low
+#endif
+
+#if F_PLL_IN > F_PLL_IN_MAX
+#error MCU_PLL_MUL is too small, the PLL input frequency is too high
+#endif
+#endif
 
 
 /* Internal slow clock frequency.  */
