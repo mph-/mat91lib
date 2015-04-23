@@ -15,37 +15,37 @@
 
 
 /* Return non-zero if there is a character ready to be read.  */
-extern bool
+bool
 usart1_read_ready_p (void);
 
 /* Read character from USART1.  This blocks if nothing
    is available to read.  */
-extern int8_t 
+int
 usart1_getc (void);
 
 /* Return non-zero if a character can be written without blocking.  */
-extern bool
+bool
 usart1_write_ready_p (void);
 
 /* Return non-zero if transmitter finished.  */
-extern bool
+bool
 usart1_write_finished_p (void);
 
 /* Write character to USART1.  This returns zero if
    the character could not be written.  */
-extern int8_t
+int
 usart1_putc (char ch);
 
 /* Write string to USART1.  */
-extern void 
+int
 usart1_puts (const char *str);
 
 /* Initialise USART1 and set baud rate.  */
-extern uint8_t
+uint8_t
 usart1_init (uint16_t baud_divisor);
 
 
 /* Shutdown USART1 in preparation for sleep.  */
-extern void
+void
 usart1_shutdown (void);
 #endif

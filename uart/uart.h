@@ -44,19 +44,19 @@ uart_write_finished_p (uart_t uart)
 
 
 /** Read character.  This blocks.  */
-int8_t
+int
 uart_getc (uart_t uart);
 
 
 /** Write character.  This blocks until character written to transmit
     buffer.  */
-int8_t
+int
 uart_putc (uart_t uart, char ch);
 
 
 /** Write string.  This blocks until last character written to
     transmit buffer.  */
-int8_t
+int
 uart_puts (uart_t uart, const char *str);
 
 

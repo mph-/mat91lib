@@ -103,7 +103,7 @@ usart0_write_finished_p (void)
 
 
 /* Write character to USART0.  */
-int8_t 
+int
 usart0_putc (char ch)
 {
     if (ch == '\n')
@@ -115,7 +115,7 @@ usart0_putc (char ch)
 
 
 /* Read character from USART0.  This blocks until a character is read.  */
-int8_t
+int
 usart0_getc (void)
 {
     /* Wait for something in receive buffer.  */
@@ -127,10 +127,14 @@ usart0_getc (void)
 
 
 /* Write string to USART0.  This blocks until the string is written.  */
-void 
+int
 usart0_puts (const char *str)
 {
     while (*str)
-        usart0_putc (*str++);
+    {
+        if (usart0_putc (*str++) < 0)
+            return -1;
+    }
+    return 1;
 }
 

@@ -22,8 +22,8 @@
 
 struct uart_dev_struct
 {
-    int8_t (*putch) (char ch);
-    int8_t (*getch) (void);
+    int (*putch) (char ch);
+    int (*getch) (void);
     bool (*read_ready_p) (void);
     bool (*write_ready_p) (void);
     bool (*write_finished_p) (void);
@@ -34,17 +34,21 @@ struct uart_dev_struct
 #if UART0_ENABLE
 #include "usart0.h"
 
-static uart_dev_t uart0_dev = {usart0_putc, usart0_getc,
-                                 usart0_read_ready_p, usart0_write_ready_p,
-                                 usart0_write_finished_p};
+static uart_dev_t uart0_dev = {usart0_putc,
+                               usart0_getc,
+                               usart0_read_ready_p,
+                               usart0_write_ready_p,
+                               usart0_write_finished_p};
 #endif
 
 #if UART1_ENABLE
 #include "uart1.h"
 
-static uart_dev_t uart1_dev = {usart1_putc, usart1_getc,
-                                 usart1_read_ready_p, usart1_write_ready_p,
-                                 usart1_write_finished_p};
+static uart_dev_t uart1_dev = {usart1_putc, 
+                               usart1_getc,
+                               usart1_read_ready_p, 
+                               usart1_write_ready_p,
+                               usart1_write_finished_p};
 #endif
 
 
@@ -104,7 +108,7 @@ uart_write_finished_p (uart_t uart)
 
 
 /** Read character.  This blocks.  */
-int8_t
+int
 uart_getc (uart_t uart)
 {
     uart_dev_t *dev = uart;
@@ -114,7 +118,7 @@ uart_getc (uart_t uart)
 
 
 /** Write character.  This blocks.  */
-int8_t
+int
 uart_putc (uart_t uart, char ch)
 {
     uart_dev_t *dev = uart;
@@ -124,11 +128,12 @@ uart_putc (uart_t uart, char ch)
 
 
 /** Write string.  This blocks.  */
-int8_t
+int
 uart_puts (uart_t uart, const char *str)
 {
     while (*str)
-        uart_putc (uart, *str++);
+        if (uart_putc (uart, *str++) < 0)
+            return -1;
 
     return 1;
 }

@@ -24,8 +24,8 @@
 
 struct usart_dev_struct
 {
-    int8_t (*putch) (char ch);
-    int8_t (*getch) (void);
+    int (*putch) (char ch);
+    int (*getch) (void);
     bool (*read_ready_p) (void);
     bool (*write_ready_p) (void);
     bool (*write_finished_p) (void);
@@ -107,7 +107,7 @@ usart_write_finished_p (usart_t usart)
 
 
 /* Read character.  This blocks.  */
-int8_t
+int
 usart_getc (usart_t usart)
 {
     usart_dev_t *dev = usart;
@@ -117,7 +117,7 @@ usart_getc (usart_t usart)
 
 
 /* Write character.  This blocks.  */
-int8_t
+int
 usart_putc (usart_t usart, char ch)
 {
     usart_dev_t *dev = usart;
@@ -127,11 +127,14 @@ usart_putc (usart_t usart, char ch)
 
 
 /* Write string.  This blocks.  */
-int8_t
+int
 usart_puts (usart_t usart, const char *str)
 {
     while (*str)
-        usart_putc (usart, *str++);
+    {
+        if (usart_putc (usart, *str++) < 0)
+            return -1;
+    }
 
     return 1;
 }

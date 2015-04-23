@@ -33,17 +33,17 @@ usart_write_ready_p (usart_t usart);
 
 
 /** Read character.  This blocks.  */
-int8_t
+int
 usart_getc (usart_t usart);
 
 
 /** Write character.  This blocks until character written to transmit buffer.  */
-int8_t
+int
 usart_putc (usart_t usart, char ch);
 
 
 /** Write string.  This blocks until last character written to transmit buffer.  */
-int8_t
+int
 usart_puts (usart_t usart, const char *str);
 
 
