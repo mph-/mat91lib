@@ -25,7 +25,7 @@ usart0_baud_divisor_set (uint16_t baud_divisor)
 }
 
 
-uint8_t
+int
 usart0_init (uint16_t baud_divisor)
 {
     /* Disable interrupts.  */

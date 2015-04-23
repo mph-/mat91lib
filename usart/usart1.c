@@ -17,7 +17,7 @@ usart1_baud_divisor_set (uint16_t baud_divisor)
 }
 
 
-uint8_t 
+int
 usart1_init (uint16_t baud_divisor)
 {
     /* Disable interrupts.  */
@@ -116,7 +116,7 @@ usart1_getc (void)
 
 
 /* Write string to USART1.  This blocks until the string is written.  */
-void 
+int
 usart1_puts (const char *str)
 {
     while (*str)

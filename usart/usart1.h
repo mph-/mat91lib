@@ -41,7 +41,7 @@ int
 usart1_puts (const char *str);
 
 /* Initialise USART1 and set baud rate.  */
-uint8_t
+int
 usart1_init (uint16_t baud_divisor);
 
 
