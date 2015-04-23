@@ -54,11 +54,11 @@ busart0_isr (void)
 
     if (USART0_WRITE_READY_P ())
     {
-        char ch;
+        int ret;
 
-        ch = ring_getc (&dev->tx_ring);        
-        if (ch)
-            USART0_WRITE (ch);
+        ret = ring_getc (&dev->tx_ring);        
+        if (ret >= 0)
+            USART0_WRITE (ret);
         else
             USART0_TX_IRQ_DISABLE ();
     }
