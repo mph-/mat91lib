@@ -76,16 +76,11 @@ deps:
 
 objs/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
-
-# Automatically generate C source code dependencies.
-deps/%.d: %.c deps
-	set -e; $(CC) -MM $(CFLAGS) $< \
-	| sed 's,\(.*\)\.o[ :]*,objs/\1.o deps/\1.d : ,g' > $@; \
-	[ -s $@ ] || rm -f $@
-
+# Generate dependencies to see if object file needs recompiling.
+	$(CC) -MM $(CFLAGS) $< > deps/$*.d
 
 # Link object files to form output file.
-$(TARGET): objs $(OBJ) $(EXTRA_OBJ)
+$(TARGET): deps objs $(OBJ) $(EXTRA_OBJ)
 	$(CC) $(OBJ) $(EXTRA_OBJ) $(LDFLAGS) -o $@ -lm -Wl,-Map=$(TARGET_MAP),--cref
 	$(SIZE) $@
 
