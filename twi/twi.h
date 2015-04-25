@@ -29,6 +29,7 @@ typedef struct
     uint8_t channel;
     twi_mode_t mode;
     twi_period_t period;         /* Clocks */
+    twi_id_t slave_addr;
 } twi_cfg_t;
 
 
@@ -70,6 +71,13 @@ twi_master_read (twi_t twi, twi_id_t slave, twi_id_t addr,
 twi_ret_t
 twi_slave_poll (twi_t twi);
 
+
+twi_ret_t
+twi_slave_read (twi_t twi, void *buffer, uint8_t size);
+
+
+twi_ret_t
+twi_slave_write (twi_t twi, void *buffer, uint8_t size);
 
 void
 twi_shutdown (twi_t twi);
