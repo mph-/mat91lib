@@ -2,10 +2,8 @@
     @author M. P. Hayes
     @date   30 November 2010
     @brief  Timer counter routines for AT91SAM7 and SAM4S
-    @note   There is no support for capture modes.  Only TIOAx can be
-            driven at present.  
+    @note   Only TIOAx can be driven at present.  
 */
-
 
 #include "tc.h"
 #include "irq.h"
