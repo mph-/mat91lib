@@ -151,6 +151,28 @@ typedef enum pio_config_enum
 #define TF_PIO PA15_PIO
 #define TF_PERIPH PIO_PERIPH_A
 
+/* TC  */
+#define TIOA0_PIO PA0_PIO
+#define TIOA0_PERIPH PIO_PERIPH_B
+#define TIOA1_PIO PA15_PIO
+#define TIOA1_PERIPH PIO_PERIPH_B
+#define TIOA2_PIO PA26_PIO
+#define TIOA2_PERIPH PIO_PERIPH_B
+
+/* TWI  */
+#define TWD0_PIO PA3_PIO
+#define TWD0_PERIPH PIO_PERIPH_A
+#define TWCK0_PIO PA4_PIO
+#define TWCK0_PERIPH PIO_PERIPH_A
+#define TWD1_PIO PB4_PIO
+#define TWD1_PERIPH PIO_PERIPH_A
+#define TWCK1_PIO PB5_PIO
+#define TWCK1_PERIPH PIO_PERIPH_A
+
+/* UART0  */
+#define URXD0_PIO PA9_PIO
+#define UTXD0_PIO PA10_PIO
+
 /* USART0  */
 #define RXD0_PIO PA5_PIO
 #define RXD0_PERIPH PIO_PERIPH_A
@@ -170,19 +192,6 @@ typedef enum pio_config_enum
 #define RTS1_PERIPH PIO_PERIPH_A
 #define CTS1_PIO PA25_PIO
 #define CTS1_PERIPH PIO_PERIPH_A
-
-/* UART0  */
-#define URXD0_PIO PA9_PIO
-#define UTXD0_PIO PA10_PIO
-
-
-/* TC  */
-#define TIOA0_PIO PA0_PIO
-#define TIOA0_PERIPH PIO_PERIPH_B
-#define TIOA1_PIO PA15_PIO
-#define TIOA1_PERIPH PIO_PERIPH_B
-#define TIOA2_PIO PA26_PIO
-#define TIOA2_PERIPH PIO_PERIPH_B
 
 
 typedef uint32_t pio_t;

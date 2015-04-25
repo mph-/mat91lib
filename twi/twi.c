@@ -28,10 +28,14 @@ twi_init (const twi_cfg_t *cfg)
     {
     case TWI_CHANNEL_0:
         twi->base = TWI0;
+        pio_config_set (TWD0_PIO, TWD0_PERIPH);
+        pio_config_set (TWCK0_PIO, TWCK0_PERIPH);
         break;
 
     case TWI_CHANNEL_1:
         twi->base = TWI1;
+        pio_config_set (TWD1_PIO, TWD0_PERIPH);
+        pio_config_set (TWCK1_PIO, TWCK0_PERIPH);
         break;
 
     default:
@@ -179,3 +183,7 @@ twi_master_read (twi_t twi, twi_id_t slave_addr,
 
     return i;
 }
+
+
+/* This driver only supports 7 bit slave addressing.  The user can
+   check the internal address if 10 bit addressing is required.  */
