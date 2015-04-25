@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "pio.h"
+#include "twi_private.h"
 
 #define TWI_PERIOD_DIVISOR(FREQ) ((twi_period_t)((F_CPU / 2) / (FREQ)))
 
@@ -17,13 +18,6 @@ typedef enum
     TWI_CHANNEL_0,
     TWI_CHANNEL_1,
 } twi_channel_t;
-
-
-typedef enum
-{
-    TWI_MODE_MASTER,
-    TWI_MODE_SLAVE
-} twi_mode_t;
 
 
 typedef uint16_t twi_period_t;
@@ -45,6 +39,8 @@ typedef struct
 
 typedef enum twi_ret
 {
+    TWI_WRITE = 2,
+    TWI_READ = 1,
     TWI_OK = 0,
     TWI_ERROR_TIMEOUT = -1,
     TWI_ERROR_NO_ACK = -2,
@@ -69,6 +65,10 @@ twi_master_write (twi_t twi, twi_id_t slave, twi_id_t addr,
 twi_ret_t
 twi_master_read (twi_t twi, twi_id_t slave, twi_id_t addr,
                  uint8_t addr_size, void *buffer, uint8_t size);
+
+
+twi_ret_t
+twi_slave_poll (twi_t twi);
 
 
 void
