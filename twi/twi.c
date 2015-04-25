@@ -106,9 +106,9 @@ twi_master_write_wait_ack (twi_t twi)
 
 
 twi_ret_t
-twi_master_write (twi_t twi, twi_id_t slave_addr,
-                  twi_id_t addr, uint8_t addr_size,
-                  void *buffer, uint8_t size)
+twi_master_addr_write (twi_t twi, twi_id_t slave_addr,
+                       twi_id_t addr, uint8_t addr_size,
+                       void *buffer, uint8_t size)
 {
     uint8_t i;
     uint8_t *data = buffer;
@@ -145,6 +145,14 @@ twi_master_write (twi_t twi, twi_id_t slave_addr,
 }
 
 
+twi_ret_t
+twi_master_write (twi_t twi, twi_id_t slave_addr,
+                  void *buffer, uint8_t size)
+{
+    return twi_master_addr_write (twi, slave_addr, 0, 0, buffer, size);
+}
+
+
 static twi_ret_t
 twi_master_read_wait_ack (twi_t twi)
 {
@@ -171,9 +179,9 @@ twi_master_read_wait_ack (twi_t twi)
 
 
 twi_ret_t
-twi_master_read (twi_t twi, twi_id_t slave_addr,
-                 twi_id_t addr, uint8_t addr_size,
-                 void *buffer, uint8_t size)
+twi_master_addr_read (twi_t twi, twi_id_t slave_addr,
+                      twi_id_t addr, uint8_t addr_size,
+                      void *buffer, uint8_t size)
 {
     uint8_t i;
     uint8_t *data = buffer;
@@ -206,6 +214,14 @@ twi_master_read (twi_t twi, twi_id_t slave_addr,
     }
 
     return i;
+}
+
+
+twi_ret_t
+twi_master_read (twi_t twi, twi_id_t slave_addr,
+                 void *buffer, uint8_t size)
+{
+    return twi_master_addr_read (twi, slave_addr, 0, 0, buffer, size);
 }
 
 

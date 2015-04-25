@@ -59,13 +59,23 @@ twi_init (const twi_cfg_t *cfg);
 
 
 twi_ret_t
-twi_master_write (twi_t twi, twi_id_t slave, twi_id_t addr,
-                  uint8_t addr_size, void *buffer, uint8_t size);
+twi_master_addr_write (twi_t twi, twi_id_t slave, twi_id_t addr,
+                       uint8_t addr_size, void *buffer, uint8_t size);
+
+
+/** Write data from slave.  No internal address is sent.  */
+twi_ret_t
+twi_master_write (twi_t twi, uint8_t addr_size, void *buffer, uint8_t size);
 
 
 twi_ret_t
-twi_master_read (twi_t twi, twi_id_t slave, twi_id_t addr,
-                 uint8_t addr_size, void *buffer, uint8_t size);
+twi_master_addr_read (twi_t twi, twi_id_t slave, twi_id_t addr,
+                      uint8_t addr_size, void *buffer, uint8_t size);
+
+
+/** Read data from slave.  No internal address is sent.  */
+twi_ret_t
+twi_master_read (twi_t twi, twi_id_t slave, void *buffer, uint8_t size);
 
 
 twi_ret_t
