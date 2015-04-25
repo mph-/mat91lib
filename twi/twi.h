@@ -46,6 +46,8 @@ typedef struct
 typedef enum twi_ret
 {
     TWI_OK = 0,
+    TWI_ERROR_TIMEOUT = -1,
+    TWI_ERROR_NO_ACK = -2,
 } twi_ret_t;
 
 
@@ -58,12 +60,12 @@ twi_init (const twi_cfg_t *cfg);
 
 
 twi_ret_t
-twi_master_write (twi_t dev, twi_id_t slave, twi_id_t addr,
+twi_master_write (twi_t twi, twi_id_t slave, twi_id_t addr,
                   uint8_t addr_size, void *buffer, uint8_t size);
 
 
 twi_ret_t
-twi_master_read (twi_t dev, twi_id_t slave, twi_id_t addr,
+twi_master_read (twi_t twi, twi_id_t slave, twi_id_t addr,
                  uint8_t addr_size, void *buffer, uint8_t size);
 
 
