@@ -11,7 +11,7 @@
 
 
 #ifndef MCU_FLASH_READ_CYCLES 
-#define MCU_FLASH_READ_CYCLES 6
+#define MCU_FLASH_READ_CYCLES 3
 #endif
 
 typedef enum 
