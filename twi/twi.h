@@ -48,6 +48,8 @@ typedef enum twi_ret
     TWI_OK = 0,
     TWI_ERROR_TIMEOUT = -1,
     TWI_ERROR_NO_ACK = -2,
+    /* Another master got in first.  */
+    TWI_ERROR_CONFLICT = -3,
 } twi_ret_t;
 
 

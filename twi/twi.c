@@ -66,6 +66,9 @@ twi_write_wait_ack (twi_t twi)
         if (status & TWI_SR_NACK)
             return TWI_ERROR_NO_ACK;
 
+        if (status & TWI_SR_ARBLST)
+            return TWI_ERROR_CONFLICT;
+
         if (status & TWI_SR_TXRDY)
             return TWI_OK;
 
@@ -87,6 +90,9 @@ twi_read_wait_ack (twi_t twi)
 
         if (status & TWI_SR_NACK)
             return TWI_ERROR_NO_ACK;
+
+        if (status & TWI_SR_ARBLST)
+            return TWI_ERROR_CONFLICT;
 
         if (status & TWI_SR_RXRDY)
             return TWI_OK;
