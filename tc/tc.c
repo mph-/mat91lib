@@ -48,7 +48,7 @@
 /* Define known TC pins.  */
 static const pinmap_t tc_pins[] = 
 {
-    {0, TIOA0_PIO, TIOA0_PERIPH},  /* TIOA0 */
+    {0, TIOA0_PIO, TIOA0_PERIPH}, /* TIOA0 */
     {1, TIOA1_PIO, TIOA1_PERIPH}, /* TIOA1 */
     {2, TIOA2_PIO, TIOA2_PERIPH}, /* TIOA2 */
 };
