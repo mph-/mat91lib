@@ -81,10 +81,10 @@ twi_master_init (twi_t twi, twi_id_t slave_addr,
 
 
 static twi_ret_t
-twi_master_write_wait_ack (twi_t twi)
+twi_master_write_wait_ack (twi_t twi, twi_timeout_t timeout_us)
 {
     uint32_t status;
-    uint32_t retries = 100;
+    uint32_t retries = timeout_us;
 
     while (retries)
     {
@@ -106,9 +106,9 @@ twi_master_write_wait_ack (twi_t twi)
 
 
 twi_ret_t
-twi_master_addr_write (twi_t twi, twi_id_t slave_addr,
-                       twi_id_t addr, uint8_t addr_size,
-                       void *buffer, uint8_t size)
+twi_master_addr_write_timeout (twi_t twi, twi_id_t slave_addr,
+                               twi_id_t addr, uint8_t addr_size,
+                               void *buffer, uint8_t size, twi_timeout_t timeout_us)
 {
     uint8_t i;
     uint8_t *data = buffer;
@@ -133,7 +133,7 @@ twi_master_addr_write (twi_t twi, twi_id_t slave_addr,
         if (i == size - 1)
             twi->base->TWI_CR = TWI_CR_STOP;
             
-        ret = twi_master_write_wait_ack (twi);
+        ret = twi_master_write_wait_ack (twi, timeout_us);
         if (ret < 0)
         {
             twi->base->TWI_CR = TWI_CR_STOP;
@@ -146,6 +146,16 @@ twi_master_addr_write (twi_t twi, twi_id_t slave_addr,
 
 
 twi_ret_t
+twi_master_addr_write (twi_t twi, twi_id_t slave_addr,
+                       twi_id_t addr, uint8_t addr_size,
+                       void *buffer, uint8_t size)
+{
+    return twi_master_addr_read_timeout (twi, slave_addr, addr, addr_size,
+                                         buffer, size, TWI_TIMEOUT_US_DEFAULT);
+}
+
+
+twi_ret_t
 twi_master_write (twi_t twi, twi_id_t slave_addr,
                   void *buffer, uint8_t size)
 {
@@ -154,10 +164,10 @@ twi_master_write (twi_t twi, twi_id_t slave_addr,
 
 
 static twi_ret_t
-twi_master_read_wait_ack (twi_t twi)
+twi_master_read_wait_ack (twi_t twi, twi_timeout_t timeout_us)
 {
     uint32_t status;
-    uint32_t retries = 100;
+    uint32_t retries = timeout_us;
 
     while (retries)
     {
@@ -179,9 +189,9 @@ twi_master_read_wait_ack (twi_t twi)
 
 
 twi_ret_t
-twi_master_addr_read (twi_t twi, twi_id_t slave_addr,
-                      twi_id_t addr, uint8_t addr_size,
-                      void *buffer, uint8_t size)
+twi_master_addr_read_timeout (twi_t twi, twi_id_t slave_addr,
+                              twi_id_t addr, uint8_t addr_size,
+                              void *buffer, uint8_t size, twi_timeout_t timeout_us)
 {
     uint8_t i;
     uint8_t *data = buffer;
@@ -199,7 +209,7 @@ twi_master_addr_read (twi_t twi, twi_id_t slave_addr,
 
     for (i = 0; i < size; i++)
     {
-        ret = twi_master_read_wait_ack (twi);
+        ret = twi_master_read_wait_ack (twi, timeout_us);
         if (ret < 0)
         {
             twi->base->TWI_CR = TWI_CR_STOP;
@@ -215,6 +225,18 @@ twi_master_addr_read (twi_t twi, twi_id_t slave_addr,
 
     return i;
 }
+
+
+
+twi_ret_t
+twi_master_addr_read (twi_t twi, twi_id_t slave_addr,
+                      twi_id_t addr, uint8_t addr_size,
+                      void *buffer, uint8_t size)
+{
+    return twi_master_addr_read_timeout (twi, slave_addr, addr, addr_size,
+                                         buffer, size, TWI_TIMEOUT_US_DEFAULT);
+}
+
 
 
 twi_ret_t
@@ -258,31 +280,49 @@ twi_slave_poll (twi_t twi)
 }
 
 
+static twi_ret_t
+twi_slave_write_wait (twi_t twi, twi_timeout_t timeout_us)
+{
+    uint32_t status;
+    uint32_t retries = timeout_us;
+
+    while (retries)
+    {
+        status = twi->base->TWI_SR;
+        
+        if (! (status & TWI_SR_SVACC))
+            return TWI_DONE;    
+        
+        if (status & TWI_SR_TXRDY)
+            return TWI_OK;
+        
+        DELAY_US (1);
+    }
+    return TWI_ERROR_TIMEOUT;
+}
+
+
 twi_ret_t
-twi_slave_write (twi_t twi, void *buffer, uint8_t size)
+twi_slave_write_timeout (twi_t twi, void *buffer, uint8_t size, 
+                         twi_timeout_t timeout_us)
 {
     uint8_t i;
     uint8_t *data = buffer;
     twi_ret_t ret;
 
     ret = twi_slave_poll (twi);
-    if (ret != TWI_WRITE)
+    if (ret <= 0)
         return ret;
+    if (ret != TWI_WRITE)
+        return TWI_ERROR_WRITE_EXPECTED;
 
     for (i = 0; i < size; i++)
     {
-        uint32_t status;
-
-        while (1)
-        {
-            status = twi->base->TWI_SR;
-            
-            if (! (status & TWI_SR_SVACC))
-                return i;    
-
-            if (status & TWI_SR_TXRDY)
-                break;
-        }
+        ret = twi_slave_write_wait (twi, timeout_us);
+        if (ret < 0)
+            return ret;
+        if (ret == TWI_DONE)
+            return i;
             
         twi->base->TWI_THR = *data++;
     }
@@ -295,36 +335,68 @@ twi_slave_write (twi_t twi, void *buffer, uint8_t size)
 
 
 twi_ret_t
-twi_slave_read (twi_t twi, void *buffer, uint8_t size)
+twi_slave_write (twi_t twi, void *buffer, uint8_t size)
+{
+    return twi_slave_write_timeout (twi, buffer, size, TWI_TIMEOUT_US_DEFAULT);
+}
+
+
+static twi_ret_t
+twi_slave_read_wait (twi_t twi, twi_timeout_t timeout_us)
+{
+    uint32_t status;
+    uint32_t retries = timeout_us;
+
+    while (retries)
+    {
+        status = twi->base->TWI_SR;
+        
+        if (! (status & TWI_SR_SVACC))
+            return TWI_DONE;    
+        
+        if (status & TWI_SR_RXRDY)
+            return TWI_OK;
+        
+        DELAY_US (1);
+    }
+    return TWI_ERROR_TIMEOUT;
+} 
+
+
+twi_ret_t
+twi_slave_read_timeout (twi_t twi, void *buffer, uint8_t size,
+                        twi_timeout_t timeout_us)
 {
     uint8_t i;
     uint8_t *data = buffer;
     twi_ret_t ret;
 
     ret = twi_slave_poll (twi);
-    if (ret != TWI_READ)
+    if (ret <= 0)
         return ret;
+    if (ret != TWI_READ)
+        return TWI_ERROR_READ_EXPECTED;
 
     for (i = 0; i < size; i++)
     {
-        uint32_t status;
-
-        while (1)
-        {
-            status = twi->base->TWI_SR;
-            
-            if (! (status & TWI_SR_SVACC))
-                return i;    
-
-            if (status & TWI_SR_RXRDY)
-                break;
-        }
+        ret = twi_slave_read_wait (twi, timeout_us);
+        if (ret < 0)
+            return ret;
+        if (ret == TWI_DONE)
+            return i;
             
         *data++ = twi->base->TWI_THR;
     }
 
     /* What if there is unread data still pending?  */
     return i;
+}
+
+
+twi_ret_t
+twi_slave_read (twi_t twi, void *buffer, uint8_t size)
+{
+    return twi_slave_read_timeout (twi, buffer, size, TWI_TIMEOUT_US_DEFAULT);
 }
 
 

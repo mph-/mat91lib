@@ -13,6 +13,11 @@
 
 #define TWI_PERIOD_DIVISOR(FREQ) ((twi_period_t)((F_CPU / 2) / (FREQ)))
 
+#ifndef TWI_TIMEOUT_US_DEFAULT
+#define TWI_TIMEOUT_US_DEFAULT 1000
+#endif
+
+
 typedef enum
 {
     TWI_CHANNEL_0,
@@ -21,6 +26,8 @@ typedef enum
 
 
 typedef uint16_t twi_period_t;
+
+typedef uint32_t twi_timeout_t;
 
 
 /** TWI configuration structure.  */
@@ -40,6 +47,7 @@ typedef struct
 
 typedef enum twi_ret
 {
+    TWI_DONE = 3,
     TWI_WRITE = 2,
     TWI_READ = 1,
     TWI_OK = 0,
@@ -47,6 +55,8 @@ typedef enum twi_ret
     TWI_ERROR_NO_ACK = -2,
     /* Another master got in first.  */
     TWI_ERROR_CONFLICT = -3,
+    TWI_ERROR_READ_EXPECTED = -4,
+    TWI_ERROR_WRITE_EXPECTED = -5
 } twi_ret_t;
 
 
@@ -59,6 +69,11 @@ twi_init (const twi_cfg_t *cfg);
 
 
 twi_ret_t
+twi_master_addr_write_timeout (twi_t twi, twi_id_t slave_addr,
+                               twi_id_t addr, uint8_t addr_size,
+                               void *buffer, uint8_t size, twi_timeout_t timeout_us);
+
+twi_ret_t
 twi_master_addr_write (twi_t twi, twi_id_t slave, twi_id_t addr,
                        uint8_t addr_size, void *buffer, uint8_t size);
 
@@ -67,6 +82,11 @@ twi_master_addr_write (twi_t twi, twi_id_t slave, twi_id_t addr,
 twi_ret_t
 twi_master_write (twi_t twi, uint8_t addr_size, void *buffer, uint8_t size);
 
+
+twi_ret_t
+twi_master_addr_read_timeout (twi_t twi, twi_id_t slave_addr,
+                              twi_id_t addr, uint8_t addr_size,
+                              void *buffer, uint8_t size, twi_timeout_t timeout_us);
 
 twi_ret_t
 twi_master_addr_read (twi_t twi, twi_id_t slave, twi_id_t addr,
