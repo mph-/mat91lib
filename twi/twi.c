@@ -86,7 +86,7 @@ twi_master_write_wait_ack (twi_t twi, twi_timeout_t timeout_us)
     uint32_t status;
     uint32_t retries = timeout_us;
 
-    while (retries)
+    while (retries--)
     {
         status = twi->base->TWI_SR;
 
@@ -169,7 +169,7 @@ twi_master_read_wait_ack (twi_t twi, twi_timeout_t timeout_us)
     uint32_t status;
     uint32_t retries = timeout_us;
 
-    while (retries)
+    while (retries--)
     {
         status = twi->base->TWI_SR;
 
@@ -286,7 +286,7 @@ twi_slave_write_wait (twi_t twi, twi_timeout_t timeout_us)
     uint32_t status;
     uint32_t retries = timeout_us;
 
-    while (retries)
+    while (retries--)
     {
         status = twi->base->TWI_SR;
         
@@ -347,7 +347,7 @@ twi_slave_read_wait (twi_t twi, twi_timeout_t timeout_us)
     uint32_t status;
     uint32_t retries = timeout_us;
 
-    while (retries)
+    while (retries--)
     {
         status = twi->base->TWI_SR;
         
