@@ -10,8 +10,10 @@
 #include "config.h"
 #include "pio.h"
 
-/* This assumes that the prescaler is 2.  */
+/* This assumes that the prescaler is 1.  */
 #define TC_PERIOD_DIVISOR(FREQ) ((tc_period_t)((F_CPU / 2) / (FREQ)))
+
+#define TC_CLOCK_FREQUENCY(PRESCALE) (F_CPU / (2 * (PRESCALE)))
 
 typedef enum
 {
