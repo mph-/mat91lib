@@ -1,7 +1,10 @@
 /** @file   tc.h
     @author M. P. Hayes
     @date   30 November 2010
-    @brief  Timer counter routines for AT91SAM7 processors
+    @brief  Timer counter routines for AT91 processors.
+    Although the counters are only 16 bit, this driver synthesises 64 bit
+    counters using overflow interrupts.   Even with a 48 MHz clock,
+    these 64 bit counters will take 3000 years to overflow!  
 */
 
 #ifndef TC_H
@@ -43,8 +46,10 @@ typedef enum
     TC_MODE_CAPTURE_RISE_FALL,
     TC_MODE_CAPTURE_FALL_RISE,
     TC_MODE_CAPTURE_FALL_FALL,
-    /** Triggering of ADC.  */
-    TC_MODE_ADC
+    /** Triggering of ADC (this doesn't use the TC pin).  */
+    TC_MODE_ADC,
+    /** Free running counter (this doesn't use the TC pin).  */
+    TC_MODE_COUNTER
 } tc_mode_t;
 
 
