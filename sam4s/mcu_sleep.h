@@ -7,7 +7,7 @@
 #define MCU_SLEEP_H
 
 #include "config.h"
-
+#include "pio.h"
 
 typedef enum 
 {
