@@ -8,6 +8,6 @@ INCLUDES += -I$(MAT91LIB_DIR)/$(FAMILY) -I$(MAT91LIB_DIR)/$(FAMILY)/atmel
 
 VPATH += $(MAT91LIB_DIR)/$(FAMILY)
 
-SRC += pio.c
+SRC += pio.c mcu_sleep.c
 
 
