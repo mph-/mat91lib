@@ -109,20 +109,20 @@ void tc_handler2 (void)
 }
 
 
-bool
+tc_ret_t
 tc_start (tc_t tc)
 {
     /* The TC_CCR register is write only.  */
     tc->base->TC_CCR |= TC_CCR_CLKEN | TC_CCR_SWTRG; 
-    return 1;
+    return TC_OK;
 }
 
 
-bool
+tc_ret_t
 tc_stop (tc_t tc)
 {
     tc->base->TC_CCR |= TC_CCR_CLKDIS; 
-    return 1;
+    return TC_OK;
 }
 
 
@@ -225,17 +225,12 @@ tc_capture_poll (tc_t tc)
 
 /** Configure TC with specified mode.  The delay and period are in
     terms of the CPU clock.  The pulse width is period - delay.  */
-bool
-tc_config_1 (tc_t tc, tc_mode_t mode, tc_period_t period, 
-             tc_period_t delay, tc_prescale_t prescale)
+tc_ret_t
+tc_config_1 (tc_t tc, tc_mode_t mode, tc_period_t period, tc_period_t delay)
 {
-    if (prescale == 0)
-        prescale = 2;
-
     tc->mode = mode;
     tc->period = period;
     tc->delay = delay;
-    tc->prescale = prescale;
 
     /* Many timer counters can only generate a pulse with a single
        timer clock period.  This timer counter allows the pulse width
@@ -336,22 +331,6 @@ tc_config_1 (tc_t tc, tc_mode_t mode, tc_period_t period,
         return 0;
     }
 
-
-    /* TODO: If period > 65536 then need to increase prescale.  */
-
-    /* The available prescaler values are 1, 4, 16, 64 for MCK / 2.
-       Thus the effective prescaler values are 2, 8, 32, and 128.  On
-       the SAM7 TIMER_CLOCK5 is MCK / 1024 but on the SAM4S it is
-       SLCK.  */
-    if (prescale > 32 && prescale <= 128)
-        tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK4;
-    else if (prescale > 8 && prescale <= 32)
-        tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK3;
-    else if (prescale > 2 && prescale <= 8)
-        tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK2;
-    else
-        tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK1;
-
     /* These registers are read only when not in wave mode.  */
     tc->base->TC_RA = delay >> 1;
     tc->base->TC_RC = period >> 1;
@@ -360,7 +339,7 @@ tc_config_1 (tc_t tc, tc_mode_t mode, tc_period_t period,
        status register clears compare status and other interrupt
        status bits.  */
     if (tc->base->TC_SR & TC_SR_CLKSTA)
-        return 1;
+        return TC_OK;
 
     /* Generate a software trigger with the clock stopped to set TIOAx
        to desired state.  */
@@ -368,7 +347,7 @@ tc_config_1 (tc_t tc, tc_mode_t mode, tc_period_t period,
 
     /* Don't drive PIO if triggering ADC.  */
     if ((mode == TC_MODE_ADC) || (mode == TC_MODE_COUNTER))
-        return 1;
+        return TC_OK;
 
     /* Make timer pin TIOAx a timer output.  Perhaps we could use
        different logical timer channels to generate pulses on TIOBx
@@ -392,21 +371,61 @@ tc_config_1 (tc_t tc, tc_mode_t mode, tc_period_t period,
         return 0;
     }
 
-    return 1;
+    return TC_OK;
 }
 
 
-bool
+tc_ret_t
 tc_config_set (tc_t tc, const tc_cfg_t *cfg)
 {
-    return tc_config_1 (tc, cfg->mode, cfg->period, cfg->delay, cfg->prescale);
+    tc_prescale_set (tc, cfg->prescale);
+
+    return tc_config_1 (tc, cfg->mode, cfg->period, cfg->delay);
 }
 
 
-bool
+tc_period_t
 tc_period_set (tc_t tc, tc_period_t period)
 {
-    return tc_config_1 (tc, tc->mode, period, tc->delay, tc->prescale);
+    tc_config_1 (tc, tc->mode, period, tc->delay);
+    return tc->period;
+}
+
+
+tc_prescale_t
+tc_prescale_set (tc_t tc, tc_prescale_t prescale)
+{
+    if (prescale == 0)
+        prescale = 2;
+
+    /* The available prescaler values are 1, 4, 16, 64 for MCK / 2.
+       Thus the effective prescaler values are 2, 8, 32, and 128.  On
+       the SAM7 TIMER_CLOCK5 is MCK / 1024 but on the SAM4S it is
+       SLCK.  */
+    if (prescale > 32 && prescale <= 128)
+    {
+        tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK4;
+        prescale = 128;
+    }
+    else if (prescale > 8 && prescale <= 32)
+    {
+        tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK3;
+        prescale = 32;
+    }
+    else if (prescale > 2 && prescale <= 8)
+    {
+        tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK2;
+        prescale = 8;
+    }
+    else
+    {
+        tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK1;
+        prescale = 2;
+    }
+
+    tc->prescale = prescale;
+    
+    return prescale;
 }
 
 
@@ -490,7 +509,8 @@ tc_clock_sync (tc_t tc, tc_period_t period)
 {
     uint32_t id;
 
-    tc_config_1 (tc, TC_MODE_DELAY_ONESHOT, period, period, 1);
+    /* Should set prescale to 2.  */
+    tc_config_1 (tc, TC_MODE_DELAY_ONESHOT, period, period);
 
     id = ID_TC0 + TC_CHANNEL (tc);
 

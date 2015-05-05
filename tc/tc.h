@@ -60,6 +60,13 @@ typedef enum
 } tc_capture_t;
 
 
+typedef enum
+{
+    TC_OK = 0,
+    TC_ERROR_PRESCALE = -1
+} tc_ret_t;
+
+
 /* The counters are only 16 bit but we synthesise a large counter
    by counting timer overflows.  */
 typedef uint64_t tc_counter_t;
@@ -95,15 +102,15 @@ typedef tc_dev_t *tc_t;
 
 
 /** Change TC configuration.  */
-bool
+tc_ret_t
 tc_config_set (tc_t tc, const tc_cfg_t *cfg);
 
 
-bool
+tc_ret_t
 tc_start (tc_t tc);
 
 
-bool
+tc_ret_t
 tc_stop (tc_t tc);
 
 
@@ -119,8 +126,12 @@ tc_capture_mask_t
 tc_capture_poll (tc_t tc);
 
 
-bool
+tc_period_t
 tc_period_set (tc_t tc, tc_period_t period);
+
+
+tc_prescale_t
+tc_prescale_set (tc_t tc, tc_prescale_t prescale);
 
 
 tc_t 
