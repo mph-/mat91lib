@@ -356,15 +356,16 @@ tc_config_1 (tc_t tc, tc_mode_t mode, tc_period_t period,
     tc->base->TC_RA = delay >> 1;
     tc->base->TC_RC = period >> 1;
 
+    /* If running do not continue and stop the timer.  Note reading
+       status register clears compare status and other interrupt
+       status bits.  */
+    if (tc->base->TC_SR & TC_SR_CLKSTA)
+        return 1;
+
     /* Generate a software trigger with the clock stopped to set TIOAx
        to desired state.  */
     tc->base->TC_CCR |= TC_CCR_CLKDIS | TC_CCR_SWTRG; 
 
-    /* Dummy read of status register.  This helps with debugging 
-       since can determine compare status.  */
-    tc->base->TC_SR;
-
-    
     /* Don't drive PIO if triggering ADC.  */
     if ((mode == TC_MODE_ADC) || (mode == TC_MODE_COUNTER))
         return 1;
