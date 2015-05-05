@@ -340,11 +340,11 @@ tc_config_1 (tc_t tc, tc_mode_t mode, tc_period_t period,
        Thus the effective prescaler values are 2, 16, 64, and 256.  On
        the SAM7 TIMER_CLOCK5 is MCK / 1024 but on the SAM4S it is
        SLCK.  */
-    if (prescale > 32 && prescale < 128)
+    if (prescale > 32 && prescale <= 128)
         tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK4;
-    else if (prescale > 8 && prescale < 32)
+    else if (prescale > 8 && prescale <= 32)
         tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK3;
-    else if (prescale > 1 && prescale < 8)
+    else if (prescale > 1 && prescale <= 8)
         tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK2;
     else
         tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK1;
