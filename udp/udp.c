@@ -638,7 +638,7 @@ void udp_endpoint_complete (udp_t udp, udp_ep_t endpoint, udp_status_t status)
 
 
 static void
-udp_endpoint_reset (udp_t udp, udp_ep_t endpoint)
+udp_endpoint_reset (__unused__ udp_t udp, udp_ep_t endpoint)
 {
     /* Reset endpoint FIFOs.  This clears RXBYTECNT.  It does not clear
        the other CSR flags.  */
@@ -674,14 +674,14 @@ udp_endpoint_error (udp_t udp, udp_ep_t endpoint, udp_error_t error)
 
 
 static void
-udp_endpoint_interrupt_disable (udp_t udp, udp_ep_t endpoint)
+udp_endpoint_interrupt_disable (__unused__ udp_t udp, udp_ep_t endpoint)
 {
     UDP->UDP_IDR |= BIT (endpoint);
 }
 
 
 static void
-udp_endpoint_interrupt_enable (udp_t udp, udp_ep_t endpoint)
+udp_endpoint_interrupt_enable (__unused__ udp_t udp, udp_ep_t endpoint)
 {
     UDP->UDP_IER |= BIT (endpoint);
 }
@@ -859,7 +859,7 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
 
 
 static unsigned int 
-udp_endpoint_read_bytes (udp_t udp, udp_ep_t endpoint)
+udp_endpoint_read_bytes (__unused__ udp_t udp, udp_ep_t endpoint)
 {
     /* Return RXBYTECNT.  */
     return UDP->UDP_CSR[endpoint] >> 16;
@@ -1428,7 +1428,7 @@ udp_configuration_set (void *arg, udp_transfer_t *ptransfer __unused__)
 
 
 void
-udp_control_gobble (udp_t udp)
+udp_control_gobble (__unused__ udp_t udp)
 {
     /* I'm not too sure what the point of this is!.  */
     while (! (UDP->UDP_CSR[UDP_EP_CONTROL] & UDP_CSR_RX_DATA_BK0));
