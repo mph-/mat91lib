@@ -229,6 +229,9 @@ bool
 tc_config_1 (tc_t tc, tc_mode_t mode, tc_period_t period, 
              tc_period_t delay, tc_prescale_t prescale)
 {
+    if (prescale == 0)
+        prescale = 2;
+
     tc->mode = mode;
     tc->period = period;
     tc->delay = delay;
@@ -336,15 +339,15 @@ tc_config_1 (tc_t tc, tc_mode_t mode, tc_period_t period,
 
     /* TODO: If period > 65536 then need to increase prescale.  */
 
-    /* The available prescaler values are 1, 8, 32, 128 for MCK / 2.
-       Thus the effective prescaler values are 2, 16, 64, and 256.  On
+    /* The available prescaler values are 1, 4, 16, 64 for MCK / 2.
+       Thus the effective prescaler values are 2, 8, 32, and 128.  On
        the SAM7 TIMER_CLOCK5 is MCK / 1024 but on the SAM4S it is
        SLCK.  */
     if (prescale > 32 && prescale <= 128)
         tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK4;
     else if (prescale > 8 && prescale <= 32)
         tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK3;
-    else if (prescale > 1 && prescale <= 8)
+    else if (prescale > 2 && prescale <= 8)
         tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK2;
     else
         tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK1;
@@ -500,7 +503,7 @@ tc_clock_sync (tc_t tc, tc_period_t period)
     tc_start (tc);
     
     /* Stop CPU clock until interrupt.  FIXME, should disable other
-       interrrupts first. */
+       interrupts first. */
     mcu_cpu_idle ();
 
     /* Disable interrupt when have compare on A.  */

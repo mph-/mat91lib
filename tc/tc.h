@@ -16,7 +16,7 @@
 /* This assumes that the prescaler is 1.  */
 #define TC_PERIOD_DIVISOR(FREQ) ((tc_period_t)((F_CPU / 2) / (FREQ)))
 
-#define TC_CLOCK_FREQUENCY(PRESCALE) (F_CPU / (2 * (PRESCALE)))
+#define TC_CLOCK_FREQUENCY(PRESCALE) (F_CPU / (PRESCALE))
 
 typedef enum
 {
@@ -81,7 +81,7 @@ typedef struct
     tc_mode_t mode;
     tc_period_t period;         /* Clocks */
     tc_period_t delay;          /* Clocks */
-    tc_prescale_t prescale;
+    tc_prescale_t prescale;     /* 2, 8, 32, 128.  0 defaults to 2.  */
 } tc_cfg_t;
 
 
