@@ -13,10 +13,10 @@
 #include "config.h"
 #include "pio.h"
 
-/* This assumes that the prescaler is 1.  */
-#define TC_PERIOD_DIVISOR(FREQ) ((tc_period_t)((F_CPU / 2) / (FREQ)))
-
 #define TC_CLOCK_FREQUENCY(PRESCALE) (F_CPU / (PRESCALE))
+
+#define TC_PERIOD_DIVISOR(FREQ, PRESCALE) ((tc_period_t)(0.5 + TC_CLOCK_FREQUENCY (PRESCALE) / (FREQ)))
+
 
 typedef enum
 {
@@ -63,7 +63,9 @@ typedef enum
 typedef enum
 {
     TC_OK = 0,
-    TC_ERROR_PRESCALE = -1
+    TC_ERROR_PRESCALE = -1,
+    TC_ERROR_CHANNEL = -2,
+    TC_ERROR_MODE = -3
 } tc_ret_t;
 
 
@@ -73,6 +75,9 @@ typedef uint64_t tc_counter_t;
 
 
 typedef uint16_t tc_period_t;
+
+
+typedef uint32_t tc_frequency_t;
 
 
 typedef uint16_t tc_capture_mask_t;
@@ -86,9 +91,11 @@ typedef struct
 {
     pio_t pio;
     tc_mode_t mode;
+    tc_prescale_t prescale;     /* 2, 8, 32, 128.  0 defaults to 2.  */
+    /* If frequency is non-zero then it overrides period and delay.  */
     tc_period_t period;         /* Clocks */
     tc_period_t delay;          /* Clocks */
-    tc_prescale_t prescale;     /* 2, 8, 32, 128.  0 defaults to 2.  */
+    tc_frequency_t frequency;   /* Hz */
 } tc_cfg_t;
 
 
@@ -126,8 +133,25 @@ tc_capture_mask_t
 tc_capture_poll (tc_t tc);
 
 
+/** Get the delay in clocks.  */
+tc_period_t
+tc_delay_get (tc_t tc);
+
+
+/** Get the period in clocks.  */
+tc_period_t
+tc_period_get (tc_t tc);
+
+
 tc_period_t
 tc_period_set (tc_t tc, tc_period_t period);
+
+
+/** Set the TC output frequency in Hz.  This returns the actual
+    frequency, closest to the desired frequency.  It also sets the
+    duty factor to 0.5.  */
+tc_frequency_t
+tc_frequency_set (tc_t tc, tc_frequency_t frequency);
 
 
 tc_prescale_t

@@ -223,15 +223,107 @@ tc_capture_poll (tc_t tc)
 }
 
 
-/** Configure TC with specified mode.  The delay and period are in
-    terms of the CPU clock.  The pulse width is period - delay.  */
-tc_ret_t
-tc_config_1 (tc_t tc, tc_mode_t mode, tc_period_t period, tc_period_t delay)
+static tc_ret_t
+tc_output_set (tc_t tc)
 {
-    tc->mode = mode;
-    tc->period = period;
+    if ((tc->mode == TC_MODE_ADC) || (tc->mode == TC_MODE_COUNTER))
+        return TC_OK;
+
+    /* Generate a software trigger with the clock stopped to set TIOAx
+       to desired state.  Note, the clock is stopped.  */
+    tc->base->TC_CCR |= TC_CCR_CLKDIS | TC_CCR_SWTRG; 
+
+    /* Make timer pin TIOAx a timer output.  Perhaps we could use
+       different logical timer channels to generate pulses on TIOBx
+       pins?  */
+    switch (TC_CHANNEL (tc))
+    {
+    case TC_CHANNEL_0:
+        /* Switch to peripheral B and disable pin as PIO.  */
+        pio_config_set (TIOA0_PIO, TIOA0_PERIPH);
+        break;
+
+    case TC_CHANNEL_1:
+        pio_config_set (TIOA1_PIO, TIOA1_PERIPH);
+        break;
+
+    case TC_CHANNEL_2:
+        pio_config_set (TIOA2_PIO, TIOA2_PERIPH);
+        break;
+
+    default:
+        return TC_ERROR_CHANNEL;
+    }
+
+    return TC_OK;
+}
+
+
+/** Get the delay in clocks.  */
+tc_period_t
+tc_delay_get (tc_t tc)
+{
+    return tc->delay;
+}
+
+
+/** Get the period in clocks.  */
+tc_period_t
+tc_period_get (tc_t tc)
+{
+    return tc->period;
+}
+
+
+/** Set the delay in clocks.  In clock modes this sets the duty.  */
+tc_period_t
+tc_delay_set (tc_t tc, tc_period_t delay)
+{
     tc->delay = delay;
 
+    if (!delay)
+        delay = tc->period >> 1;
+
+    /* This register is read only when not in wave mode.  */
+    tc->base->TC_RA = delay;
+
+    return delay;
+}
+
+
+/** Set the period in clocks.  */
+tc_period_t
+tc_period_set (tc_t tc, tc_period_t period)
+{
+    /* This register is read only when not in wave mode.  */
+    tc->base->TC_RC = period;
+
+    tc->period = period;
+    return period;
+}
+
+
+/** Set the TC output frequency in Hz.  This returns the actual
+    frequency, closest to the desired frequency.  It also sets the
+    duty factor to 0.5.  */
+tc_frequency_t
+tc_frequency_set (tc_t tc, tc_frequency_t frequency)
+{
+    tc_period_t period;
+
+    period = TC_PERIOD_DIVISOR (frequency, tc->prescale);
+    
+    period = tc_period_set (tc, period);
+    tc_delay_set (tc, period >> 1);
+
+    return TC_CLOCK_FREQUENCY (tc->prescale) / period;
+}
+
+
+/** Configure TC with specified mode.  */
+tc_ret_t
+tc_mode_set (tc_t tc, tc_mode_t mode)
+{
     /* Many timer counters can only generate a pulse with a single
        timer clock period.  This timer counter allows the pulse width
        to be varied.  It is specified by period - delay. 
@@ -243,9 +335,6 @@ tc_config_1 (tc_t tc, tc_mode_t mode, tc_period_t period, tc_period_t delay)
     {
     case TC_MODE_ADC:
     case TC_MODE_CLOCK:
-        if (!delay)
-            delay = period >> 1;
-
     case TC_MODE_PULSE:
         /* Set TIOAx when RA matches and clear TIOAx when RC matches.  */
         tc->base->TC_CMR = TC_CMR_BURST_NONE | TC_CMR_WAVE
@@ -328,76 +417,17 @@ tc_config_1 (tc_t tc, tc_mode_t mode, tc_period_t period, tc_period_t delay)
         break;
         
     default:
-        return 0;
+        return TC_ERROR_MODE;
     }
 
-    /* These registers are read only when not in wave mode.  */
-    tc->base->TC_RA = delay >> 1;
-    tc->base->TC_RC = period >> 1;
-
-    /* If running do not continue and stop the timer.  Note reading
-       status register clears compare status and other interrupt
-       status bits.  */
-    if (tc->base->TC_SR & TC_SR_CLKSTA)
-        return TC_OK;
-
-    /* Generate a software trigger with the clock stopped to set TIOAx
-       to desired state.  */
-    tc->base->TC_CCR |= TC_CCR_CLKDIS | TC_CCR_SWTRG; 
-
-    /* Don't drive PIO if triggering ADC.  */
-    if ((mode == TC_MODE_ADC) || (mode == TC_MODE_COUNTER))
-        return TC_OK;
-
-    /* Make timer pin TIOAx a timer output.  Perhaps we could use
-       different logical timer channels to generate pulses on TIOBx
-       pins?  */
-    switch (TC_CHANNEL (tc))
-    {
-    case TC_CHANNEL_0:
-        /* Switch to peripheral B and disable pin as PIO.  */
-        pio_config_set (TIOA0_PIO, TIOA0_PERIPH);
-        break;
-
-    case TC_CHANNEL_1:
-        pio_config_set (TIOA1_PIO, TIOA1_PERIPH);
-        break;
-
-    case TC_CHANNEL_2:
-        pio_config_set (TIOA2_PIO, TIOA2_PERIPH);
-        break;
-
-    default:
-        return 0;
-    }
-
+    tc->mode = mode;
     return TC_OK;
-}
-
-
-tc_ret_t
-tc_config_set (tc_t tc, const tc_cfg_t *cfg)
-{
-    tc_prescale_set (tc, cfg->prescale);
-
-    return tc_config_1 (tc, cfg->mode, cfg->period, cfg->delay);
-}
-
-
-tc_period_t
-tc_period_set (tc_t tc, tc_period_t period)
-{
-    tc_config_1 (tc, tc->mode, period, tc->delay);
-    return tc->period;
 }
 
 
 tc_prescale_t
 tc_prescale_set (tc_t tc, tc_prescale_t prescale)
 {
-    if (prescale == 0)
-        prescale = 2;
-
     /* The available prescaler values are 1, 4, 16, 64 for MCK / 2.
        Thus the effective prescaler values are 2, 8, 32, and 128.  On
        the SAM7 TIMER_CLOCK5 is MCK / 1024 but on the SAM4S it is
@@ -429,6 +459,33 @@ tc_prescale_set (tc_t tc, tc_prescale_t prescale)
 }
 
 
+tc_ret_t
+tc_config_set (tc_t tc, const tc_cfg_t *cfg)
+{
+    tc_ret_t ret;
+
+    if (tc_prescale_set (tc, cfg->prescale) != cfg->prescale
+        && cfg->prescale != 0)
+        return TC_ERROR_PRESCALE;
+
+    ret = tc_mode_set (tc, cfg->mode);
+    if (ret < 0)
+        return ret;
+    
+    if (cfg->frequency)
+    {
+        tc_frequency_set (tc, cfg->frequency);
+    }
+    else
+    {
+        tc_period_set (tc, cfg->period);
+        tc_delay_set (tc, cfg->delay);
+    }
+
+    return TC_OK;
+}
+
+
 void
 tc_shutdown (tc_t tc)
 {
@@ -437,7 +494,8 @@ tc_shutdown (tc_t tc)
 
     irq_disable (ID_TC0 + TC_CHANNEL (tc));
 
-    /* Perhaps should force TC output pin low?  */
+    /* Perhaps should force TC output pin low?  Let the user decide
+       how to deal with this.  */
 }
 
 
@@ -483,6 +541,9 @@ tc_init (const tc_cfg_t *cfg)
     
     tc_config_set (tc, cfg);
 
+    /* Configure output pin if applicable.  */
+    tc_output_set (tc);
+
     tc->overflows = 0;
 
     irq_enable (ID_TC0 + TC_CHANNEL (tc));
@@ -510,7 +571,8 @@ tc_clock_sync (tc_t tc, tc_period_t period)
     uint32_t id;
 
     /* Should set prescale to 2.  */
-    tc_config_1 (tc, TC_MODE_DELAY_ONESHOT, period, period);
+    tc_mode_set (tc, TC_MODE_DELAY_ONESHOT);
+    tc_period_set (tc, period);
 
     id = ID_TC0 + TC_CHANNEL (tc);
 
