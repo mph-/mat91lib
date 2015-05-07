@@ -233,7 +233,7 @@ ssc_module_enable (ssc_t ssc, ssc_module_t tx_rx)
         break;
 
     case SSC_RX:
-        pio_config_set (RD_PIO, TD_PERIPH);
+        pio_config_set (RD_PIO, RD_PERIPH);
         pio_config_set (RK_PIO, RK_PERIPH);
         pio_config_set (RF_PIO, RF_PERIPH);
 
