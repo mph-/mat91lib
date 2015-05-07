@@ -90,6 +90,16 @@ ssc_module_config (ssc_t ssc, ssc_module_cfg_t *cfg, ssc_module_t module)
     if (!cfg)
         return 0;
 
+    // initialise the mode register to it's reset value
+    if (module == SSC_TX)
+    {
+        SSC->SSC_TCMR = 0;
+    }
+    else
+    {
+        SSC->SSC_RCMR = 0;
+    }
+                
     ssc_fs_period_set (ssc, cfg->fs_period, module);
 
     cmr = cfg->start_delay << 16;
@@ -138,7 +148,7 @@ ssc_module_config (ssc_t ssc, ssc_module_cfg_t *cfg, ssc_module_t module)
             fmr |= SSC_TFMR_DATDEF;
 
         SSC->SSC_TFMR = fmr | cfg->sync_data_enable;
-        SSC->SSC_TCMR = cmr;
+        SSC->SSC_TCMR |= cmr;
     }
     else 
     {
@@ -146,7 +156,7 @@ ssc_module_config (ssc_t ssc, ssc_module_cfg_t *cfg, ssc_module_t module)
             fmr |= SSC_RFMR_LOOP;
         
         SSC->SSC_RFMR = fmr;
-        SSC->SSC_RCMR = cmr | cfg->stop_mode;
+        SSC->SSC_RCMR |= cmr | cfg->stop_mode;
     }
     return 1;
 }
