@@ -29,7 +29,7 @@ typedef uint8_t bool;
 
 
 #ifndef __always_inline__
-#define  __always_inline__ __attribute__ ((always_inline))
+#define  __always_inline__ inline __attribute__ ((always_inline))
 #endif
 
 

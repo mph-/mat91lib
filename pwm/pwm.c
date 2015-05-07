@@ -1,7 +1,9 @@
 /** @file   pwm.c
-    @author 
+    @author M. P. Hayes
     @date   12 February 2008
-    @brief  Pulse Width Modulation routines for AT91SAM7 processors.
+    @brief  Pulse Width Modulation routines for AT91SAM7/SAM4S processors.
+    This only drives the PWMHx signals; there is no support for the PWMLx
+    signals.
 */
 
 #include "mcu.h"
@@ -25,7 +27,7 @@ struct pwm_dev_struct
 static pwm_dev_t pwm_devices[PWM_DEVICES_NUM];
 
 
-/* Define known PWM pins.  */
+/* Define known PWMH pins, grouped by channel.  */
 static const pinmap_t pwm_pins[] = 
 {
     {0, PA0_PIO, PIO_PERIPH_A},

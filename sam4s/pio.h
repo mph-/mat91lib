@@ -9,6 +9,7 @@
 #define PIO_H
 
 #include "config.h"
+#include "mcu.h"
 
 
 #define PIO_SAM4S
@@ -197,6 +198,23 @@ typedef enum pio_config_enum
 typedef uint32_t pio_t;
 
 
+/** Enable the clock for the port.  This is required for input
+    operations.  */
+static inline void
+pio_init (pio_t pio)
+{
+    mcu_pmc_enable (PIO_ID (pio));
+}
+
+
+/** Disable the clock for the port.  */
+static inline void
+pio_shutdown (pio_t pio)
+{
+    mcu_pmc_disable (PIO_ID (pio));
+}
+
+
 /** Configure PIO
     @param pio  */
 static inline bool
@@ -222,12 +240,14 @@ pio_config_set (pio_t pio, pio_config_t config)
         PIO_BASE (pio)->PIO_ODR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PER = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
+        pio_init (pio);
         return 1;
 
     case PIO_PULLUP:
         PIO_BASE (pio)->PIO_ODR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PER = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
+        pio_init (pio);
         return 1;
 
     case PIO_PERIPH_A:
@@ -404,6 +424,17 @@ static inline void
 pio_irq_disable (pio_t pio)
 {
     PIO_BASE (pio)->PIO_IDR = PIO_BITMASK_ (pio);
+}
+
+
+
+/** Clear interrupt for specified PIO.  Unfortunately, this has the
+ gnarly side-effect of clearing ALL the PIO interrupts on the same
+ port.  */
+static inline uint32_t
+pio_irq_clear (pio_t pio)
+{
+    return PIO_BASE (pio)->PIO_ISR;
 }
 
 

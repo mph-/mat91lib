@@ -1,7 +1,10 @@
 /** @file   tc.h
     @author M. P. Hayes
     @date   30 November 2010
-    @brief  Timer counter routines for AT91SAM7 processors
+    @brief  Timer counter routines for AT91 processors.
+    Although the counters are only 16 bit, this driver synthesises 64 bit
+    counters using overflow interrupts.   Even with a 48 MHz clock,
+    these 64 bit counters will take 3000 years to overflow!  
 */
 
 #ifndef TC_H
@@ -10,8 +13,10 @@
 #include "config.h"
 #include "pio.h"
 
-/* This assumes that the prescaler is 2.  */
+/* This assumes that the prescaler is 1.  */
 #define TC_PERIOD_DIVISOR(FREQ) ((tc_period_t)((F_CPU / 2) / (FREQ)))
+
+#define TC_CLOCK_FREQUENCY(PRESCALE) (F_CPU / (PRESCALE))
 
 typedef enum
 {
@@ -41,8 +46,10 @@ typedef enum
     TC_MODE_CAPTURE_RISE_FALL,
     TC_MODE_CAPTURE_FALL_RISE,
     TC_MODE_CAPTURE_FALL_FALL,
-    /** Triggering of ADC.  */
-    TC_MODE_ADC
+    /** Triggering of ADC (this doesn't use the TC pin).  */
+    TC_MODE_ADC,
+    /** Free running counter (this doesn't use the TC pin).  */
+    TC_MODE_COUNTER
 } tc_mode_t;
 
 
@@ -51,6 +58,13 @@ typedef enum
     TC_CAPTURE_A,
     TC_CAPTURE_B
 } tc_capture_t;
+
+
+typedef enum
+{
+    TC_OK = 0,
+    TC_ERROR_PRESCALE = -1
+} tc_ret_t;
 
 
 /* The counters are only 16 bit but we synthesise a large counter
@@ -74,7 +88,7 @@ typedef struct
     tc_mode_t mode;
     tc_period_t period;         /* Clocks */
     tc_period_t delay;          /* Clocks */
-    tc_prescale_t prescale;
+    tc_prescale_t prescale;     /* 2, 8, 32, 128.  0 defaults to 2.  */
 } tc_cfg_t;
 
 
@@ -88,15 +102,15 @@ typedef tc_dev_t *tc_t;
 
 
 /** Change TC configuration.  */
-bool
+tc_ret_t
 tc_config_set (tc_t tc, const tc_cfg_t *cfg);
 
 
-bool
+tc_ret_t
 tc_start (tc_t tc);
 
 
-bool
+tc_ret_t
 tc_stop (tc_t tc);
 
 
@@ -112,8 +126,12 @@ tc_capture_mask_t
 tc_capture_poll (tc_t tc);
 
 
-bool
+tc_period_t
 tc_period_set (tc_t tc, tc_period_t period);
+
+
+tc_prescale_t
+tc_prescale_set (tc_t tc, tc_prescale_t prescale);
 
 
 tc_t 
