@@ -150,8 +150,8 @@ twi_master_addr_write (twi_t twi, twi_id_t slave_addr,
                        twi_id_t addr, uint8_t addr_size,
                        void *buffer, uint8_t size)
 {
-    return twi_master_addr_read_timeout (twi, slave_addr, addr, addr_size,
-                                         buffer, size, TWI_TIMEOUT_US_DEFAULT);
+    return twi_master_addr_write_timeout (twi, slave_addr, addr, addr_size,
+                                          buffer, size, TWI_TIMEOUT_US_DEFAULT);
 }
 
 
@@ -250,6 +250,7 @@ twi_master_read (twi_t twi, twi_id_t slave_addr,
 static twi_ret_t
 twi_slave_init (twi_t twi)
 {
+    /* Must be set before enabling slave mode.  */
     twi->base->TWI_SMR = TWI_MMR_DADR (twi->slave_addr);
 
     /* Switch to slave mode.  */
