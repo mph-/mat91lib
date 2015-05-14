@@ -120,7 +120,8 @@ adc_trigger_set (adc_t adc, adc_trigger_t trigger)
 
     if (trigger == ADC_TRIGGER_SW)
     {
-        BITS_INSERT (adc->MR, 0, 0, 0);
+        /* Disable trigger.  */
+        adc->MR &= ~ADC_MR_TRGEN_EN;
     }
     else
     {
@@ -128,7 +129,7 @@ adc_trigger_set (adc_t adc, adc_trigger_t trigger)
         BITS_INSERT (adc->MR, trigger - ADC_TRIGGER_EXT, 1, 3);
 
         /* Enable trigger.  */
-        BITS_INSERT (adc->MR, 1, 0, 0);
+        adc->MR |= ADC_MR_TRGEN_EN;
     }
 }
 
@@ -186,7 +187,7 @@ adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
 }
 
 
-/* This does not select the channel until adc_channel_enable called.  */
+/* This does not select the channel until adc_channel_select called.  */
 bool
 adc_channel_set (adc_t adc, adc_channel_t channel)
 {
@@ -199,16 +200,10 @@ adc_channel_set (adc_t adc, adc_channel_t channel)
 
 
 static void
-adc_channel_enable (adc_t adc)
+adc_channel_select (adc_t adc)
 {
+    ADC->ADC_CHDR = ~0;
     ADC->ADC_CHER = BIT (adc->channel);
-}
-
-
-static void
-adc_channel_disable (adc_t adc)
-{
-    ADC->ADC_CHDR = BIT (adc->channel);
 }
 
 
@@ -257,7 +252,7 @@ adc_bits_set (adc_t adc, uint8_t bits)
 bool
 adc_config (adc_t adc)
 {
-    adc_channel_enable (adc);
+    adc_channel_select (adc);
 
     if (adc == adc_config_last)
         return 1;
