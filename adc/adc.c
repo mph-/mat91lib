@@ -167,25 +167,26 @@ adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
     adc_clock_divisor_set (adc, ((F_CPU / 2) + clock_speed - 1) / clock_speed);
     clock_speed = (F_CPU / 2) / adc->clock_divisor;
 
-    /* With 24 MHz clock need 4.8 clocks to settle on SAM4S.  This is only
-       needed when switching gain or offset, say when converting a
-       sequence of channels.  Let's play safe and allocate the maximum
-       17 clocks.  */
-    BITS_INSERT (adc->MR, 3, 20, 21);
-
-    /* With 24 MHz clock need 288 clocks to start up on SAM4S.  Let's
-       allocate 512.  TODO, scan through table to find appropriate
-       value.  */
+    /* STARTUP: With 24 MHz clock need 288 clocks to start up on
+       SAM4S.  Let's allocate 512.  TODO, scan through table to find
+       appropriate value.  */
     BITS_INSERT (adc->MR, 8, 16, 19);
 
-    /* With 24 MHz clock need 3.4 clocks to sample on SAM4S.   Let's
-       allocate 4.  */
+    /* SETTLING: With 24 MHz clock need 4.8 clocks to settle on SAM4S.
+       This is only needed when switching gain or offset, say when
+       converting a sequence of channels.  Let's play safe and
+       allocate the maximum 17 clocks.  */
+    BITS_INSERT (adc->MR, 3, 20, 21);
+
+    /* TRACKTIM: With 24 MHz clock need 3.4 clocks to sample on SAM4S.
+       Let's allocate 4.  */
     BITS_INSERT (adc->MR, 3, 24, 27);
 
     return clock_speed / 1000;
 }
 
 
+/* This does not select the channel until adc_channel_enable called.  */
 bool
 adc_channel_set (adc_t adc, adc_channel_t channel)
 {

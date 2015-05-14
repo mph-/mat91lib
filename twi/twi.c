@@ -108,7 +108,8 @@ twi_master_write_wait_ack (twi_t twi, twi_timeout_t timeout_us)
 twi_ret_t
 twi_master_addr_write_timeout (twi_t twi, twi_id_t slave_addr,
                                twi_id_t addr, uint8_t addr_size,
-                               void *buffer, uint8_t size, twi_timeout_t timeout_us)
+                               void *buffer, uint8_t size,
+                               twi_timeout_t timeout_us)
 {
     uint8_t i;
     uint8_t *data = buffer;
@@ -118,12 +119,13 @@ twi_master_addr_write_timeout (twi_t twi, twi_id_t slave_addr,
 
     twi->base->TWI_CR = TWI_CR_START;
 
-    /* A START command is sent followed by the slave address and the
-       optional internal address.  This initiated by writing to THR.
-       Each of the sent bytes needs to be acknowledged by the slave.
-       There are two error scenarios 1) another master transmits at
-       the same time with a higher priority 2) no slave responds to
-       the desired address
+    /* A START command is sent followed by the 7 bit slave address
+       (MSB first) the read/write bit (0 for write, 1 for read), the
+       acknowledge bit, then the optional internal address.  This is
+       initiated by writing to THR.  Each of the sent bytes needs to
+       be acknowledged by the slave.  There are two error scenarios 1)
+       another master transmits at the same time with a higher
+       priority 2) no slave responds to the desired address.
     */
 
     for (i = 0; i < size; i++)
@@ -191,7 +193,8 @@ twi_master_read_wait_ack (twi_t twi, twi_timeout_t timeout_us)
 twi_ret_t
 twi_master_addr_read_timeout (twi_t twi, twi_id_t slave_addr,
                               twi_id_t addr, uint8_t addr_size,
-                              void *buffer, uint8_t size, twi_timeout_t timeout_us)
+                              void *buffer, uint8_t size,
+                              twi_timeout_t timeout_us)
 {
     uint8_t i;
     uint8_t *data = buffer;
