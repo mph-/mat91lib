@@ -105,6 +105,25 @@ twi_master_write_wait_ack (twi_t twi, twi_timeout_t timeout_us)
 }
 
 
+static twi_ret_t
+twi_master_write_wait_complete (twi_t twi, twi_timeout_t timeout_us)
+{
+    uint32_t status;
+    uint32_t retries = timeout_us;
+
+    while (retries--)
+    {
+        status = twi->base->TWI_SR;
+
+        if (status & TWI_SR_TXCOMP)
+            return TWI_OK;
+
+        DELAY_US (1);
+    }
+    return TWI_ERROR_TIMEOUT;
+}
+
+
 twi_ret_t
 twi_master_addr_write_timeout (twi_t twi, twi_id_t slave_addr,
                                twi_id_t addr, uint8_t addr_size,
@@ -115,9 +134,10 @@ twi_master_addr_write_timeout (twi_t twi, twi_id_t slave_addr,
     uint8_t *data = buffer;
     twi_ret_t ret;
 
-    twi_master_init (twi, slave_addr, addr, addr_size, 0);
+    /* If addr size is zero, need to set start and stop bits at same
+       time.  */
 
-    twi->base->TWI_CR = TWI_CR_START;
+    twi_master_init (twi, slave_addr, addr, addr_size, 0);
 
     /* A START command is sent followed by the 7 bit slave address
        (MSB first) the read/write bit (0 for write, 1 for read), the
@@ -132,9 +152,7 @@ twi_master_addr_write_timeout (twi_t twi, twi_id_t slave_addr,
     {
     
         twi->base->TWI_THR = *data++;
-        if (i == size - 1)
-            twi->base->TWI_CR = TWI_CR_STOP;
-            
+
         ret = twi_master_write_wait_ack (twi, timeout_us);
         if (ret < 0)
         {
@@ -142,6 +160,11 @@ twi_master_addr_write_timeout (twi_t twi, twi_id_t slave_addr,
             return ret;
         }
     }
+
+    twi->base->TWI_CR = TWI_CR_STOP;
+    ret = twi_master_write_wait_complete (twi, timeout_us);
+    if (ret < 0)
+        return ret;
 
     return i;
 }
@@ -165,7 +188,6 @@ twi_master_write (twi_t twi, twi_id_t slave_addr,
 }
 
 
-static twi_ret_t
 twi_master_read_wait_ack (twi_t twi, twi_timeout_t timeout_us)
 {
     uint32_t status;
@@ -203,9 +225,10 @@ twi_master_addr_read_timeout (twi_t twi, twi_id_t slave_addr,
     twi_master_init (twi, slave_addr, addr, addr_size, TWI_MMR_MREAD);
 
     if (size == 1)
-        twi->base->TWI_CR = TWI_CR_START;
-    else
         twi->base->TWI_CR = TWI_CR_START | TWI_CR_STOP;
+    else
+        twi->base->TWI_CR = TWI_CR_START;
+
 
     /* The slave address and optional internal address is sent. 
        Each sent byte should be acknowledged.  */
