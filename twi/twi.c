@@ -246,7 +246,12 @@ twi_master_addr_read_timeout (twi_t twi, twi_id_t slave_addr,
         ret = twi_master_read_wait_ack (twi, timeout_us);
         if (ret < 0)
         {
-            /* A STOP is automatically performed.  */
+            /* A STOP is automatically performed if we get a NACK.
+               But what about a timeout, say while the clock is being
+               stretched?  */
+            if (ret == TWI_ERROR_TIMEOUT)
+                twi->base->TWI_CR = TWI_CR_STOP;
+            
             return ret;
         }
 
@@ -326,10 +331,13 @@ twi_slave_write_wait (twi_t twi, twi_timeout_t timeout_us)
         status = twi->base->TWI_SR;
         
         if (! (status & TWI_SR_SVACC))
-            return TWI_DONE;    
+            return TWI_ERROR_SVACC;    
         
         if (status & TWI_SR_TXRDY)
             return TWI_OK;
+
+        if (status & TWI_SR_TXCOMP)
+            return TWI_DONE;    
         
         DELAY_US (1);
     }
@@ -362,10 +370,19 @@ twi_slave_write_timeout (twi_t twi, void *buffer, uint8_t size,
         twi->base->TWI_THR = *data++;
     }
 
-    /* What if the master wants more data?  We could keep sending
-       zero bytes.  Let's let the user handle this.  */
+    /* Send dummy data.  */
+    while (1)
+    {
+        ret = twi_slave_write_wait (twi, timeout_us);
+        if (ret < 0)
+            return ret;
+        if (ret == TWI_DONE)
+            break;
+            
+        twi->base->TWI_THR = 0;
+    }
 
-    return i;
+    return size;
 }
 
 
@@ -387,10 +404,13 @@ twi_slave_read_wait (twi_t twi, twi_timeout_t timeout_us)
         status = twi->base->TWI_SR;
         
         if (! (status & TWI_SR_SVACC))
-            return TWI_DONE;    
-        
+            return TWI_ERROR_SVACC;    
+
         if (status & TWI_SR_RXRDY)
             return TWI_OK;
+
+        if (status & TWI_SR_TXCOMP)
+            return TWI_DONE;    
         
         DELAY_US (1);
     }
@@ -412,6 +432,8 @@ twi_slave_read_timeout (twi_t twi, void *buffer, uint8_t size,
     if (ret != TWI_WRITE)
         return TWI_ERROR_WRITE_EXPECTED;
 
+    /* SVACC high.  */
+
     for (i = 0; i < size; i++)
     {
         ret = twi_slave_read_wait (twi, timeout_us);
@@ -423,8 +445,19 @@ twi_slave_read_timeout (twi_t twi, void *buffer, uint8_t size,
         *data++ = twi->base->TWI_RHR;
     }
 
-    /* What if there is unread data still pending?  */
-    return i;
+    /* Read any other pending data.  */
+    while (1)
+    {
+        ret = twi_slave_read_wait (twi, timeout_us);
+        if (ret < 0)
+            return ret;
+        if (ret == TWI_DONE)
+            break;
+
+        /* Discard data.  */
+        twi->base->TWI_RHR;
+    }
+    return size;
 }
 
 
