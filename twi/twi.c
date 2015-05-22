@@ -67,15 +67,16 @@ static twi_ret_t
 twi_master_init (twi_t twi, twi_id_t slave_addr,
                  twi_id_t addr, uint8_t addr_size, uint32_t read)
 {
+    /* Switch to master mode.  */
+    twi->base->TWI_CR = TWI_CR_SVDIS | TWI_CR_MSEN;
+    twi->mode = TWI_MODE_MASTER;
+
+    /* The flowchart Fig 33-17 suggests this order.  */
     twi->base->TWI_MMR = TWI_MMR_DADR (slave_addr)
         | BITS (addr_size, 8, 9) | read;
     
     twi->base->TWI_IADR = addr;
     
-    /* Switch to master mode.  */
-    twi->base->TWI_CR = TWI_CR_SVDIS | TWI_CR_MSEN;
-    twi->mode = TWI_MODE_MASTER;
-
     return TWI_OK;
 }
 
@@ -106,7 +107,7 @@ twi_master_write_wait_ack (twi_t twi, twi_timeout_t timeout_us)
 
 
 static twi_ret_t
-twi_master_write_wait_complete (twi_t twi, twi_timeout_t timeout_us)
+twi_master_wait_txcomp (twi_t twi, twi_timeout_t timeout_us)
 {
     uint32_t status;
     uint32_t retries = timeout_us;
@@ -139,6 +140,10 @@ twi_master_addr_write_timeout (twi_t twi, twi_id_t slave_addr,
 
     twi_master_init (twi, slave_addr, addr, addr_size, 0);
 
+    /* Perhaps check that both the clock and data lines are high?  A
+       common mistake is not to have pullup resistors for these
+       lines.  */
+
     /* A START command is sent followed by the 7 bit slave address
        (MSB first) the read/write bit (0 for write, 1 for read), the
        acknowledge bit, then the optional internal address.  This is
@@ -150,19 +155,22 @@ twi_master_addr_write_timeout (twi_t twi, twi_id_t slave_addr,
 
     for (i = 0; i < size; i++)
     {
-    
         twi->base->TWI_THR = *data++;
 
         ret = twi_master_write_wait_ack (twi, timeout_us);
         if (ret < 0)
         {
+            /* The datasheet does not say what to do here!  */
             twi->base->TWI_CR = TWI_CR_STOP;
             return ret;
         }
     }
 
+    /* Figure 33-16 says if there is a single data byte then write to
+       THR, set TW_CR_STOP, check TXRDY, then check TXCOMP.  */
+
     twi->base->TWI_CR = TWI_CR_STOP;
-    ret = twi_master_write_wait_complete (twi, timeout_us);
+    ret = twi_master_wait_txcomp (twi, timeout_us);
     if (ret < 0)
         return ret;
 
@@ -188,6 +196,7 @@ twi_master_write (twi_t twi, twi_id_t slave_addr,
 }
 
 
+twi_ret_t
 twi_master_read_wait_ack (twi_t twi, twi_timeout_t timeout_us)
 {
     uint32_t status;
@@ -224,30 +233,29 @@ twi_master_addr_read_timeout (twi_t twi, twi_id_t slave_addr,
 
     twi_master_init (twi, slave_addr, addr, addr_size, TWI_MMR_MREAD);
 
-    if (size == 1)
-        twi->base->TWI_CR = TWI_CR_START | TWI_CR_STOP;
-    else
-        twi->base->TWI_CR = TWI_CR_START;
-
+    twi->base->TWI_CR = TWI_CR_START;
 
     /* The slave address and optional internal address is sent. 
        Each sent byte should be acknowledged.  */
 
     for (i = 0; i < size; i++)
     {
+        if (i == size - 1)
+            twi->base->TWI_CR = TWI_CR_STOP;
+
         ret = twi_master_read_wait_ack (twi, timeout_us);
         if (ret < 0)
         {
-            twi->base->TWI_CR = TWI_CR_STOP;
+            /* A STOP is automatically performed.  */
             return ret;
         }
 
         *data++ = twi->base->TWI_RHR;
-
-        /* Need to set STOP prior to reading last byte.  */
-        if ((i != 0) && (i == size - 1))
-            twi->base->TWI_CR = TWI_CR_STOP;
     }
+
+    ret = twi_master_wait_txcomp (twi, timeout_us);
+    if (ret < 0)
+        return ret;
 
     return i;
 }
@@ -340,8 +348,8 @@ twi_slave_write_timeout (twi_t twi, void *buffer, uint8_t size,
     ret = twi_slave_poll (twi);
     if (ret <= 0)
         return ret;
-    if (ret != TWI_WRITE)
-        return TWI_ERROR_WRITE_EXPECTED;
+    if (ret != TWI_READ)
+        return TWI_ERROR_READ_EXPECTED;
 
     for (i = 0; i < size; i++)
     {
@@ -401,8 +409,8 @@ twi_slave_read_timeout (twi_t twi, void *buffer, uint8_t size,
     ret = twi_slave_poll (twi);
     if (ret <= 0)
         return ret;
-    if (ret != TWI_READ)
-        return TWI_ERROR_READ_EXPECTED;
+    if (ret != TWI_WRITE)
+        return TWI_ERROR_WRITE_EXPECTED;
 
     for (i = 0; i < size; i++)
     {
@@ -412,7 +420,7 @@ twi_slave_read_timeout (twi_t twi, void *buffer, uint8_t size,
         if (ret == TWI_DONE)
             return i;
             
-        *data++ = twi->base->TWI_THR;
+        *data++ = twi->base->TWI_RHR;
     }
 
     /* What if there is unread data still pending?  */

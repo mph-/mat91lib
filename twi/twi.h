@@ -48,7 +48,9 @@ typedef struct
 typedef enum twi_ret
 {
     TWI_DONE = 3,
+    /* Master performing a write, slave a read.  */
     TWI_WRITE = 2,
+    /* Master performing a read, slave a write.  */
     TWI_READ = 1,
     TWI_OK = 0,
     TWI_ERROR_TIMEOUT = -1,
