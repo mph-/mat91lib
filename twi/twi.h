@@ -71,46 +71,150 @@ twi_t
 twi_init (const twi_cfg_t *cfg);
 
 
+/** Perform a master write to the specified slave address with internal address
+    and timeout
+    @param twi TWI controller to use
+    @param slave_addr 7 bit slave address
+    @param addr optional internal address
+    @param addr_size number of bytes for internal address (0--2)
+    @param buffer buffer to write from
+    @param size number of bytes to transfer
+    @param timeout_us timeout in microseconds
+    @return number of bytes read or negative value for an error
+*/    
 twi_ret_t
 twi_master_addr_write_timeout (twi_t twi, twi_id_t slave_addr,
                                twi_id_t addr, uint8_t addr_size,
                                void *buffer, uint8_t size, twi_timeout_t timeout_us);
 
+
+/** Perform a master write to the specified slave address with internal address
+    and default timeout
+    @param twi TWI controller to use
+    @param slave_addr 7 bit slave address
+    @param addr optional internal address
+    @param addr_size number of bytes for internal address (0--2)
+    @param buffer buffer to write from
+    @param size number of bytes to transfer
+    @return number of bytes read or negative value for an error
+*/    
 twi_ret_t
 twi_master_addr_write (twi_t twi, twi_id_t slave, twi_id_t addr,
                        uint8_t addr_size, void *buffer, uint8_t size);
 
 
-/** Write data from slave.  No internal address is sent.  */
+/** Perform a master write to the specified slave address without internal address
+    using default timeout
+    @param twi TWI controller to use
+    @param slave_addr 7 bit slave address
+    @param buffer buffer to write from
+    @param size number of bytes to transfer
+    @return number of bytes read or negative value for an error
+*/
 twi_ret_t
 twi_master_write (twi_t twi, uint8_t addr_size, void *buffer, uint8_t size);
 
 
+/** Perform a master read to the specified slave address with internal address
+    and timeout
+    @param twi TWI controller to use
+    @param slave_addr 7 bit slave address
+    @param addr optional internal address
+    @param addr_size number of bytes for internal address (0--2)
+    @param buffer buffer to read into
+    @param size number of bytes to transfer
+    @param timeout_us timeout in microseconds
+    @return number of bytes read or negative value for an error
+*/    
 twi_ret_t
 twi_master_addr_read_timeout (twi_t twi, twi_id_t slave_addr,
                               twi_id_t addr, uint8_t addr_size,
-                              void *buffer, uint8_t size, twi_timeout_t timeout_us);
+                              void *buffer, uint8_t size, 
+                              twi_timeout_t timeout_us);
 
+
+/** Perform a master read to the specified slave address with internal address
+    and default timeout
+    @param twi TWI controller to use
+    @param slave_addr 7 bit slave address
+    @param addr optional internal address
+    @param addr_size number of bytes for internal address (0--2)
+    @param buffer buffer to read into
+    @param size number of bytes to transfer
+    @return number of bytes read or negative value for an error
+*/    
 twi_ret_t
 twi_master_addr_read (twi_t twi, twi_id_t slave, twi_id_t addr,
                       uint8_t addr_size, void *buffer, uint8_t size);
 
 
-/** Read data from slave.  No internal address is sent.  */
+/** Perform a master read to the specified slave address without internal address
+    and default timeout
+    @param twi TWI controller to use
+    @param slave_addr 7 bit slave address
+    @param buffer buffer to read into
+    @param size number of bytes to transfer
+    @param timeout_us timeout in microseconds
+    @return number of bytes read or negative value for an error
+*/
 twi_ret_t
 twi_master_read (twi_t twi, twi_id_t slave, void *buffer, uint8_t size);
 
 
+/** Poll TWI controller to detect a packet from the master
+    @return TWI_WRITE if master write detected,
+            TWI_READ if master read detected,
+            otherwise TWI_OK
+*/    
 twi_ret_t
 twi_slave_poll (twi_t twi);
 
 
+/** Perform a slave write with specified timeout
+    @param twi TWI controller to use
+    @param size number of bytes to transfer
+    @param timeout_us timeout in microseconds
+    @return number of bytes read or negative value for an error
+    @note If there are more bytes to be written than required, 
+          they will be ignored
+*/
+twi_ret_t
+twi_slave_write_timeout (twi_t twi, void *buffer, uint8_t size, 
+                         twi_timeout_t timeout_us);
+
+
+/** Perform a slave read  with specified timeout
+    @param twi TWI controller to use
+    @param size number of bytes to transfer
+    @timeout_us timeout in microseconds
+    @return number of bytes read or negative value for an error
+    @note If there are more bytes to be read than specified, they will be gobbled
+*/
+twi_ret_t
+twi_slave_read_timeout (twi_t twi, void *buffer, uint8_t size,
+                        twi_timeout_t timeout_us);
+
+/** Perform a slave read with default timeout
+    @param twi TWI controller to use
+    @param size number of bytes to transfer
+    @return number of bytes read or negative value for an error
+    @note If there are more bytes to be read than specified, they will be gobbled
+*/
 twi_ret_t
 twi_slave_read (twi_t twi, void *buffer, uint8_t size);
 
 
+/** Perform a slave write with default timeout
+    @param twi TWI controller to use
+    @param size number of bytes to transfer
+    @param timeout_us timeout in microseconds
+    @return number of bytes read or negative value for an error
+    @note If there are more bytes to be written than required, 
+          they will be ignored
+*/
 twi_ret_t
 twi_slave_write (twi_t twi, void *buffer, uint8_t size);
+
 
 void
 twi_shutdown (twi_t twi);
