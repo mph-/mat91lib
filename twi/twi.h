@@ -2,6 +2,8 @@
     @author M. P. Hayes
     @date   25 April 2015
     @brief  TWI routines for AT91 processors
+    This assumes that the slave address is 7-bits.  10-bit addresses can
+    be handled using the internal address.
 */
 
 #ifndef TWI_H
@@ -25,6 +27,9 @@ typedef enum
 } twi_channel_t;
 
 
+/* Internal address.  */
+typedef uint32_t twi_iaddr_t;
+
 typedef uint16_t twi_period_t;
 
 typedef uint32_t twi_timeout_t;
@@ -33,10 +38,9 @@ typedef uint32_t twi_timeout_t;
 /** TWI configuration structure.  */
 typedef struct
 {
-    uint8_t channel;
-    twi_mode_t mode;
-    twi_period_t period;         /* Clocks */
-    twi_id_t slave_addr;
+    uint8_t channel;             /* The controller channel, 0 or 1.  */
+    twi_period_t period;         /* Clocks.  */
+    twi_slave_addr_t slave_addr; /* Only required for slave mode.  */
 } twi_cfg_t;
 
 
@@ -53,6 +57,7 @@ typedef enum twi_ret
     /* Master performing a read, slave a write.  */
     TWI_READ = 1,
     TWI_OK = 0,
+    TWI_IDLE = 0,
     TWI_ERROR_TIMEOUT = -1,
     TWI_ERROR_NO_ACK = -2,
     /* Another master got in first.  */
@@ -76,15 +81,15 @@ twi_init (const twi_cfg_t *cfg);
     @param twi TWI controller to use
     @param slave_addr 7 bit slave address
     @param addr optional internal address
-    @param addr_size number of bytes for internal address (0--2)
+    @param addr_size number of bytes for internal address (0--3)
     @param buffer buffer to write from
     @param size number of bytes to transfer
     @param timeout_us timeout in microseconds
     @return number of bytes read or negative value for an error
 */    
 twi_ret_t
-twi_master_addr_write_timeout (twi_t twi, twi_id_t slave_addr,
-                               twi_id_t addr, uint8_t addr_size,
+twi_master_addr_write_timeout (twi_t twi, twi_slave_addr_t slave_addr,
+                               twi_iaddr_t addr, uint8_t addr_size,
                                void *buffer, uint8_t size, twi_timeout_t timeout_us);
 
 
@@ -93,13 +98,13 @@ twi_master_addr_write_timeout (twi_t twi, twi_id_t slave_addr,
     @param twi TWI controller to use
     @param slave_addr 7 bit slave address
     @param addr optional internal address
-    @param addr_size number of bytes for internal address (0--2)
+    @param addr_size number of bytes for internal address (0--3)
     @param buffer buffer to write from
     @param size number of bytes to transfer
     @return number of bytes read or negative value for an error
 */    
 twi_ret_t
-twi_master_addr_write (twi_t twi, twi_id_t slave, twi_id_t addr,
+twi_master_addr_write (twi_t twi, twi_slave_addr_t slave, twi_iaddr_t addr,
                        uint8_t addr_size, void *buffer, uint8_t size);
 
 
@@ -120,15 +125,15 @@ twi_master_write (twi_t twi, uint8_t addr_size, void *buffer, uint8_t size);
     @param twi TWI controller to use
     @param slave_addr 7 bit slave address
     @param addr optional internal address
-    @param addr_size number of bytes for internal address (0--2)
+    @param addr_size number of bytes for internal address (0--3)
     @param buffer buffer to read into
     @param size number of bytes to transfer
     @param timeout_us timeout in microseconds
     @return number of bytes read or negative value for an error
 */    
 twi_ret_t
-twi_master_addr_read_timeout (twi_t twi, twi_id_t slave_addr,
-                              twi_id_t addr, uint8_t addr_size,
+twi_master_addr_read_timeout (twi_t twi, twi_slave_addr_t slave_addr,
+                              twi_iaddr_t addr, uint8_t addr_size,
                               void *buffer, uint8_t size, 
                               twi_timeout_t timeout_us);
 
@@ -138,13 +143,13 @@ twi_master_addr_read_timeout (twi_t twi, twi_id_t slave_addr,
     @param twi TWI controller to use
     @param slave_addr 7 bit slave address
     @param addr optional internal address
-    @param addr_size number of bytes for internal address (0--2)
+    @param addr_size number of bytes for internal address (0--3)
     @param buffer buffer to read into
     @param size number of bytes to transfer
     @return number of bytes read or negative value for an error
 */    
 twi_ret_t
-twi_master_addr_read (twi_t twi, twi_id_t slave, twi_id_t addr,
+twi_master_addr_read (twi_t twi, twi_slave_addr_t slave, twi_iaddr_t addr,
                       uint8_t addr_size, void *buffer, uint8_t size);
 
 
@@ -158,7 +163,7 @@ twi_master_addr_read (twi_t twi, twi_id_t slave, twi_id_t addr,
     @return number of bytes read or negative value for an error
 */
 twi_ret_t
-twi_master_read (twi_t twi, twi_id_t slave, void *buffer, uint8_t size);
+twi_master_read (twi_t twi, twi_slave_addr_t slave, void *buffer, uint8_t size);
 
 
 /** Poll TWI controller to detect a packet from the master

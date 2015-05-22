@@ -9,7 +9,7 @@
 
 #include "config.h"
 
-typedef uint8_t twi_id_t;
+typedef uint8_t twi_slave_addr_t;
 
 typedef enum
 {
@@ -22,7 +22,7 @@ typedef enum
 typedef struct twi_dev_struct
 {
     Twi *base;
-    twi_id_t slave_addr;
+    twi_slave_addr_t slave_addr;
     twi_mode_t mode;
 } twi_dev_t;
 
