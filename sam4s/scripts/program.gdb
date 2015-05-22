@@ -10,3 +10,6 @@ monitor reset
 monitor sleep 500
 
 load
+
+monitor reset
+

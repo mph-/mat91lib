@@ -91,6 +91,7 @@ twi_master_write_wait_ack (twi_t twi, twi_timeout_t timeout_us)
     {
         status = twi->base->TWI_SR;
 
+        /* TXCOMP set at same time as NACK.  */
         if (status & TWI_SR_NACK)
             return TWI_ERROR_NO_ACK;
 
@@ -206,6 +207,7 @@ twi_master_read_wait_ack (twi_t twi, twi_timeout_t timeout_us)
     {
         status = twi->base->TWI_SR;
 
+        /* TXCOMP set at same time as NACK.  */
         if (status & TWI_SR_NACK)
             return TWI_ERROR_NO_ACK;
 
@@ -330,7 +332,7 @@ twi_slave_write_wait (twi_t twi, twi_timeout_t timeout_us)
     {
         status = twi->base->TWI_SR;
         
-        if (! (status & TWI_SR_SVACC))
+        if (0 && ! (status & TWI_SR_SVACC))
             return TWI_ERROR_SVACC;    
         
         if (status & TWI_SR_TXRDY)
@@ -403,11 +405,17 @@ twi_slave_read_wait (twi_t twi, twi_timeout_t timeout_us)
     {
         status = twi->base->TWI_SR;
         
-        if (! (status & TWI_SR_SVACC))
+        if (0 && ! (status & TWI_SR_SVACC))
             return TWI_ERROR_SVACC;    
 
         if (status & TWI_SR_RXRDY)
             return TWI_OK;
+
+        /* When have a reversal from write to read mode
+           then EOSACC gets set.  TXCOMP is not set until
+           the completion of the transfer.  */
+        if (status & TWI_SR_EOSACC)
+            return TWI_DONE;    
 
         if (status & TWI_SR_TXCOMP)
             return TWI_DONE;    
