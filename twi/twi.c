@@ -53,8 +53,10 @@ twi_init (const twi_cfg_t *cfg)
     
     twi = &twi_devices[cfg->channel];
 
-    /* Clock ony required for master mode.  */
-    twi->base->TWI_CWGR = cfg->period;
+    /* Clock ony required for master mode.  Set a 50% duty cycle.  */
+    twi->base->TWI_CWGR = TWI_CWGR_CLDIV (cfg->period - 4) 
+        | TWI_CWGR_CHDIV (cfg->period - 4)
+        | TWI_CWGR_CKDIV ((cfg->period - 4) >> 8);
 
     /* Slave addres ony required for slave mode.  */
     twi->slave_addr = cfg->slave_addr;
