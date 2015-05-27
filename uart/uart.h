@@ -13,22 +13,16 @@ typedef struct uart_dev_struct uart_dev_t;
 
 typedef uart_dev_t *uart_t;
 
-/* UART configuration structure.  */
-typedef struct uart_cfg_struct 
-{
-    uint8_t channel;
-    uint16_t baud;
-    uint8_t bits;
-    uart_parity_t parity;
-} uart_cfg_t;
+#define UART_BAUD_DIVISOR(BAUD_RATE) UART0_BAUD_DIVISOR(BAUD_RATE)
 
 
-/** Initialise UART for desired channel, baud rate, etc.  */
-uart_t
-uart_init (uart_cfg_t *uart_cfg);
+/* Initialise UART for desired channel, baud rate, etc.  */
+uart_t 
+uart_init (uint8_t channel,
+            uint16_t baud_divisor);
 
 
-/** Return non-zero if there is a character ready to be read.  */
+/** Return non-zero if there is a character ready to be read without blocking.  */
 bool
 uart_read_ready_p (uart_t uart);
 
@@ -38,29 +32,22 @@ bool
 uart_write_ready_p (uart_t uart);
 
 
-/** Return non-zero if transmitter finished.  */
-bool
-uart_write_finished_p (uart_t uart)
-
-
 /** Read character.  This blocks.  */
 int
 uart_getc (uart_t uart);
 
 
-/** Write character.  This blocks until character written to transmit
-    buffer.  */
+/** Write character.  This blocks until character written to transmit buffer.  */
 int
 uart_putc (uart_t uart, char ch);
 
 
-/** Write string.  This blocks until last character written to
-    transmit buffer.  */
+/** Write string.  This blocks until last character written to transmit buffer.  */
 int
 uart_puts (uart_t uart, const char *str);
 
 
-/** Shutdown UART to save power.  */
+/* Shutdown UART to save power.  */
 void
 uart_shutdown (uart_t uart);
 

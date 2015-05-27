@@ -1,8 +1,7 @@
 UART_DIR = $(MAT91LIB_DIR)/uart
 
-PERIPHERALS += usart
 VPATH += $(UART_DIR)
 INCLUDES += -I$(UART_DIR)
 
-SRC += uart.c
+SRC += uart.c uart0.c uart1.c
 
