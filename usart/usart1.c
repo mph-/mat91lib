@@ -9,6 +9,13 @@
 #include "usart1.h"
 #include "usart1_defs.h"
 
+/* Define in target.h to use hardware flow control.   */
+#ifdef USART1_USE_HANDSHAKING
+#define USART1_MODE US_MR_USART_MODE_HW_HANDSHAKING
+#else
+#define USART1_MODE US_MR_USART_MODE_NORMAL
+#endif
+
 
 void
 usart1_baud_divisor_set (uint16_t baud_divisor)
@@ -35,7 +42,7 @@ usart1_init (uint16_t baud_divisor)
         | US_CR_RXDIS | US_CR_TXDIS;           
 
     /* Set normal mode, clock = MCK, 8-bit data, no parity, 1 stop bit.  */
-    USART1->US_MR = US_MR_USART_MODE_NORMAL
+    USART1->US_MR = USART1_MODE
         | US_MR_CHRL_8_BIT | US_MR_PAR_NO | US_MR_NBSTOP_1_BIT;
 
     usart1_baud_divisor_set (baud_divisor);
