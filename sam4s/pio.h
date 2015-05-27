@@ -172,7 +172,15 @@ typedef enum pio_config_enum
 
 /* UART0  */
 #define URXD0_PIO PA9_PIO
+#define URXD0_PERIPH PIO_PERIPH_A
 #define UTXD0_PIO PA10_PIO
+#define UTXD0_PERIPH PIO_PERIPH_A
+
+/* UART1  */
+#define URXD1_PIO PB2_PIO
+#define URXD1_PERIPH PIO_PERIPH_A
+#define UTXD1_PIO PB3_PIO
+#define UTXD1_PERIPH PIO_PERIPH_A
 
 /* USART0  */
 #define RXD0_PIO PA5_PIO
