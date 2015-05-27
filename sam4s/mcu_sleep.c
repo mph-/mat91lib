@@ -59,13 +59,18 @@ mcu_sleep (mcu_sleep_mode_cfg_t *cfg)
     {
     case  MCU_SLEEP_MODE_BACKUP:
 
-        /* For backup mode, need to set DEEPSLEEP bit in CPU system
-           control register and set the VROFF bit of SUPC_CR.  The CPU
-           is reset when on wake up.  */
+        /* For backup mode, set DEEPSLEEP bit in CPU system control
+           register and set the VROFF bit of SUPC_CR.  The CPU is
+           reset when on wake up.  */
         SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
         SUPC->SUPC_CR = SUPC_CR_KEY (0xA5u) | SUPC_CR_VROFF_STOP_VREG;
         irq_global_enable ();
         cpu_wfi ();
+        
+        /* Exit from backup mode occurs if there is an event on the
+           WKUPEN0-15 pins, supply monitor (SM), RTC alarm, or RTT
+           alarm.  The supply monitor monitors the voltage on the VDDIO pin
+           if it is enabled.  */
 
     default:
         return;
