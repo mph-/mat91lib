@@ -175,7 +175,6 @@ twi_master_addr_write_timeout (twi_t twi, twi_slave_addr_t slave_addr,
         if (ret < 0)
         {
             /* The datasheet does not say what to do here!  */
-            twi->base->TWI_CR = TWI_CR_STOP;
             return ret;
         }
     }
