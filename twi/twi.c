@@ -142,7 +142,7 @@ twi_master_wait_txcomp (twi_t twi, twi_timeout_t timeout_us)
 twi_ret_t
 twi_master_addr_write_timeout (twi_t twi, twi_slave_addr_t slave_addr,
                                twi_iaddr_t addr, uint8_t addr_size,
-                               void *buffer, uint8_t size,
+                               void *buffer, twi_size_t size,
                                twi_timeout_t timeout_us)
 {
     uint8_t i;
@@ -204,7 +204,7 @@ twi_master_addr_write_timeout (twi_t twi, twi_slave_addr_t slave_addr,
 twi_ret_t
 twi_master_addr_write (twi_t twi, twi_slave_addr_t slave_addr,
                        twi_iaddr_t addr, uint8_t addr_size,
-                       void *buffer, uint8_t size)
+                       void *buffer, twi_size_t size)
 {
     return twi_master_addr_write_timeout (twi, slave_addr, addr, addr_size,
                                           buffer, size, TWI_TIMEOUT_US_DEFAULT);
@@ -221,7 +221,7 @@ twi_master_addr_write (twi_t twi, twi_slave_addr_t slave_addr,
 */    
 twi_ret_t
 twi_master_write (twi_t twi, twi_slave_addr_t slave_addr,
-                  void *buffer, uint8_t size)
+                  void *buffer, twi_size_t size)
 {
     return twi_master_addr_write (twi, slave_addr, 0, 0, buffer, size);
 }
@@ -267,7 +267,7 @@ twi_master_read_wait_ack (twi_t twi, twi_timeout_t timeout_us)
 twi_ret_t
 twi_master_addr_read_timeout (twi_t twi, twi_slave_addr_t slave_addr,
                               twi_iaddr_t addr, uint8_t addr_size,
-                              void *buffer, uint8_t size,
+                              void *buffer, twi_size_t size,
                               twi_timeout_t timeout_us)
 {
     uint8_t i;
@@ -322,7 +322,7 @@ twi_master_addr_read_timeout (twi_t twi, twi_slave_addr_t slave_addr,
 twi_ret_t
 twi_master_addr_read (twi_t twi, twi_slave_addr_t slave_addr,
                       twi_iaddr_t addr, uint8_t addr_size,
-                      void *buffer, uint8_t size)
+                      void *buffer, twi_size_t size)
 {
     return twi_master_addr_read_timeout (twi, slave_addr, addr, addr_size,
                                          buffer, size, TWI_TIMEOUT_US_DEFAULT);
@@ -341,7 +341,7 @@ twi_master_addr_read (twi_t twi, twi_slave_addr_t slave_addr,
 */
 twi_ret_t
 twi_master_read (twi_t twi, twi_slave_addr_t slave_addr,
-                 void *buffer, uint8_t size)
+                 void *buffer, twi_size_t size)
 {
     return twi_master_addr_read (twi, slave_addr, 0, 0, buffer, size);
 }
@@ -420,7 +420,7 @@ twi_slave_write_wait (twi_t twi, twi_timeout_t timeout_us)
           they will be ignored
 */
 twi_ret_t
-twi_slave_write_timeout (twi_t twi, void *buffer, uint8_t size, 
+twi_slave_write_timeout (twi_t twi, void *buffer, twi_size_t size, 
                          twi_timeout_t timeout_us)
 {
     uint8_t i;
@@ -468,7 +468,7 @@ twi_slave_write_timeout (twi_t twi, void *buffer, uint8_t size,
           they will be ignored
 */
 twi_ret_t
-twi_slave_write (twi_t twi, void *buffer, uint8_t size)
+twi_slave_write (twi_t twi, void *buffer, twi_size_t size)
 {
     return twi_slave_write_timeout (twi, buffer, size, TWI_TIMEOUT_US_DEFAULT);
 }
@@ -513,7 +513,7 @@ twi_slave_read_wait (twi_t twi, twi_timeout_t timeout_us)
     @note If there are more bytes to be read than specified, they will be gobbled
 */
 twi_ret_t
-twi_slave_read_timeout (twi_t twi, void *buffer, uint8_t size,
+twi_slave_read_timeout (twi_t twi, void *buffer, twi_size_t size,
                         twi_timeout_t timeout_us)
 {
     uint8_t i;
@@ -562,7 +562,7 @@ twi_slave_read_timeout (twi_t twi, void *buffer, uint8_t size,
     @note If there are more bytes to be read than specified, they will be gobbled
 */
 twi_ret_t
-twi_slave_read (twi_t twi, void *buffer, uint8_t size)
+twi_slave_read (twi_t twi, void *buffer, twi_size_t size)
 {
     return twi_slave_read_timeout (twi, buffer, size, TWI_TIMEOUT_US_DEFAULT);
 }

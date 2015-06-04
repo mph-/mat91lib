@@ -34,6 +34,9 @@ typedef uint16_t twi_period_t;
 
 typedef uint32_t twi_timeout_t;
 
+/* Don't want messages too long that will hog bus.  */
+typedef uint16_t twi_size_t;
+
 
 /** TWI configuration structure.  */
 typedef struct
@@ -90,7 +93,7 @@ twi_init (const twi_cfg_t *cfg);
 twi_ret_t
 twi_master_addr_write_timeout (twi_t twi, twi_slave_addr_t slave_addr,
                                twi_iaddr_t addr, uint8_t addr_size,
-                               void *buffer, uint8_t size, twi_timeout_t timeout_us);
+                               void *buffer, twi_size_t size, twi_timeout_t timeout_us);
 
 
 /** Perform a master write to the specified slave address with internal address
@@ -105,7 +108,7 @@ twi_master_addr_write_timeout (twi_t twi, twi_slave_addr_t slave_addr,
 */    
 twi_ret_t
 twi_master_addr_write (twi_t twi, twi_slave_addr_t slave, twi_iaddr_t addr,
-                       uint8_t addr_size, void *buffer, uint8_t size);
+                       uint8_t addr_size, void *buffer, twi_size_t size);
 
 
 /** Perform a master write to the specified slave address without internal address
@@ -117,7 +120,7 @@ twi_master_addr_write (twi_t twi, twi_slave_addr_t slave, twi_iaddr_t addr,
     @return number of bytes read or negative value for an error
 */
 twi_ret_t
-twi_master_write (twi_t twi, uint8_t addr_size, void *buffer, uint8_t size);
+twi_master_write (twi_t twi, uint8_t addr_size, void *buffer, twi_size_t size);
 
 
 /** Perform a master read to the specified slave address with internal address
@@ -134,7 +137,7 @@ twi_master_write (twi_t twi, uint8_t addr_size, void *buffer, uint8_t size);
 twi_ret_t
 twi_master_addr_read_timeout (twi_t twi, twi_slave_addr_t slave_addr,
                               twi_iaddr_t addr, uint8_t addr_size,
-                              void *buffer, uint8_t size, 
+                              void *buffer, twi_size_t size, 
                               twi_timeout_t timeout_us);
 
 
@@ -150,7 +153,7 @@ twi_master_addr_read_timeout (twi_t twi, twi_slave_addr_t slave_addr,
 */    
 twi_ret_t
 twi_master_addr_read (twi_t twi, twi_slave_addr_t slave, twi_iaddr_t addr,
-                      uint8_t addr_size, void *buffer, uint8_t size);
+                      uint8_t addr_size, void *buffer, twi_size_t size);
 
 
 /** Perform a master read to the specified slave address without internal address
@@ -163,7 +166,7 @@ twi_master_addr_read (twi_t twi, twi_slave_addr_t slave, twi_iaddr_t addr,
     @return number of bytes read or negative value for an error
 */
 twi_ret_t
-twi_master_read (twi_t twi, twi_slave_addr_t slave, void *buffer, uint8_t size);
+twi_master_read (twi_t twi, twi_slave_addr_t slave, void *buffer, twi_size_t size);
 
 
 /** Poll TWI controller to detect a packet from the master
@@ -184,7 +187,7 @@ twi_slave_poll (twi_t twi);
           they will be ignored
 */
 twi_ret_t
-twi_slave_write_timeout (twi_t twi, void *buffer, uint8_t size, 
+twi_slave_write_timeout (twi_t twi, void *buffer, twi_size_t size, 
                          twi_timeout_t timeout_us);
 
 
@@ -196,7 +199,7 @@ twi_slave_write_timeout (twi_t twi, void *buffer, uint8_t size,
     @note If there are more bytes to be read than specified, they will be gobbled
 */
 twi_ret_t
-twi_slave_read_timeout (twi_t twi, void *buffer, uint8_t size,
+twi_slave_read_timeout (twi_t twi, void *buffer, twi_size_t size,
                         twi_timeout_t timeout_us);
 
 /** Perform a slave read with default timeout
@@ -206,7 +209,7 @@ twi_slave_read_timeout (twi_t twi, void *buffer, uint8_t size,
     @note If there are more bytes to be read than specified, they will be gobbled
 */
 twi_ret_t
-twi_slave_read (twi_t twi, void *buffer, uint8_t size);
+twi_slave_read (twi_t twi, void *buffer, twi_size_t size);
 
 
 /** Perform a slave write with default timeout
@@ -218,7 +221,7 @@ twi_slave_read (twi_t twi, void *buffer, uint8_t size);
           they will be ignored
 */
 twi_ret_t
-twi_slave_write (twi_t twi, void *buffer, uint8_t size);
+twi_slave_write (twi_t twi, void *buffer, twi_size_t size);
 
 
 void
