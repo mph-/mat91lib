@@ -61,13 +61,25 @@ endif
 SRC += syscalls.c
 
 # Create list of object and dependency files.  Note, sort removes duplicates.
-OBJ = $(addprefix objs/, $(sort $(SRC:.c=.o)))
-DEPS = $(addprefix deps/, $(sort $(SRC:.c=.d)))
+OBJS = $(addprefix objs/, $(notdir $(sort $(SRC:.c=.o))))
+DEPS = $(addprefix deps/, $(notdir $(sort $(SRC:.c=.d))))
+SRC_DIRS = $(sort $(dir $(SRC)))
+
+VPATH += $(SRC_DIRS)
 
 include $(MAT91LIB_DIR)/peripherals.mk
 
-EXTRA_OBJ = objs/crt0.o objs/mcu.o
+EXTRA_OBJS = objs/crt0.o objs/mcu.o
 
+
+print-deps:
+	@echo $(DEPS)
+
+print-objs:
+	@echo $(OBJS)
+
+print-src-dirs:
+	@echo $(SRC_DIRS)
 
 objs:
 	mkdir -p objs
@@ -81,8 +93,8 @@ objs/%.o: %.c Makefile
 	$(CC) -MM $(CFLAGS) $< > deps/$*.d
 
 # Link object files to form output file.
-$(TARGET): deps objs $(OBJ) $(EXTRA_OBJ)
-	$(CC) $(OBJ) $(EXTRA_OBJ) $(LDFLAGS) -o $@ -lm -Wl,-Map=$(TARGET_MAP),--cref
+$(TARGET): deps objs $(OBJS) $(EXTRA_OBJS)
+	$(CC) $(OBJS) $(EXTRA_OBJS) $(LDFLAGS) -o $@ -lm -Wl,-Map=$(TARGET_MAP),--cref
 	$(SIZE) $@
 
 # Include the dependency files.
