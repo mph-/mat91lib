@@ -67,7 +67,8 @@ typedef enum twi_ret
     TWI_ERROR_CONFLICT = -3,
     TWI_ERROR_READ_EXPECTED = -4,
     TWI_ERROR_WRITE_EXPECTED = -5,
-    TWI_ERROR_SVACC = -6
+    TWI_ERROR_SVACC = -6,
+    TWI_ERROR_PROTOCOL = -7
 } twi_ret_t;
 
 
