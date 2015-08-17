@@ -31,6 +31,9 @@ typedef enum
 /** ADC sample size.  */
 typedef uint16_t adc_sample_t;
 
+/** Bit mask to specify enabled channels.  */
+typedef uint16_t adc_channels_t;
+
 
 typedef uint16_t adc_clock_divisor_t;
 
@@ -40,7 +43,7 @@ typedef uint32_t adc_clock_speed_t;
 
 typedef struct adc_dev_struct
 {
-    adc_channel_t channel;
+    adc_channels_t channels;
     adc_trigger_t trigger;
     adc_clock_divisor_t clock_divisor;
     uint8_t bits;
@@ -53,9 +56,11 @@ typedef adc_dev_t *adc_t;
 
 typedef struct adc_cfg_struct
 {
-    /* Could have a channels field if need to convert multiple channels
-       in a sequence.  */
+    /* This specifies the channel if the channels field is zero.  */
     adc_channel_t channel;
+
+    /* This specifies the channels to convert as a bitmask.  */
+    adc_channels_t channels;
 
     /* Conversion bits.  */
     uint8_t bits;
@@ -81,7 +86,7 @@ adc_bits_set (adc_t adc, uint8_t bits);
 
 
 bool
-adc_channel_set (adc_t adc, adc_channel_t channel);
+adc_channels_set (adc_t adc, adc_channels_t channels);
 
 
 /** Configure ADC peripheral registers in preparation for a conversion.

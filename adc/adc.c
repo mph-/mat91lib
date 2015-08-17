@@ -187,23 +187,20 @@ adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
 }
 
 
-/* This does not select the channel until adc_channel_select called.  */
+/* This does not select the channel until adc_channels_select called.  */
 bool
-adc_channel_set (adc_t adc, adc_channel_t channel)
+adc_channels_set (adc_t adc, adc_channels_t channels)
 {
-    if (channel >= ADC_CHANNEL_NUM)
-	return 0;
-    adc->channel = channel;
-
+    adc->channels = channels;
     return 1;
 }
 
 
 static void
-adc_channel_select (adc_t adc)
+adc_channels_select (adc_t adc)
 {
     ADC->ADC_CHDR = ~0;
-    ADC->ADC_CHER = BIT (adc->channel);
+    ADC->ADC_CHER = adc->channels;
 }
 
 
@@ -252,7 +249,7 @@ adc_bits_set (adc_t adc, uint8_t bits)
 bool
 adc_config (adc_t adc)
 {
-    adc_channel_select (adc);
+    adc_channels_select (adc);
 
     if (adc == adc_config_last)
         return 1;
@@ -270,7 +267,10 @@ adc_config_set (adc_t adc, const adc_cfg_t *cfg)
     adc_bits_set (adc, cfg->bits);
     adc_clock_speed_kHz_set (adc, cfg->clock_speed_kHz);
     adc_trigger_set (adc, cfg->trigger);
-    adc_channel_set (adc, cfg->channel);
+    if (cfg->channels == 0)
+        adc_channels_set (adc, BIT (cfg->channel));
+    else
+        adc_channels_set (adc, cfg->channels);
 }
 
 
