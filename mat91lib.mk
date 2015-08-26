@@ -34,6 +34,9 @@ $(error unknown family)
 endif
 endif
 
+ifndef CXXFLAGS
+CXXFLAGS = $(CFLAGS)
+endif
 
 all: $(TARGET)
 
@@ -44,9 +47,12 @@ LDSCRIPTS = $(MAT91LIB_DIR)/$(FAMILY)
 
 
 CC = $(TOOLCHAIN)-gcc
+CXX = $(TOOLCHAIN)-g++
+LD = $(TOOLCHAIN)-g++
 OBJCOPY = $(TOOLCHAIN)-objcopy
 SIZE = $(TOOLCHAIN)-size
 DEL = rm
+
 
 INCLUDES += -I.
 
@@ -60,10 +66,15 @@ endif
 # Hack.  FIXME
 SRC += syscalls.c
 
+CSRC = $(filter %.c, $(SRC))
+#CCSRC = $(filter %.cc %.cpp, $(SRC))
+CCSRC = $(filter %.cpp, $(SRC))
+
 # Create list of object and dependency files.  Note, sort removes duplicates.
-OBJS = $(addprefix objs/, $(notdir $(sort $(SRC:.c=.o))))
-DEPS = $(addprefix deps/, $(notdir $(sort $(SRC:.c=.d))))
+OBJS = $(addprefix objs/, $(notdir $(sort $(CSRC:.c=.o) $(CCSRC:.cpp=.o))))
+DEPS = $(addprefix deps/, $(notdir $(sort $(CSRC:.c=.d) $(CCSRC:.cpp=.d))))
 SRC_DIRS = $(sort $(dir $(SRC)))
+
 
 VPATH += $(SRC_DIRS)
 
@@ -87,6 +98,11 @@ objs:
 deps:
 	mkdir -p deps
 
+objs/%.o: %.cpp Makefile
+	$(CXX) -c $(CXXFLAGS) $< -o $@
+# Generate dependencies to see if object file needs recompiling.
+	$(CXX) -MM $(CXXFLAGS) $< > deps/$*.d
+
 objs/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 # Generate dependencies to see if object file needs recompiling.
@@ -94,7 +110,7 @@ objs/%.o: %.c Makefile
 
 # Link object files to form output file.
 $(TARGET): deps objs $(OBJS) $(EXTRA_OBJS)
-	$(CC) $(OBJS) $(EXTRA_OBJS) $(LDFLAGS) -o $@ -lm -Wl,-Map=$(TARGET_MAP),--cref
+	$(LD) $(OBJS) $(EXTRA_OBJS) $(LDFLAGS) -o $@ -lm -Wl,-Map=$(TARGET_MAP),--cref
 	$(SIZE) $@
 
 # Include the dependency files.
@@ -106,7 +122,7 @@ clean-objs:
 	-$(DEL) -fr objs
 
 # Rebuild the code, don't delete dependencies.
-rebuild: clean-objs $(TARGET_OUT)
+rebuild: clean-objs $(TARGET)
 
 # Generate cscope tags file
 .PHONY: cscope

@@ -7,8 +7,11 @@
 #define MAT91LIB_H
 
 #include <stdint.h>
+
+#ifndef __cplusplus
 enum {false = 0, true = 1};
 typedef uint8_t bool;
+#endif
 
 
 #ifndef BIT
