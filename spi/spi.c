@@ -587,7 +587,7 @@ spi_init (const spi_cfg_t *cfg)
 
     spi_channel_csr_set (spi, 0);
 
-    spi_cs_mode_set (spi, SPI_CS_MODE_TOGGLE);
+    spi_cs_mode_set (spi, cfg->cs_mode);
 
     spi->cs_config = spi_channel_cs_config_get (spi, spi->cs); 
     spi_cs_auto_disable (spi);
