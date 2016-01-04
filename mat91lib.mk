@@ -91,6 +91,13 @@ print-objs:
 
 print-src-dirs:
 	@echo $(SRC_DIRS)
+	@echo $(VPATH)
+
+print-cflags:
+	@echo $(CFLAGS)
+
+print-src:
+	@echo $(SRC)
 
 objs:
 	mkdir -p objs

@@ -110,8 +110,11 @@ typedef uint32_t pio_t;
 #define SPCK1_PIO PA22_PIO
 #else
 #define MOSI0_PIO PA13_PIO
+#define MOSI0_PERIPH PIO_PERIPH_A
 #define MISO0_PIO PA12_PIO
+#define MISO0_PERIPH PIO_PERIPH_A
 #define SPCK0_PIO PA14_PIO
+#define SPCK0_PERIPH PIO_PERIPH_A
 #endif
 
 
