@@ -160,6 +160,8 @@ typedef uint32_t pio_t;
 /* TC  */
 #define TIOA0_PIO PA0_PIO
 #define TIOA0_PERIPH PIO_PERIPH_B
+#define TIOB0_PIO PA1_PIO
+#define TIOB0_PERIPH PIO_PERIPH_B
 #define TIOA1_PIO PA15_PIO
 #define TIOA1_PERIPH PIO_PERIPH_B
 #define TIOA2_PIO PA26_PIO
