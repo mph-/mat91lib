@@ -209,13 +209,13 @@ tc_capture_poll (tc_t tc)
     
     if (status & TC_SR_LDRAS)
     {
-        tc->captureA = tc->base->TC_RA;
+        tc->captureA = (tc->overflows << 16) | tc->base->TC_RA;
         return_val |= BIT (TC_CAPTURE_A);
     }
     
     if (status & TC_SR_LDRBS)
     {
-        tc->captureB = tc->base->TC_RB;
+        tc->captureB = (tc->overflows << 16) | tc->base->TC_RB;
         return_val |= BIT (TC_CAPTURE_B);
     }
     
