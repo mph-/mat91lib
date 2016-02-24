@@ -77,14 +77,27 @@ void tc_handler (tc_t tc)
        if an overflow occurs after the capture event but
        before the status register is read.  */
     
+    int capture_state = 0;
+
     if (status & TC_SR_LDRAS)
+    {
         tc->captureA = (tc->overflows << 16) | tc->base->TC_RA;
+        capture_state |= BIT (TC_CAPTURE_A);
+    }
 
     if (status & TC_SR_LDRBS)
+    {
         tc->captureB = (tc->overflows << 16) | tc->base->TC_RB;
+        capture_state |= BIT (TC_CAPTURE_B);
+    }
 
     if (status & TC_SR_COVFS)
         tc->overflows++;
+    
+    if (tc->onload && capture_state)
+    {
+        tc->onload (capture_state);
+    }
 }
 
 
@@ -545,6 +558,7 @@ tc_init (const tc_cfg_t *cfg)
     tc_output_set (tc);
 
     tc->overflows = 0;
+    tc->onload = 0;
 
     irq_enable (ID_TC0 + TC_CHANNEL (tc));
 
@@ -596,3 +610,12 @@ tc_clock_sync (tc_t tc, tc_period_t period)
 
     tc_stop (tc);
 }
+    
+
+void
+tc_onload_set (tc_t tc, tc_onload_function onload)
+{
+    tc->onload = onload;
+}
+
+

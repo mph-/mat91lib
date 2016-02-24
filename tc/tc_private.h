@@ -19,6 +19,7 @@ typedef struct
     tc_period_t period;         /* Clocks */
     tc_period_t delay;          /* Clocks */
     tc_prescale_t prescale;
+    tc_onload_function onload;
 } tc_dev_t;
 
 #endif
