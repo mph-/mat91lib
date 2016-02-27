@@ -55,6 +55,10 @@
 #include "config.h"
 #include "pio.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef uint16_t spi_size_t;
 
 typedef int16_t spi_ret_t;
@@ -84,13 +88,13 @@ enum {SPI_CHANNEL0 = 0, SPI_CHANNEL1, SPI_CHANNEL2, SPI_CHANNEL3,
 /* SPI mode settings.  */
 typedef enum 
 {
-    /* Clock normally low, read on rising edge.  */
+    /* Clock normally low, read on rising edge.  Mode 0, 0.  */
     SPI_MODE_0 = 0,
     /* Clock normally low, read on falling edge.  */
     SPI_MODE_1 = 1,
     /* Clock normally high, read on falling edge.  */
     SPI_MODE_2 = 2,
-    /* Clock normally high, read on rising edge.  */
+    /* Clock normally high, read on rising edge.  Mode 1, 1.  */
     SPI_MODE_3 = 3
 } spi_mode_t;
 
@@ -129,6 +133,8 @@ typedef struct
     pio_t cs;
     /* SPI mode.  */
     spi_mode_t mode;
+    /* SPI chip select mode (toggle default).  */
+    spi_cs_mode_t cs_mode;
     /* Bits per frame.  */
     uint8_t bits;
 } spi_cfg_t;
@@ -283,6 +289,10 @@ spi_cs_assert (spi_t spi);
 /** Force negation of chip select (set high).  */
 void
 spi_cs_negate (spi_t spi);
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif
