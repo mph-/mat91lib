@@ -49,7 +49,9 @@ typedef enum
     /** Triggering of ADC (this doesn't use the TC pin).  */
     TC_MODE_ADC,
     /** Free running counter (this doesn't use the TC pin).  */
-    TC_MODE_COUNTER
+    TC_MODE_COUNTER,
+    /** Periodic interrupt (this doesn't use the TC pin).  */
+    TC_MODE_INTERRUPT
 } tc_mode_t;
 
 
