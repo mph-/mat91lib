@@ -8,6 +8,20 @@
    check the internal address if 10 bit addressing is required.  
 
    General call is not supported.
+
+   The master controls the clock although the slave can stretch it
+   when it can't keep up.
+
+   A master write consists of the slave address, followed by the
+   internal address, and the data payload.  Each byte needs to be
+   acknowledged by the slave.  
+
+   A master read consists of a write followed by a read.  The write
+    consists of the slave address followed by the internal address.  A
+    repeated START is then sent followed by the slave address.  The
+    master the reads the data payload from the slave.  The master
+    acknowledges each byte and controls the number of bytes read by
+    sending a STOP.
 */
 
 
@@ -17,10 +31,20 @@
 #include "bits.h"
 #include "delay.h"
 
-
 #define TWI_DEVICES_NUM 2
 
 static twi_dev_t twi_devices[TWI_DEVICES_NUM];
+
+
+void
+twi_reset (twi_t twi)
+{
+    /* Dummy read of status register.  */
+    twi->base->TWI_SR;
+
+    /* Perform software reset of peripheral.  */
+    twi->base->TWI_CR = TWI_CR_SWRST;
+}
 
 
 twi_t 
@@ -53,12 +77,15 @@ twi_init (const twi_cfg_t *cfg)
     
     twi = &twi_devices[cfg->channel];
 
+    /* Reset TWI peripheral.  */
+    twi_reset (twi);
+
     /* Clock ony required for master mode.  Set a 50% duty cycle.  */
     twi->base->TWI_CWGR = TWI_CWGR_CLDIV (cfg->period - 4) 
         | TWI_CWGR_CHDIV (cfg->period - 4)
         | TWI_CWGR_CKDIV ((cfg->period - 4) >> 8);
 
-    /* Slave addres ony required for slave mode.  */
+    /* Slave address ony required for slave mode.  */
     twi->slave_addr = cfg->slave_addr;
 
     return twi;
@@ -70,10 +97,13 @@ twi_master_init (twi_t twi, twi_slave_addr_t slave_addr,
                  twi_iaddr_t addr, uint8_t addr_size, uint32_t read)
 {
     /* Switch to master mode.  */
-    twi->base->TWI_CR = TWI_CR_SVDIS | TWI_CR_MSEN;
+    twi->base->TWI_CR = TWI_CR_MSDIS;
+    twi->base->TWI_CR = TWI_CR_SVDIS;
+    twi->base->TWI_CR = TWI_CR_MSEN;
+
     twi->mode = TWI_MODE_MASTER;
 
-    /* The flowchart Fig 33-17 suggests this order.  */
+    /* The flowchart Fig 33-17 suggests this order for MMR and IADR.  */
     twi->base->TWI_MMR = TWI_MMR_DADR (slave_addr)
         | BITS (addr_size, 8, 9) | read;
     
@@ -174,7 +204,11 @@ twi_master_addr_write_timeout (twi_t twi, twi_slave_addr_t slave_addr,
         ret = twi_master_write_wait_ack (twi, timeout_us);
         if (ret < 0)
         {
-            /* The datasheet does not say what to do here!  */
+            /* FIXME.  The datasheet does not say what to do here!
+               The slave has not responded in time.  Perhaps we need
+               to reset the controller to prevent bus being left in a
+               weird state.  */
+               
             return ret;
         }
     }
@@ -274,16 +308,24 @@ twi_master_addr_read_timeout (twi_t twi, twi_slave_addr_t slave_addr,
     uint8_t *data = buffer;
     twi_ret_t ret;
 
+    if (size == 0)
+        return 0;
+
     twi_master_init (twi, slave_addr, addr, addr_size, TWI_MMR_MREAD);
 
-    twi->base->TWI_CR = TWI_CR_START;
+    if (size == 1)
+        twi->base->TWI_CR = TWI_CR_START | TWI_CR_STOP;
+    else
+        twi->base->TWI_CR = TWI_CR_START;
 
     /* The slave address and optional internal address is sent. 
-       Each sent byte should be acknowledged.  */
+       Each sent byte should be acknowledged.  See Figure 33-20
+       for a flowchart.  */
 
     for (i = 0; i < size; i++)
     {
-        if (i == size - 1)
+        /* The master does not acknowledge receipt of the last byte.  */
+        if ((i == size - 1) && (size > 1))
             twi->base->TWI_CR = TWI_CR_STOP;
 
         ret = twi_master_read_wait_ack (twi, timeout_us);
@@ -292,9 +334,6 @@ twi_master_addr_read_timeout (twi_t twi, twi_slave_addr_t slave_addr,
             /* A STOP is automatically performed if we get a NACK.
                But what about a timeout, say while the clock is being
                stretched?  */
-            if (ret == TWI_ERROR_TIMEOUT)
-                twi->base->TWI_CR = TWI_CR_STOP;
-            
             return ret;
         }
 
@@ -304,6 +343,9 @@ twi_master_addr_read_timeout (twi_t twi, twi_slave_addr_t slave_addr,
     ret = twi_master_wait_txcomp (twi, timeout_us);
     if (ret < 0)
         return ret;
+
+    /* Clear flags.  I'm not sure why!  */
+    twi->base->TWI_SR;
 
     return i;
 }
@@ -354,7 +396,10 @@ twi_slave_init (twi_t twi)
     twi->base->TWI_SMR = TWI_MMR_DADR (twi->slave_addr);
 
     /* Switch to slave mode.  */
-    twi->base->TWI_CR = TWI_CR_MSDIS | TWI_CR_SVEN;
+    twi->base->TWI_CR = TWI_CR_MSDIS;
+    twi->base->TWI_CR = TWI_CR_SVDIS;
+    twi->base->TWI_CR = TWI_CR_SVEN;
+
     twi->mode = TWI_MODE_SLAVE;
 
     return TWI_OK;
@@ -371,14 +416,17 @@ twi_slave_poll (twi_t twi)
 {
     uint32_t status;
 
+    /* Ensure in slave mode.  */
     if (twi->mode != TWI_MODE_SLAVE)
         twi_slave_init (twi);
 
     status = twi->base->TWI_SR;
 
+    /* SVACC is set when our address matches until a STOP or repeated START.  */
     if (! (status & TWI_SR_SVACC))
         return TWI_IDLE;    
 
+    /*  SVREAD is curiously named.  It is high when the master wants to read!  */
     if (status & TWI_SR_SVREAD)
         return TWI_READ;
 
@@ -396,14 +444,29 @@ twi_slave_write_wait (twi_t twi, twi_timeout_t timeout_us)
     {
         status = twi->base->TWI_SR;
         
-        if (0 && ! (status & TWI_SR_SVACC))
-            return TWI_ERROR_SVACC;    
-        
-        if (status & TWI_SR_TXRDY)
-            return TWI_OK;
-
-        if (status & TWI_SR_TXCOMP)
-            return TWI_DONE;    
+        if (status & TWI_SR_SVACC)
+        {
+            /* Look for GACC 0, SVREAD 1, TXRDY 1.  */
+            if (!(status & TWI_SR_GACC)
+                && ((status & (TWI_SR_SVREAD | TWI_SR_TXRDY))
+                    == (TWI_SR_SVREAD | TWI_SR_TXRDY)))
+            {
+                /* The master does not acknowledge the last byte of a
+                   read and so NACK=1.  Even though TXRDY=1 we do not
+                   want to write to THR so indicate that the transfer
+                   is finished.  */
+                if (status & TWI_SR_NACK)
+                    return TWI_DONE;
+                return TWI_OK;            
+            }
+        }
+        else
+        {
+            /* Look for EOSACC 1, TXCOMP 1.  */
+            if ((status & (TWI_SR_EOSACC | TWI_SR_TXCOMP))
+                == (TWI_SR_EOSACC | TWI_SR_TXCOMP))
+                return TWI_DONE;    
+        }
         
         DELAY_US (1);
     }
@@ -433,6 +496,13 @@ twi_slave_write_timeout (twi_t twi, void *buffer, twi_size_t size,
     if (ret != TWI_READ)
         return TWI_ERROR_READ_EXPECTED;
 
+    /* See Figure 33-31 for repeated START and reversal from write to
+       read mode.  It appears that TXRDY goes high unexpectedly before
+       TXCOMP goes low.  Thus we will load the THR prematurely.  This
+       is not sent until the next master read.  To avoid this, we need
+       to check NACK since the master does not acknowledge the last
+       byte and this will set NACK.  */
+
     for (i = 0; i < size; i++)
     {
         ret = twi_slave_write_wait (twi, timeout_us);
@@ -444,8 +514,8 @@ twi_slave_write_timeout (twi_t twi, void *buffer, twi_size_t size,
         twi->base->TWI_THR = *data++;
     }
 
-    /* Send dummy data.  */
-    while (1)
+    /* Until the master sends a STOP, send dummy data.  */
+    for (i = 0; ; i++)
     {
         ret = twi_slave_write_wait (twi, timeout_us);
         if (ret < 0)
@@ -453,10 +523,12 @@ twi_slave_write_timeout (twi_t twi, void *buffer, twi_size_t size,
         if (ret == TWI_DONE)
             break;
             
-        twi->base->TWI_THR = 0;
+        /* Send recognisable sequence for debugging.  */
+        twi->base->TWI_THR = 'A' + i;
     }
 
-    return size;
+    /* Return number of bytes written.  */
+    return size + i;
 }
 
 
@@ -484,21 +556,24 @@ twi_slave_read_wait (twi_t twi, twi_timeout_t timeout_us)
     {
         status = twi->base->TWI_SR;
         
-        if (0 && ! (status & TWI_SR_SVACC))
-            return TWI_ERROR_SVACC;    
+        if (status & TWI_SR_SVACC)
+        {
+            /* Look for GACC 0, SVREAD 0, RXRDY 1.  */
+            if (!(status & (TWI_SR_GACC | TWI_SR_SVREAD))
+                && (status & TWI_SR_RXRDY))
+                return TWI_OK;            
+        }
+        else
+        {
+            /* Look for EOSACC 1 or TXCOMP 1. 
 
-        if (status & TWI_SR_RXRDY)
-            return TWI_OK;
+               When have a reversal from write to read mode
+               EOSACC=1, TXCOMP=0.
 
-        /* When have a reversal from write to read mode
-           then EOSACC gets set.  TXCOMP is not set until
-           the completion of the transfer.  */
-        if (status & TWI_SR_EOSACC)
-            return TWI_DONE;    
-
-        if (status & TWI_SR_TXCOMP)
-            return TWI_DONE;    
-        
+               When receive STOP EOSACC=1, TXCOMP=1.  */
+            if (status & (TWI_SR_EOSACC | TWI_SR_TXCOMP))
+                return TWI_DONE;    
+        }
         DELAY_US (1);
     }
     return TWI_ERROR_TIMEOUT;
@@ -526,7 +601,7 @@ twi_slave_read_timeout (twi_t twi, void *buffer, twi_size_t size,
     if (ret != TWI_WRITE)
         return TWI_ERROR_WRITE_EXPECTED;
 
-    /* SVACC high.  */
+    /* SVACC=1, SVREAD=0.  */
 
     for (i = 0; i < size; i++)
     {

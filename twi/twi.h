@@ -226,6 +226,10 @@ twi_slave_write (twi_t twi, void *buffer, twi_size_t size);
 
 
 void
+twi_reset (twi_t twi);
+
+
+void
 twi_shutdown (twi_t twi);
 
 #endif
