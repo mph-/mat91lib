@@ -44,6 +44,7 @@ static const pinmap_t pwm_pins[] =
 
     {3, PA7_PIO, PIO_PERIPH_B},
     {3, PA14_PIO, PIO_PERIPH_B},
+    {3, PA17_PIO, PIO_PERIPH_C},
 };
 
 
