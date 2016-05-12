@@ -71,8 +71,8 @@ CSRC = $(filter %.c, $(SRC))
 CCSRC = $(filter %.cpp, $(SRC))
 
 # Create list of object and dependency files.  Note, sort removes duplicates.
-OBJS = $(addprefix objs/, $(notdir $(sort $(CSRC:.c=.o) $(CCSRC:.cpp=.o))))
-DEPS = $(addprefix deps/, $(notdir $(sort $(CSRC:.c=.d) $(CCSRC:.cpp=.d))))
+OBJS = $(sort $(addprefix objs/, $(notdir $(sort $(CSRC:.c=.o) $(CCSRC:.cpp=.o)))))
+DEPS = $(sort $(addprefix deps/, $(notdir $(sort $(CSRC:.c=.d) $(CCSRC:.cpp=.d)))))
 SRC_DIRS = $(sort $(dir $(SRC)))
 
 
