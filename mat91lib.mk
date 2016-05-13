@@ -16,7 +16,6 @@ endif
 ifndef OPT
 OPT = -Os
 endif
-OPT = -O1
 
 ifndef TOOLCHAIN
 TOOLCHAIN = arm-none-eabi
