@@ -175,7 +175,7 @@ twi_master_addr_write_timeout (twi_t twi, twi_slave_addr_t slave_addr,
                                void *buffer, twi_size_t size,
                                twi_timeout_t timeout_us)
 {
-    uint8_t i;
+    twi_size_t i;
     uint8_t *data = buffer;
     twi_ret_t ret;
 
@@ -304,7 +304,7 @@ twi_master_addr_read_timeout (twi_t twi, twi_slave_addr_t slave_addr,
                               void *buffer, twi_size_t size,
                               twi_timeout_t timeout_us)
 {
-    uint8_t i;
+    twi_size_t i;
     uint8_t *data = buffer;
     twi_ret_t ret;
 
@@ -486,7 +486,7 @@ twi_ret_t
 twi_slave_write_timeout (twi_t twi, void *buffer, twi_size_t size, 
                          twi_timeout_t timeout_us)
 {
-    uint8_t i;
+    twi_size_t i;
     uint8_t *data = buffer;
     twi_ret_t ret;
 
@@ -515,7 +515,7 @@ twi_slave_write_timeout (twi_t twi, void *buffer, twi_size_t size,
     }
 
     /* Until the master sends a STOP, send dummy data.  */
-    for (i = 0; ; i++)
+    for (i = 0; i < 32767; i++)
     {
         ret = twi_slave_write_wait (twi, timeout_us);
         if (ret < 0)
@@ -524,8 +524,10 @@ twi_slave_write_timeout (twi_t twi, void *buffer, twi_size_t size,
             break;
             
         /* Send recognisable sequence for debugging.  */
-        twi->base->TWI_THR = 'A' + i;
+        twi->base->TWI_THR = 'A' + (i & 0xff);
     }
+    if (i == 32768)
+        return TWI_ERROR_NO_STOP;
 
     /* Return number of bytes written.  */
     return size + i;
@@ -591,7 +593,7 @@ twi_ret_t
 twi_slave_read_timeout (twi_t twi, void *buffer, twi_size_t size,
                         twi_timeout_t timeout_us)
 {
-    uint8_t i;
+    twi_size_t i;
     uint8_t *data = buffer;
     twi_ret_t ret;
 
