@@ -1,16 +1,30 @@
 /** @file   usart.c
     @author M. P. Hayes, UCECE
     @date   21 June 2007
-    @brief  Unbuffered USART implementation.  */
+    @brief  Unbuffered USART implementation. 
+    @note   This driver is a wrapper for USARTx and provides a USART
+   independent interface.
+
+   This needs updating to be more general and to provide
+   support for synchronous operation. 
+
+   If code memory is at a premium, a USART can be disabled in the
+   target.h file, e.g., using #define USART0_ENABLE 0. 
+
+   Both USART0 and USART1 have CTS/RTS flow control pins:
+
+   * RTS is an output from the receiver.  It is driven low when the receiver
+   is ready to read.
+
+   * CTS is an input to the transmitter.  The transmitter does not transmit
+   until it goes low.
+
+   By default hardware handshaking is not used for flow control.  This
+   can be enabled by defining USART0_USE_HANDSHAKING or
+   USART1_USE_HANDSHAKING in target.h  */
 
 #include "usart.h"
 #include "peripherals.h"
-
-/* This needs updating to be more general and to provide
-   support for synchronous operation.  */
-
-/* A USART can be disabled in the target.h file, e.g., using
-   #define USART0_ENABLE 0.  */
 
 #ifndef USART0_ENABLE
 #define USART0_ENABLE (USART_NUM >= 1)
