@@ -24,6 +24,7 @@ typedef struct twi_dev_struct
     Twi *base;
     twi_slave_addr_t slave_addr;
     twi_mode_t mode;
+    uint32_t clock_config;
 } twi_dev_t;
 
 #endif

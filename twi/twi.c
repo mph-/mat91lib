@@ -44,6 +44,12 @@ twi_reset (twi_t twi)
 
     /* Perform software reset of peripheral.  */
     twi->base->TWI_CR = TWI_CR_SWRST;
+
+    /* The controller becomes a master on reset.  */
+    twi->mode = TWI_MODE_MASTER;
+
+    /* Clock ony required for master mode.  Set a 50% duty cycle.  */
+    twi->base->TWI_CWGR = twi->clock_config;
 }
 
 
@@ -77,13 +83,12 @@ twi_init (const twi_cfg_t *cfg)
     
     twi = &twi_devices[cfg->channel];
 
-    /* Reset TWI peripheral.  */
-    twi_reset (twi);
-
-    /* Clock ony required for master mode.  Set a 50% duty cycle.  */
-    twi->base->TWI_CWGR = TWI_CWGR_CLDIV (cfg->period - 4) 
+    twi->clock_config = TWI_CWGR_CLDIV (cfg->period - 4) 
         | TWI_CWGR_CHDIV (cfg->period - 4)
         | TWI_CWGR_CKDIV ((cfg->period - 4) >> 8);
+
+    /* Reset TWI peripheral.  */
+    twi_reset (twi);
 
     /* Slave address ony required for slave mode.  */
     twi->slave_addr = cfg->slave_addr;
@@ -208,7 +213,7 @@ twi_master_addr_write_timeout (twi_t twi, twi_slave_addr_t slave_addr,
                The slave has not responded in time.  Perhaps we need
                to reset the controller to prevent bus being left in a
                weird state.  */
-               
+            twi_reset (twi);
             return ret;
         }
     }
@@ -334,6 +339,7 @@ twi_master_addr_read_timeout (twi_t twi, twi_slave_addr_t slave_addr,
             /* A STOP is automatically performed if we get a NACK.
                But what about a timeout, say while the clock is being
                stretched?  */
+            twi_reset (twi);
             return ret;
         }
 
@@ -470,6 +476,7 @@ twi_slave_write_wait (twi_t twi, twi_timeout_t timeout_us)
         
         DELAY_US (1);
     }
+    twi_reset (twi);
     return TWI_ERROR_TIMEOUT;
 }
 
@@ -578,6 +585,7 @@ twi_slave_read_wait (twi_t twi, twi_timeout_t timeout_us)
         }
         DELAY_US (1);
     }
+    twi_reset (twi);
     return TWI_ERROR_TIMEOUT;
 } 
 
