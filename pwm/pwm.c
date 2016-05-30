@@ -45,7 +45,7 @@ static const pinmap_t pwm_pins[] =
     {3, PA7_PIO, PIO_PERIPH_B, PWM_POLARITY_HIGH},
     {3, PA14_PIO, PIO_PERIPH_B, PWM_POLARITY_HIGH},
 
-#ifdef PIO_PERIPH_C
+#ifdef _SAM4S_
     /* SAM4S  64 pin.  TODO, support PCx on 100 pin devices.  */
     {0, PB0_PIO, PIO_PERIPH_A, PWM_POLARITY_HIGH},
     {1, PB1_PIO, PIO_PERIPH_A, PWM_POLARITY_HIGH},
@@ -58,6 +58,7 @@ static const pinmap_t pwm_pins[] =
     {1, PA20_PIO, PIO_PERIPH_B, PWM_POLARITY_LOW},
     {1, PB12_PIO, PIO_PERIPH_A, PWM_POLARITY_LOW},
     {2, PA30_PIO, PIO_PERIPH_A, PWM_POLARITY_LOW},
+    {2, PA16_PIO, PIO_PERIPH_C, PWM_POLARITY_LOW},
     {2, PB13_PIO, PIO_PERIPH_A, PWM_POLARITY_LOW},
     {3, PA15_PIO, PIO_PERIPH_C, PWM_POLARITY_LOW},
 #endif
