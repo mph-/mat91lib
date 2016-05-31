@@ -13,6 +13,7 @@ typedef struct pinmap_struct
     uint8_t channel;
     pio_t pio;
     pio_config_t periph;
+    uint8_t flags;
 } pinmap_t;
 
 

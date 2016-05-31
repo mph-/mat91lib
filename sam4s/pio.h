@@ -58,7 +58,9 @@ typedef enum pio_config_enum
     PIO_PERIPH_B,
     PIO_PERIPH_A_PULLUP,
     PIO_PERIPH_PULLUP = PIO_PERIPH_A_PULLUP,
-    PIO_PERIPH_B_PULLUP
+    PIO_PERIPH_B_PULLUP,
+    PIO_PERIPH_C,
+    PIO_PERIPH_C_PULLUP
 } pio_config_t;
 
 
@@ -272,6 +274,13 @@ pio_config_set (pio_t pio, pio_config_t config)
         PIO_BASE (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
         return 1;
 
+    case PIO_PERIPH_C:
+        PIO_BASE (pio)->PIO_ABCDSR[1] |= PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_ABCDSR[0] &= ~PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
+        return 1;
+
     case PIO_PERIPH_A_PULLUP:
         PIO_BASE (pio)->PIO_ABCDSR[0] &= ~PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_ABCDSR[1] &= ~PIO_BITMASK_ (pio);
@@ -282,6 +291,13 @@ pio_config_set (pio_t pio, pio_config_t config)
     case PIO_PERIPH_B_PULLUP:
         PIO_BASE (pio)->PIO_ABCDSR[0] &= ~PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_ABCDSR[1] |= PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
+        return 1;
+
+    case PIO_PERIPH_C_PULLUP:
+        PIO_BASE (pio)->PIO_ABCDSR[1] &= ~PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_ABCDSR[0] |= PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PDR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
         return 1;

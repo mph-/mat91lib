@@ -53,9 +53,9 @@
 /* Define known TC pins.  */
 static const pinmap_t tc_pins[] = 
 {
-    {0, TIOA0_PIO, TIOA0_PERIPH}, /* TIOA0 */
-    {1, TIOA1_PIO, TIOA1_PERIPH}, /* TIOA1 */
-    {2, TIOA2_PIO, TIOA2_PERIPH}, /* TIOA2 */
+    {0, TIOA0_PIO, TIOA0_PERIPH, 0}, /* TIOA0 */
+    {1, TIOA1_PIO, TIOA1_PERIPH, 0}, /* TIOA1 */
+    {2, TIOA2_PIO, TIOA2_PERIPH, 0}  /* TIOA2 */
 };
 #define TC_PINS_NUM ARRAY_SIZE (tc_pins)
 
@@ -239,7 +239,9 @@ tc_capture_poll (tc_t tc)
 static tc_ret_t
 tc_output_set (tc_t tc)
 {
-    if ((tc->mode == TC_MODE_ADC) || (tc->mode == TC_MODE_COUNTER))
+    if ((tc->mode == TC_MODE_ADC) || (tc->mode == TC_MODE_COUNTER)
+        || (tc->mode == TC_MODE_INTERRUPT))
+        
         return TC_OK;
 
     /* Generate a software trigger with the clock stopped to set TIOAx
@@ -348,6 +350,7 @@ tc_mode_set (tc_t tc, tc_mode_t mode)
     {
     case TC_MODE_ADC:
     case TC_MODE_CLOCK:
+    case TC_MODE_INTERRUPT:
     case TC_MODE_PULSE:
         /* Set TIOAx when RA matches and clear TIOAx when RC matches.  */
         tc->base->TC_CMR = TC_CMR_BURST_NONE | TC_CMR_WAVE

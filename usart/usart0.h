@@ -9,7 +9,6 @@
 
 #include "config.h"
 
-
 #define USART0_BAUD_DIVISOR(BAUD_RATE)  ((F_CPU / 16) / (BAUD_RATE))
 
 

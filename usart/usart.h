@@ -47,6 +47,18 @@ int
 usart_puts (usart_t usart, const char *str);
 
 
+/** Read size bytes.  This will block until the desired number of
+    bytes have been read.  */
+int16_t
+usart_read (usart_t usart, void *data, uint16_t size);
+
+
+/** Write size bytes.  This will block until the desired number of
+    bytes have been transmitted.  */
+int16_t
+usart_write (usart_t usart, const void *data, uint16_t size);
+
+
 /* Shutdown UART to save power.  */
 void
 usart_shutdown (usart_t usart);
