@@ -21,9 +21,6 @@ extern char __bss_start__;      /** Start of uninitialised variables.  */
 extern char __bss_end__;        /** End of uninitialised variables.  */
 
 
-/* TODO: reallocate vector table into SRAM.  */
-
-
 int main (void);
 
 void __libc_init_array (void);

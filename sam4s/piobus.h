@@ -14,7 +14,9 @@
 typedef uint64_t piobus_t;
 
 
-#define PIOBUS_DEFINE(PORT, LSB, MSB) (((piobus_t)(LSB) << 32) | (BIT ((MSB) + 1) - BIT (LSB)) | ((piobus_t)(PORT) << 40))
+#define LLBIT(X) (1ULL << (X))
+
+#define PIOBUS_DEFINE(PORT, LSB, MSB) (((piobus_t)(LSB) << 32) | (LLBIT ((MSB) + 1) - LLBIT (LSB)) | ((piobus_t)(PORT) << 40))
 
 /** Private macro to lookup bitmask.  */
 #define PIOBUS_BITMASK_(PIOBUS) ((PIOBUS) & 0xffffffff)

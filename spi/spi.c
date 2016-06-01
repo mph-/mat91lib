@@ -289,27 +289,27 @@ spi_channel_mode_set (spi_t spi, spi_mode_t mode)
 /* AT91SAM7X  */
 static const pinmap_t spi_cs[] = 
 {
-    {0, PA21_PIO, PIO_PERIPH_B},
-    {1, PA25_PIO, PIO_PERIPH_B},
-    {2, PA26_PIO, PIO_PERIPH_B},
-    {3, PA29_PIO, PIO_PERIPH_B},
-    {1, PA10_PIO, PIO_PERIPH_B},
-    {2, PA11_PIO, PIO_PERIPH_B},
-    {3, PA16_PIO, PIO_PERIPH_B},
+    {0, PA21_PIO, PIO_PERIPH_B, 0},
+    {1, PA25_PIO, PIO_PERIPH_B, 0},
+    {2, PA26_PIO, PIO_PERIPH_B, 0},
+    {3, PA29_PIO, PIO_PERIPH_B, 0},
+    {1, PA10_PIO, PIO_PERIPH_B, 0},
+    {2, PA11_PIO, PIO_PERIPH_B, 0},
+    {3, PA16_PIO, PIO_PERIPH_B, 0},
 };
 
 #else
 /* AT91SAM7S  */
 static const pinmap_t spi_cs[] = 
 {
-    {0, PA11_PIO, PIO_PERIPH_A},
-    {1, PA9_PIO, PIO_PERIPH_B},
-    {1, PA31_PIO, PIO_PERIPH_A},
-    {2, PA10_PIO, PIO_PERIPH_B},
-    {2, PA30_PIO, PIO_PERIPH_B},
-    {3, PA3_PIO, PIO_PERIPH_B},
-    {3, PA5_PIO, PIO_PERIPH_B},
-    {3, PA22_PIO, PIO_PERIPH_B}
+    {0, PA11_PIO, PIO_PERIPH_A, 0},
+    {1, PA9_PIO, PIO_PERIPH_B, 0},
+    {1, PA31_PIO, PIO_PERIPH_A, 0},
+    {2, PA10_PIO, PIO_PERIPH_B, 0},
+    {2, PA30_PIO, PIO_PERIPH_B, 0},
+    {3, PA3_PIO, PIO_PERIPH_B, 0},
+    {3, PA5_PIO, PIO_PERIPH_B, 0},
+    {3, PA22_PIO, PIO_PERIPH_B, 0}
 };
 
 #endif
