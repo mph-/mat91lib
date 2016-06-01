@@ -622,12 +622,6 @@ tc_onload_set (tc_t tc, tc_onload_function onload)
     tc->onload = onload;
 }
 
-void
-tc_sync (void)
-{
-    TC0->TC_BCR |= TC_BCR_SYNC;
-}
-
 
 void
 tc_sync (void)
