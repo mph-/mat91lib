@@ -177,5 +177,9 @@ void
 tc_onload_set (tc_t tc, tc_onload_function onload);
 
 
+void
+tc_sync (void);
+
+
 #endif
 

@@ -40,10 +40,12 @@
 
 
 #ifdef __SAM4S__
+#define TC_BASE (TC0)
 #define TC0_BASE (TC0->TC_CHANNEL)
 #define TC1_BASE (TC0->TC_CHANNEL + 1)
 #define TC2_BASE (TC0->TC_CHANNEL + 2)
 #else
+#define TC_BASE (AT91C_BASE_TCB)
 #define TC0_BASE TC0
 #define TC1_BASE TC1
 #define TC2_BASE TC2
@@ -618,4 +620,10 @@ tc_onload_set (tc_t tc, tc_onload_function onload)
     tc->onload = onload;
 }
 
+
+void
+tc_sync (void)
+{
+    TC_BASE->TC_BCR = TC_BCR_SYNC;
+}
 
