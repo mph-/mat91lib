@@ -512,7 +512,7 @@ sys_device_register (const char *devicename, const sys_file_ops_t *file_ops,
 
     new = malloc (sizeof (*new));
     new->name = devicename;
-    new->file_ops = file_ops;
+    new->file_ops = (void *)file_ops;
     new->arg = arg;
     new->next = 0;
 
