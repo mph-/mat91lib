@@ -3,11 +3,14 @@
     @date   18 February 2008
     @brief  This file contains a collection of stub functions to replace those
     used by the C library newlib.  Primarily, it provides functionality
-    to redirect standard I/O and to interface to a file system.  */
+    to redirect standard I/O and to interface to a file system. 
+    It assumes that all devices are non-blocking.
+ */
 
 #include "config.h"
 #include <errno.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "sys.h"
@@ -35,10 +38,21 @@ typedef struct sys_file_struct
     void *file;
 } sys_file_t;
 
+
+typedef struct sys_device_struct
+{
+    const char *name;
+    sys_file_ops_t *file_ops;
+    void *arg;
+    struct sys_device_struct *next;
+} sys_device_t;
+
+
 static sys_file_ops_t stdin_file_ops;
 static sys_file_ops_t stdout_file_ops;
 static sys_file_ops_t stderr_file_ops;
 
+/* Array of file descriptors.  */
 static sys_file_t sys_files[SYS_FD_NUM] =
 {
     {.file_ops = &stdin_file_ops, .file = 0},
@@ -46,7 +60,12 @@ static sys_file_t sys_files[SYS_FD_NUM] =
     {.file_ops = &stderr_file_ops, .file = 0}
 };
 
+/* Linked list of devices.  */
+static sys_device_t *sys_devices = 0;
+
+/* Array of file systems.  */
 static sys_fs_t *sys_fs[SYS_FS_NUM];
+
 static void (*stdio_putc) (void *stream, int ch) = 0;
 static int (*stdio_getc) (void *stream) = 0;
 
@@ -157,13 +176,22 @@ sys_fs_find (const char *pathname, sys_fs_t **pfs)
 ssize_t
 _read (int fd, char *buffer, size_t size)
 {
+    ssize_t ret;
+
     if ((fd >= SYS_FD_NUM) || !sys_files[fd].file_ops->read)
     {
         errno = ENODEV;
         return -1;
     }
 
-    return sys_files[fd].file_ops->read (sys_files[fd].file, buffer, size);
+    ret = sys_files[fd].file_ops->read (sys_files[fd].file, buffer, size);
+    if (ret == 0 && size != 0)
+    {
+        /* Would block.  */
+        errno = EAGAIN;
+        return -1;
+    }
+    return ret;
 }
 
 
@@ -183,24 +211,29 @@ _lseek (int fd, off_t offset, int whence)
 ssize_t
 _write (int fd, char *buffer, size_t size)
 {
+    ssize_t ret;
+
     if ((fd >= SYS_FD_NUM) || !sys_files[fd].file_ops->write)
     {
         errno = ENODEV;
         return -1;
     }
 
-    return sys_files[fd].file_ops->write (sys_files[fd].file, buffer, size);
+    ret = sys_files[fd].file_ops->write (sys_files[fd].file, buffer, size);
+    if (ret == 0 && size != 0)
+    {
+        /* Would block.  */
+        errno = EAGAIN;
+        return -1;
+    }
+    return ret;
 }
 
 
-int
-_open (const char *pathname, int flags, ...)
+static int
+sys_next_fd (void)
 {
-    void *arg;
     int fd;
-    sys_fs_t *fs;
-
-    /* This is not called for stdin, stdout, stderr.  */
 
     for (fd = 3; fd < SYS_FD_NUM; fd++)
     {
@@ -212,6 +245,21 @@ _open (const char *pathname, int flags, ...)
         errno = ENFILE;
         return -1;
     }
+
+    return fd;
+}
+
+
+static int
+sys_file_open (const char *pathname, int flags)
+{
+    sys_fs_t *fs;
+    void *arg;
+    int fd;
+
+    fd = sys_next_fd ();
+    if (fd < 0)
+        return fd;
 
     pathname = sys_fs_find (pathname, &fs);
 
@@ -231,6 +279,51 @@ _open (const char *pathname, int flags, ...)
     sys_files[fd].file = arg;
 
     return fd;
+}
+
+
+int
+sys_attach (sys_file_ops_t *file_ops, void *arg)
+{
+    int fd;
+
+    fd = sys_next_fd ();
+    if (fd < 0)
+        return fd;
+
+    sys_files[fd].file_ops = file_ops;
+    sys_files[fd].file = arg;
+
+    return fd;
+}
+
+
+static int
+sys_device_open (const char *pathname, int flags)
+{
+    sys_device_t *device;
+
+    /* Traverse list of devices.  */
+    for (device = sys_devices; device; device = device->next)
+    {
+        if (strcmp (device->name, pathname) == 0)
+            return sys_attach (device->file_ops, device->arg);
+    }
+    /* No device found.  */
+    errno = ENXIO;
+    return -1;
+}
+
+
+int
+_open (const char *pathname, int flags, ...)
+{
+    /* This is not called for stdin, stdout, stderr.  */
+
+    if (strncmp (pathname, "/dev/", 5) == 0)
+        return sys_device_open (pathname, flags);
+
+    return sys_file_open (pathname, flags);
 }
 
 
@@ -407,24 +500,36 @@ sys_mount (sys_fs_t *fs, const char *mountname, int flags)
 }
 
 
+/** Register a device with a devicename, say /dev/usart0,  
+    and record the file_ops and arg (say device handle). 
+    The device can then be opened using open.  */
 int
-sys_attach (sys_file_ops_t *file_ops, void *arg)
+sys_device_register (const char *devicename, const sys_file_ops_t *file_ops,
+                     void *arg)
 {
-    int fd;
+    sys_device_t *device;
+    sys_device_t *new;
 
-    for (fd = 3; fd < SYS_FD_NUM; fd++)
+    new = malloc (sizeof (*new));
+    new->name = devicename;
+    new->file_ops = file_ops;
+    new->arg = arg;
+    new->next = 0;
+
+    if (! sys_devices)
     {
-        if (!sys_files[fd].file_ops)
-            break;
+        sys_devices = new;
     }
-    if (fd == SYS_FD_NUM)
+    else
     {
-        errno = ENFILE;
-        return -1;
+        /* Traverse list of devices.  */
+        for (device = sys_devices; device->next; device = device->next)
+        {
+            /* Perhaps check if device already registered?  */
+            continue;
+        }
+        device->next = new;
     }
 
-    sys_files[fd].file_ops = file_ops;
-    sys_files[fd].file = arg;
-
-    return fd;
+    return 0;
 }

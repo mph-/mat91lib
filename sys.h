@@ -70,4 +70,12 @@ bool sys_mount (sys_fs_t *fs, const char *mountname, int flags);
 
 int sys_attach (sys_file_ops_t *file_ops, void *arg);
 
+
+/** Register a device with a devicename, say /dev/usart0,  
+    and record the file_ops and arg (say device handle). 
+    The device can then be opened using open.  */
+int
+sys_device_register (const char *devicename, const sys_file_ops_t *file_ops,
+                     void *arg);
+
 #endif
