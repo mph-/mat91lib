@@ -29,6 +29,11 @@ enum {PORT_A, PORT_B};
 /** Private macro to lookup port register.  */
 #define PIO_PORT_(PIO) (((PIO) & 0x80000000) ? PIOB : PIOA)
 
+
+/** Private macro to lookup PIO controller ID.  */
+#define PIO_ID(PIO) (PIO_PORT (PIO) == PORT_A ? AT91C_ID_PIOA : AT91C_ID_PIOB)
+
+
 #else
 /* The AT91SAMSX has one PIO port.  */
 enum {PORT_A};
@@ -44,6 +49,11 @@ enum {PORT_A};
 /** Private macro to lookup port register.  */
 #define PIO_PORT_(PIO) (PIOA)
 #endif
+
+
+/** Private macro to lookup PIO controller ID.  */
+#define PIO_ID(PIO) (AT91C_ID_PIOA)
+
 
 typedef uint32_t pio_mask_t;
 
@@ -110,8 +120,11 @@ typedef uint32_t pio_t;
 #define SPCK1_PIO PA22_PIO
 #else
 #define MOSI0_PIO PA13_PIO
+#define MOSI0_PERIPH PIO_PERIPH_A
 #define MISO0_PIO PA12_PIO
+#define MISO0_PERIPH PIO_PERIPH_A
 #define SPCK0_PIO PA14_PIO
+#define SPCK0_PERIPH PIO_PERIPH_A
 #endif
 
 
@@ -157,6 +170,8 @@ typedef uint32_t pio_t;
 /* TC  */
 #define TIOA0_PIO PA0_PIO
 #define TIOA0_PERIPH PIO_PERIPH_B
+#define TIOB0_PIO PA1_PIO
+#define TIOB0_PERIPH PIO_PERIPH_B
 #define TIOA1_PIO PA15_PIO
 #define TIOA1_PERIPH PIO_PERIPH_B
 #define TIOA2_PIO PA26_PIO
@@ -294,4 +309,35 @@ void pio_output_toggle (pio_t pio)
 #define pio_shutdown(pio) \
     PMC->PMC_PCDR = BIT (AT91C_ID_PIOA)
 
+
+/** Enable PIO input change interrupt for specified PIO.  Note, it is
+    necessary to read PIO_ISR to clear the interrupt source.
+    Unfortunately, this will clear other pending input change
+    interrupts from the same PIO controller.  */
+static inline void
+pio_irq_enable (pio_t pio)
+{
+    PIO_PORT_ (pio)->PIO_IER = PIO_BITMASK_ (pio);
+}
+
+
+/** Disable PIO input change interrupt for specified PIO.   */
+static inline void
+pio_irq_disable (pio_t pio)
+{
+    PIO_PORT_ (pio)->PIO_IDR = PIO_BITMASK_ (pio);
+}
+
+
+/** Clear interrupt for specified PIO.  Unfortunately, this has the
+ gnarly side-effect of clearing ALL the PIO interrupts on the same
+ port.  */
+static inline uint32_t
+pio_irq_clear (pio_t pio)
+{
+    return PIO_PORT_ (pio)->PIO_ISR;
+}
+
+
 #endif
+

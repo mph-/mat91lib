@@ -40,10 +40,12 @@
 
 
 #ifdef __SAM4S__
+#define TC_BASE (TC0)
 #define TC0_BASE (TC0->TC_CHANNEL)
 #define TC1_BASE (TC0->TC_CHANNEL + 1)
 #define TC2_BASE (TC0->TC_CHANNEL + 2)
 #else
+#define TC_BASE (AT91C_BASE_TCB)
 #define TC0_BASE TC0
 #define TC1_BASE TC1
 #define TC2_BASE TC2
@@ -65,26 +67,45 @@ static tc_dev_t tc_devices[TC_DEVICES_NUM];
 
 
 static
-void tc_handler (tc_t tc)
+uint32_t tc_handle_status_reg (tc_t tc)
 {
-    uint32_t status = 0;
-    
     /* When the status register is read, the capture status
        flags are cleared!  */
-    status = tc->base->TC_SR;
+    uint32_t status = tc->base->TC_SR;
 
     /* There is a race condition to fix.  This can occur 
        if an overflow occurs after the capture event but
        before the status register is read.  */
     
+    int capture_state = 0;
+
     if (status & TC_SR_LDRAS)
+    {
         tc->captureA = (tc->overflows << 16) | tc->base->TC_RA;
+        capture_state |= BIT (TC_CAPTURE_A);
+    }
 
     if (status & TC_SR_LDRBS)
+    {
         tc->captureB = (tc->overflows << 16) | tc->base->TC_RB;
+        capture_state |= BIT (TC_CAPTURE_B);
+    }
 
     if (status & TC_SR_COVFS)
         tc->overflows++;
+    
+    if (tc->onload && capture_state)
+    {
+        tc->onload (capture_state);
+    }
+
+    return status;
+}
+
+static
+void tc_handler (tc_t tc)
+{
+    tc_handle_status_reg (tc);
 }
 
 
@@ -185,9 +206,11 @@ tc_capture_get (tc_t tc, tc_capture_t reg)
     switch (reg)
     {
     case TC_CAPTURE_A:
+        tc->capture_state &= ~BIT (TC_CAPTURE_A);
         return tc->captureA;
 
     case TC_CAPTURE_B:
+        tc->capture_state &= ~BIT (TC_CAPTURE_B);
         return tc->captureB;
         
     default:
@@ -200,26 +223,16 @@ tc_capture_get (tc_t tc, tc_capture_t reg)
 tc_capture_mask_t
 tc_capture_poll (tc_t tc)
 {
-    uint32_t status = 0;
-    int return_val = 0;
-    
-    /* When the status register is read, the capture status
-       flags are cleared!  */
-    status = tc->base->TC_SR;
-    
-    if (status & TC_SR_LDRAS)
+    // It is assumed here that interrupt-loading regA implies that regB is also
+    // interrupt loaded.
+    bool irq_load_enabled = tc->base->TC_IMR & TC_IMR_LDRAS;
+
+    if (!irq_load_enabled)
     {
-        tc->captureA = tc->base->TC_RA;
-        return_val |= BIT (TC_CAPTURE_A);
+        tc_handle_status_reg (tc);
     }
     
-    if (status & TC_SR_LDRBS)
-    {
-        tc->captureB = tc->base->TC_RB;
-        return_val |= BIT (TC_CAPTURE_B);
-    }
-    
-    return return_val;
+    return tc->capture_state;
 }
 
 
@@ -548,6 +561,8 @@ tc_init (const tc_cfg_t *cfg)
     tc_output_set (tc);
 
     tc->overflows = 0;
+    tc->capture_state = 0;
+    tc->onload = 0;
 
     irq_enable (ID_TC0 + TC_CHANNEL (tc));
 
@@ -599,3 +614,19 @@ tc_clock_sync (tc_t tc, tc_period_t period)
 
     tc_stop (tc);
 }
+
+
+void
+tc_onload_set (tc_t tc, tc_onload_function onload)
+{
+    tc->onload = onload;
+}
+
+
+void
+tc_sync (void)
+{
+    TC_BASE->TC_BCR = TC_BCR_SYNC;
+}
+
+

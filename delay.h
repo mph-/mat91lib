@@ -11,7 +11,7 @@
 #include "mcu.h"
 
 
-#ifdef RAM_RUN
+#ifdef RAM
 #define DELAY_LOOP_CYCLES 4
 #else
 #define DELAY_LOOP_CYCLES (1 * MCU_FLASH_READ_CYCLES)

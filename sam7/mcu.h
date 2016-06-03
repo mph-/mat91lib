@@ -12,7 +12,7 @@
 
 
 #ifndef MCU_FLASH_READ_CYCLES 
-#define MCU_FLASH_READ_CYCLES 2
+#define MCU_FLASH_READ_CYCLES 16
 #endif
 
 
@@ -249,7 +249,7 @@ mcu_init (void)
 
     mcu_clock_init ();
 
-#ifdef RAM_RUN
+#ifdef RAM
     /* Remap SRAM if using RAM model.  */
     mcu_sram_remap ();
 #endif
