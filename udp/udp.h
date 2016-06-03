@@ -2,6 +2,7 @@
 #define UDP_H
 
 #include "config.h"
+#include "sys.h"
 
 enum {UDP_EP_CONTROL_SIZE = 8, UDP_EP_OUT_SIZE = 64, UDP_EP_IN_SIZE = 64};
 
@@ -81,9 +82,9 @@ bool udp_halt_p (udp_t udp, udp_ep_t endpoint);
 
 bool udp_read_ready_p (udp_t udp);
 
-udp_size_t udp_read (udp_t udp, void *buffer, udp_size_t length);
+ssize_t udp_read (udp_t udp, void *buffer, size_t length);
 
-udp_size_t udp_write (udp_t udp, const void *buffer, udp_size_t length);
+ssize_t udp_write (udp_t udp, const void *buffer, size_t length);
 
 udp_status_t udp_write_async (udp_t udp, 
                               udp_ep_t endpoint,

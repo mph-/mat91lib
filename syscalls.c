@@ -176,22 +176,13 @@ sys_fs_find (const char *pathname, sys_fs_t **pfs)
 ssize_t
 _read (int fd, char *buffer, size_t size)
 {
-    ssize_t ret;
-
     if ((fd >= SYS_FD_NUM) || !sys_files[fd].file_ops->read)
     {
         errno = ENODEV;
         return -1;
     }
 
-    ret = sys_files[fd].file_ops->read (sys_files[fd].file, buffer, size);
-    if (ret == 0 && size != 0)
-    {
-        /* Would block.  */
-        errno = EAGAIN;
-        return -1;
-    }
-    return ret;
+    return sys_files[fd].file_ops->read (sys_files[fd].file, buffer, size);
 }
 
 
@@ -211,22 +202,13 @@ _lseek (int fd, off_t offset, int whence)
 ssize_t
 _write (int fd, char *buffer, size_t size)
 {
-    ssize_t ret;
-
     if ((fd >= SYS_FD_NUM) || !sys_files[fd].file_ops->write)
     {
         errno = ENODEV;
         return -1;
     }
 
-    ret = sys_files[fd].file_ops->write (sys_files[fd].file, buffer, size);
-    if (ret == 0 && size != 0)
-    {
-        /* Would block.  */
-        errno = EAGAIN;
-        return -1;
-    }
-    return ret;
+    return sys_files[fd].file_ops->write (sys_files[fd].file, buffer, size);
 }
 
 

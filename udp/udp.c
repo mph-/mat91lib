@@ -1,4 +1,5 @@
 #include "delay.h"
+#include "errno.h"
 #include "irq.h"
 #include "mcu.h"
 #include "pio.h"
@@ -1498,17 +1499,35 @@ udp_endpoint_write (udp_t udp, udp_ep_t endpoint,
 }
 
 
-udp_size_t
-udp_read (udp_t udp, void *buffer, udp_size_t len)
+ssize_t
+udp_read (udp_t udp, void *buffer, size_t size)
 {
-    return udp_endpoint_read (udp, UDP_EP_OUT, buffer, len);
+    ssize_t ret;
+
+    ret = udp_endpoint_read (udp, UDP_EP_OUT, buffer, size);
+    if (ret == 0 && size != 0)
+    {
+        /* Would block.  */
+        errno = EAGAIN;
+        return -1;
+    }
+    return ret;
 }
 
 
-udp_size_t
-udp_write (udp_t udp, const void *buffer, udp_size_t len)
+ssize_t
+udp_write (udp_t udp, const void *buffer, size_t size)
 {
-    return udp_endpoint_write (udp, UDP_EP_IN, buffer, len);
+    ssize_t ret;
+
+    ret = udp_endpoint_write (udp, UDP_EP_IN, buffer, size);
+    if (ret == 0 && size != 0)
+    {
+        /* Would block.  */
+        errno = EAGAIN;
+        return -1;
+    }
+    return ret;
 }
 
 
