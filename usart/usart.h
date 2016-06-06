@@ -9,6 +9,21 @@
 #include "config.h"
 #include "usart0.h"
 
+
+/** usart configuration structure.  */
+typedef struct
+{
+    /* 0 for USART0, 1 for USART1.  */
+    uint8_t channel;
+    /* Baud rate.  */
+    uint32_t baud_rate;
+    /* Baud rate divisor (this is used if baud_rate is zero).  */
+    uint32_t baud_divisor;
+    /* Non-zero for blocking I/O.  */
+    bool block;
+}
+usart_cfg_t;
+
 typedef struct usart_dev_struct usart_dev_t;
 
 typedef usart_dev_t *usart_t;
@@ -18,8 +33,7 @@ typedef usart_dev_t *usart_t;
 
 /* Initialise UART for desired channel, baud rate, etc.  */
 usart_t 
-usart_init (uint8_t channel,
-            uint16_t baud_divisor);
+usart_init (const usart_cfg_t *cfg);
 
 
 /** Return non-zero if there is a character ready to be read without blocking.  */
@@ -32,29 +46,27 @@ bool
 usart_write_ready_p (usart_t usart);
 
 
-/** Read character.  This blocks.  */
+/** Read character.  */
 int
 usart_getc (usart_t usart);
 
 
-/** Write character.  This blocks until character written to transmit buffer.  */
+/** Write character.  */
 int
 usart_putc (usart_t usart, char ch);
 
 
-/** Write string.  This blocks until last character written to transmit buffer.  */
+/** Write string.  */
 int
 usart_puts (usart_t usart, const char *str);
 
 
-/** Read size bytes.  This will block until the desired number of
-    bytes have been read.  */
+/** Read size bytes.  */
 int16_t
 usart_read (usart_t usart, void *data, uint16_t size);
 
 
-/** Write size bytes.  This will block until the desired number of
-    bytes have been transmitted.  */
+/** Write size bytes.  */
 int16_t
 usart_write (usart_t usart, const void *data, uint16_t size);
 

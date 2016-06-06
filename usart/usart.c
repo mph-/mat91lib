@@ -23,7 +23,9 @@
    can be enabled by defining USART0_USE_HANDSHAKING or
    USART1_USE_HANDSHAKING in target.h  */
 
+#include "errno.h"
 #include "usart.h"
+#include "sys.h"
 #include "peripherals.h"
 
 #ifndef USART0_ENABLE
@@ -42,6 +44,7 @@ struct usart_dev_struct
     bool (*read_ready_p) (void);
     bool (*write_ready_p) (void);
     bool (*write_finished_p) (void);
+    bool block;
 };
 
 
@@ -51,7 +54,7 @@ struct usart_dev_struct
 
 static usart_dev_t usart0_dev = {usart0_putc, usart0_getc,
                                  usart0_read_ready_p, usart0_write_ready_p,
-                                 usart0_write_finished_p};
+                                 usart0_write_finished_p, 0};
 #endif
 
 #if USART1_ENABLE
@@ -59,18 +62,23 @@ static usart_dev_t usart0_dev = {usart0_putc, usart0_getc,
 
 static usart_dev_t usart1_dev = {usart1_putc, usart1_getc,
                                  usart1_read_ready_p, usart1_write_ready_p,
-                                 usart1_write_finished_p};
+                                 usart1_write_finished_p, 0};
 #endif
 
 
 usart_t 
-usart_init (uint8_t channel,
-            uint16_t baud_divisor)
+usart_init (const usart_cfg_t *cfg)
 {
     usart_dev_t *dev = 0;
+    uint16_t baud_divisor;
+
+    if (cfg->baud_rate == 0)
+        baud_divisor = cfg->baud_divisor;
+    else
+        baud_divisor = USART_BAUD_DIVISOR (cfg->baud_rate);
 
 #if USART0_ENABLE
-    if (channel == 0)
+    if (cfg->channel == 0)
     {
         usart0_init (baud_divisor);
         dev = &usart0_dev;
@@ -78,12 +86,14 @@ usart_init (uint8_t channel,
 #endif
 
 #if USART1_ENABLE
-    if (channel == 1)
+    if (cfg->channel == 1)
     {
         usart1_init (baud_divisor);
         dev = &usart1_dev;
     }
 #endif
+
+    dev->block = cfg->block;
 
     return dev;
 }
@@ -119,27 +129,39 @@ usart_write_finished_p (usart_t usart)
 }
 
 
-/* Read character.  This blocks.  */
+/* Read character.  */
 int
 usart_getc (usart_t usart)
 {
     usart_dev_t *dev = usart;
 
+    if (! dev->block && ! usart_read_ready_p (usart))
+    {
+        errno = EAGAIN;
+        return - 1;
+    }
+
     return dev->getch ();
 }
 
 
-/* Write character.  This blocks.  */
+/* Write character.  */
 int
 usart_putc (usart_t usart, char ch)
 {
     usart_dev_t *dev = usart;
 
+    if (! dev->block && ! usart_write_ready_p (usart))
+    {
+        errno = EAGAIN;
+        return - 1;
+    }
+
     return dev->putch (ch);
 }
 
 
-/* Write string.  This blocks.  */
+/* Write string.  */
 int
 usart_puts (usart_t usart, const char *str)
 {
@@ -153,35 +175,57 @@ usart_puts (usart_t usart, const char *str)
 }
 
 
-/** Read size bytes.  This will block until the desired number of
-    bytes have been read.  */
+/** Read size bytes.  */
 int16_t
 usart_read (usart_t usart, void *data, uint16_t size)
 {
-    uint16_t left = size;
+    uint16_t count = 0;
     char *buffer = data;
 
-    while (left)
+    for (count = 0; count < size; count++)
     {
-        *buffer++ = usart_getc (usart);
-        left--;
+        int ch;
+
+        ch = usart_getc (usart);
+        if (ch < 0)
+        {
+            if (count == 0 && errno == EAGAIN)
+                return -1;
+            return count;
+        }
+        *buffer++ = ch;
     }
     return size;
 }
 
 
-/** Write size bytes.  This will block until the desired number of
-    bytes have been transmitted.  */
+/** Write size bytes.  */
 int16_t
 usart_write (usart_t usart, const void *data, uint16_t size)
 {
-    uint16_t left = size;
+    uint16_t count = 0;
     const char *buffer = data;
 
-    while (left)
+    for (count = 0; count < size; count++)
     {
-        usart_putc (usart, *buffer++);
-        left--;
+        int ret;
+
+        ret = usart_putc (usart, *buffer++);
+        if (ret < 0)
+        {
+            if (count == 0 && errno == EAGAIN)
+                return -1;
+            return count;
+        }
     }
     return size;
 }
+
+
+const sys_file_ops_t usart_file_ops =
+{
+    .read = (void *)usart_read,
+    .write = (void *)usart_write
+};
+
+
