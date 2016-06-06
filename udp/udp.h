@@ -60,6 +60,15 @@ typedef struct usb_setup_struct
 } udp_setup_t;
 
 
+/** usb configuration structure.  */
+typedef struct
+{
+    /* Non-zero for blocking I/O.  */
+    bool block;
+}
+udp_cfg_t;
+
+
 typedef struct udp_dev_struct udp_dev_t;
 
 typedef udp_dev_t *udp_t;
@@ -113,6 +122,6 @@ void udp_shutdown (void);
 /** Return non-zero if configured.  */
 bool udp_poll (udp_t udp);
 
-udp_t udp_init (udp_request_handler_t handler, void *arg);
+udp_t udp_init (udp_cfg_t * cfg, udp_request_handler_t handler, void *arg);
 
 #endif

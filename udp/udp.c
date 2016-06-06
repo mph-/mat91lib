@@ -458,6 +458,7 @@ struct udp_dev_struct
     volatile udp_state_t prev_state;
     udp_setup_t setup;
     udp_ep_info_t eps[UDP_EP_NUM];
+    bool block;
 };
 
 
@@ -886,7 +887,8 @@ udp_endpoint_read_ready_p (udp_t udp, udp_ep_t endpoint)
  * 
  */
 static unsigned int 
-udp_endpoint_fifo_read1 (udp_t udp, udp_ep_t endpoint, uint8_t *buffer, int len)
+udp_endpoint_fifo_read1 (udp_t udp, udp_ep_t endpoint, 
+                         uint8_t *buffer, int len)
 {
     udp_ep_info_t *pep = &udp->eps[endpoint];
     unsigned int bytes;
@@ -921,7 +923,6 @@ udp_endpoint_fifo_read1 (udp_t udp, udp_ep_t endpoint, uint8_t *buffer, int len)
 
     return bytes;
 }
-
 
 
 static unsigned int 
@@ -1212,7 +1213,6 @@ udp_endpoint_stall_handler (udp_t udp, udp_ep_t endpoint)
         UDP_CSR_CLR (endpoint, UDP_CSR_FORCESTALL);
 }
 
-
     
 /**
  * UDP endpoint handler
@@ -1500,34 +1500,66 @@ udp_endpoint_write (udp_t udp, udp_ep_t endpoint,
 
 
 ssize_t
-udp_read (udp_t udp, void *buffer, size_t size)
+udp_read (udp_t udp, void *data, size_t size)
 {
-    ssize_t ret;
+    uint8_t *buffer = data;
+    size_t left;
+    size_t count;
 
-    ret = udp_endpoint_read (udp, UDP_EP_OUT, buffer, size);
-    if (ret == 0 && size != 0)
+    count = 0;
+    left = size;
+    while (left)
     {
-        /* Would block.  */
-        errno = EAGAIN;
-        return -1;
+        int ret;
+
+        ret = udp_endpoint_read (udp, UDP_EP_OUT, buffer, left);
+
+        if (ret == 0 && ! udp->block)
+        {
+            if (count == 0)
+            {
+                errno = EAGAIN;
+                return -1;
+            }
+            return count;
+        }
+        count += ret;
+        left -= ret;
+        buffer += ret;
     }
-    return ret;
+    return count;
 }
 
 
 ssize_t
-udp_write (udp_t udp, const void *buffer, size_t size)
+udp_write (udp_t udp, const void *data, size_t size)
 {
-    ssize_t ret;
+    const uint8_t *buffer = data;
+    size_t left;
+    size_t count;
 
-    ret = udp_endpoint_write (udp, UDP_EP_IN, buffer, size);
-    if (ret == 0 && size != 0)
+    count = 0;
+    left = size;
+    while (left)
     {
-        /* Would block.  */
-        errno = EAGAIN;
-        return -1;
+        int ret;
+
+        ret = udp_endpoint_write (udp, UDP_EP_IN, buffer, left);
+
+        if (ret == 0 && ! udp->block)
+        {
+            if (count == 0)
+            {
+                errno = EAGAIN;
+                return -1;
+            }
+            return count;
+        }
+        count += ret;
+        left -= ret;
+        buffer += ret;
     }
-    return ret;
+    return count;
 }
 
 
@@ -1745,10 +1777,11 @@ udp_vbus_interrupt_handler (void)
 #endif
 
 
-udp_t udp_init (udp_request_handler_t request_handler, void *arg)
+udp_t udp_init (udp_cfg_t *cfg, udp_request_handler_t request_handler, void *arg)
 {
     udp_t udp = &udp_dev;
 
+    udp->block = cfg->block;
     udp->request_handler = request_handler;
     udp->request_handler_arg = arg;
     udp->setup.request = 0;
