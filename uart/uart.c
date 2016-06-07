@@ -55,10 +55,15 @@ static uart_dev_t uart1_dev = {uart1_putc, uart1_getc,
 
 
 uart_t 
-uart_init (uint8_t channel,
-           uint16_t baud_divisor)
+uart_init (const uart_cfg_t *cfg)
 {
     uart_dev_t *dev = 0;
+    uint16_t baud_divisor;
+
+    if (cfg->baud_rate == 0)
+        baud_divisor = cfg->baud_divisor;
+    else
+        baud_divisor = UART_BAUD_DIVISOR (cfg->baud_rate);
 
 #if UART0_ENABLE
     if (channel == 0)
@@ -75,6 +80,8 @@ uart_init (uint8_t channel,
         dev = &uart1_dev;
     }
 #endif
+
+    dev->block = cfg->block;
 
     return dev;
 }
@@ -110,27 +117,39 @@ uart_write_finished_p (uart_t uart)
 }
 
 
-/* Read character.  This blocks.  */
+/* Read character.  */
 int
 uart_getc (uart_t uart)
 {
     uart_dev_t *dev = uart;
 
+    if (! dev->block && ! uart_read_ready_p (uart))
+    {
+        errno = EAGAIN;
+        return - 1;
+    }
+
     return dev->getch ();
 }
 
 
-/* Write character.  This blocks.  */
+/* Write character.  */
 int
 uart_putc (uart_t uart, char ch)
 {
     uart_dev_t *dev = uart;
 
+    if (! dev->block && ! uart_write_ready_p (uart))
+    {
+        errno = EAGAIN;
+        return - 1;
+    }
+
     return dev->putch (ch);
 }
 
 
-/* Write string.  This blocks.  */
+/* Write string.  */
 int
 uart_puts (uart_t uart, const char *str)
 {
@@ -142,3 +161,57 @@ uart_puts (uart_t uart, const char *str)
 
     return 1;
 }
+
+
+/** Read size bytes.  */
+int16_t
+uart_read (uart_t uart, void *data, uint16_t size)
+{
+    uint16_t count = 0;
+    char *buffer = data;
+
+    for (count = 0; count < size; count++)
+    {
+        int ch;
+
+        ch = uart_getc (uart);
+        if (ch < 0)
+        {
+            if (count == 0 && errno == EAGAIN)
+                return -1;
+            return count;
+        }
+        *buffer++ = ch;
+    }
+    return size;
+}
+
+
+/** Write size bytes.  */
+int16_t
+uart_write (uart_t uart, const void *data, uint16_t size)
+{
+    uint16_t count = 0;
+    const char *buffer = data;
+
+    for (count = 0; count < size; count++)
+    {
+        int ret;
+
+        ret = uart_putc (uart, *buffer++);
+        if (ret < 0)
+        {
+            if (count == 0 && errno == EAGAIN)
+                return -1;
+            return count;
+        }
+    }
+    return size;
+}
+
+
+const sys_file_ops_t uart_file_ops =
+{
+    .read = (void *)uart_read,
+    .write = (void *)uart_write
+};

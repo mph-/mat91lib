@@ -9,6 +9,20 @@
 #include "config.h"
 #include "uart0.h"
 
+/** uart configuration structure.  */
+typedef struct
+{
+    /* 0 for UART0, 1 for UART1.  */
+    uint8_t channel;
+    /* Baud rate.  */
+    uint32_t baud_rate;
+    /* Baud rate divisor (this is used if baud_rate is zero).  */
+    uint32_t baud_divisor;
+    /* Non-zero for blocking I/O.  */
+    bool block;
+}
+uart_cfg_t;
+
 typedef struct uart_dev_struct uart_dev_t;
 
 typedef uart_dev_t *uart_t;
@@ -18,8 +32,7 @@ typedef uart_dev_t *uart_t;
 
 /* Initialise UART for desired channel, baud rate, etc.  */
 uart_t 
-uart_init (uint8_t channel,
-            uint16_t baud_divisor);
+uart_init (const uart_cfg_t *cfg);
 
 
 /** Return non-zero if there is a character ready to be read without blocking.  */
