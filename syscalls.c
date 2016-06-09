@@ -8,6 +8,7 @@
  */
 
 #include "config.h"
+#include "delay.h"
 #include <errno.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -514,4 +515,72 @@ sys_device_register (const char *devicename, const sys_file_ops_t *file_ops,
     }
 
     return 0;
+}
+
+
+/* Helper blocking read function for device drivers.  */
+ssize_t
+sys_read_timeout (void *dev, void *data, size_t size,
+                  uint32_t timeout_us, sys_read_t dev_read)
+{
+    uint8_t *buffer = data;
+    size_t left;
+    size_t count;
+
+    count = 0;
+    left = size;
+    while (left && timeout_us)
+    {
+        int ret;
+
+        errno = 0;
+        ret = dev_read (dev, buffer, left);
+        if (ret < 0)
+        {
+            if (errno != EAGAIN)
+                return ret;
+            timeout_us--;
+            DELAY_US (1);
+            continue;
+        }
+
+        count += ret;
+        left -= ret;
+        buffer += ret;
+    }
+    return count;
+}
+
+
+/* Helper blocking write function for device drivers.  */
+ssize_t
+sys_write_timeout (void *dev, const void *data, size_t size,
+                   uint32_t timeout_us, sys_write_t dev_write)
+{
+    const uint8_t *buffer = data;
+    size_t left;
+    size_t count;
+
+    count = 0;
+    left = size;
+    while (left && timeout_us)
+    {
+        int ret;
+
+        errno = 0;
+        ret = dev_write (dev, buffer, left);
+        if (ret < 0)
+        {
+            if (errno != EAGAIN)
+                return ret;
+            timeout_us--;
+            DELAY_US (1);
+            continue;
+        }
+
+        count += ret;
+        left -= ret;
+        buffer += ret;
+    }
+    return count;
 }

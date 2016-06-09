@@ -78,4 +78,16 @@ int
 sys_device_register (const char *devicename, const sys_file_ops_t *file_ops,
                      void *arg);
 
+
+/** Helper blocking read function for device drivers.  */
+ssize_t
+sys_read_timeout (void *dev, void *data, size_t size,
+                  uint32_t timeout_us, sys_read_t dev_read);
+
+
+/** Helper blocking write function for device drivers.  */
+ssize_t
+sys_write_timeout (void *dev, const void *data, size_t size,
+                   uint32_t timeout_us, sys_write_t dev_write);
+
 #endif
