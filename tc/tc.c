@@ -66,46 +66,53 @@ static const pinmap_t tc_pins[] =
 static tc_dev_t tc_devices[TC_DEVICES_NUM];
 
 
-static
-uint32_t tc_handle_status_reg (tc_t tc)
+/** Interrupt handler.  */
+static void 
+tc_handler (tc_t tc)
 {
+    uint32_t status;
+    tc_counter_t overflows;
+    uint16_t counter_value;
+
     /* When the status register is read, the capture status
        flags are cleared!  */
-    uint32_t status = tc->base->TC_SR;
+    status = tc->base->TC_SR;
+    overflows = tc->overflows;
 
-    /* There is a race condition to fix.  This can occur 
-       if an overflow occurs after the capture event but
-       before the status register is read.  */
-    
-    int capture_state = 0;
+    /* There are three cases to handle:
+       A: The counter overflows between the capture event and checking status.
+       B: The counter overflows before the capture event and checking status.
+       C: The counter overflows after checking status.
+
+       With case B we will read a small value in the capture register.
+       If an overflow is flagged then we need to use the current
+       overflow count plus one.
+    */
 
     if (status & TC_SR_LDRAS)
     {
-        tc->captureA = (tc->overflows << 16) | tc->base->TC_RA;
-        capture_state |= BIT (TC_CAPTURE_A);
+        counter_value = tc->base->TC_RA;
+
+        if ((counter_value < 32768) && (status & TC_SR_COVFS))
+            tc->captureA = ((overflows + 1) << 16) | counter_value;
+        else
+            tc->captureA = (overflows << 16) | counter_value;
+        tc->capture_state |= BIT (TC_CAPTURE_A);
     }
 
     if (status & TC_SR_LDRBS)
     {
-        tc->captureB = (tc->overflows << 16) | tc->base->TC_RB;
-        capture_state |= BIT (TC_CAPTURE_B);
+        counter_value = tc->base->TC_RB;
+
+        if ((counter_value < 32768) && (status & TC_SR_COVFS))
+            tc->captureB = ((overflows + 1) << 16) | counter_value;
+        else
+            tc->captureB = (overflows << 16) | counter_value;
+        tc->capture_state |= BIT (TC_CAPTURE_B);
     }
 
     if (status & TC_SR_COVFS)
-        tc->overflows++;
-    
-    if (tc->onload && capture_state)
-    {
-        tc->onload (capture_state);
-    }
-
-    return status;
-}
-
-static
-void tc_handler (tc_t tc)
-{
-    tc_handle_status_reg (tc);
+        tc->overflows = overflows + 1;
 }
 
 
@@ -173,7 +180,7 @@ tc_counter_get (tc_t tc)
     /* Read counter value.  */
     counter_value = tc->base->TC_CV;
 
-    /* Check for overflows and service pending interrups.  */
+    /* Check for overflows and service pending interrupts.  */
     tc_handler (tc);
 
     if (overflows != tc->overflows)
@@ -203,19 +210,28 @@ tc_counter_get (tc_t tc)
 tc_counter_t
 tc_capture_get (tc_t tc, tc_capture_t reg)
 {
+    tc_counter_t ret = 0;
+
+    /* It might be better to have a ring buffer where capture events
+       are pushed.  This will avoid the use of a critical section.  */
+
+    irq_global_disable ();
+
     switch (reg)
     {
     case TC_CAPTURE_A:
         tc->capture_state &= ~BIT (TC_CAPTURE_A);
-        return tc->captureA;
+        ret = tc->captureA;
+        break;
 
     case TC_CAPTURE_B:
         tc->capture_state &= ~BIT (TC_CAPTURE_B);
-        return tc->captureB;
-        
-    default:
-        return 0;
+        ret = tc->captureB;
+        break;
     }
+
+    irq_global_enable ();
+    return ret;
 }
 
 
@@ -229,7 +245,7 @@ tc_capture_poll (tc_t tc)
 
     if (!irq_load_enabled)
     {
-        tc_handle_status_reg (tc);
+        tc_handler (tc);
     }
     
     return tc->capture_state;
@@ -562,7 +578,6 @@ tc_init (const tc_cfg_t *cfg)
 
     tc->overflows = 0;
     tc->capture_state = 0;
-    tc->onload = 0;
 
     irq_enable (ID_TC0 + TC_CHANNEL (tc));
 
@@ -613,13 +628,6 @@ tc_clock_sync (tc_t tc, tc_period_t period)
     irq_disable (id);
 
     tc_stop (tc);
-}
-
-
-void
-tc_onload_set (tc_t tc, tc_onload_function onload)
-{
-    tc->onload = onload;
 }
 
 

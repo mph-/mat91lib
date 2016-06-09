@@ -88,9 +88,6 @@ typedef uint16_t tc_capture_mask_t;
 typedef uint16_t tc_prescale_t;
 
 
-typedef void (* tc_onload_function) (int);
-
-
 /** TC configuration structure.  */
 typedef struct
 {
@@ -173,10 +170,6 @@ tc_shutdown (tc_t tc);
 
 void
 tc_clock_sync (tc_t tc, tc_period_t period);
-
-
-void
-tc_onload_set (tc_t tc, tc_onload_function onload);
 
 
 void
