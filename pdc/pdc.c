@@ -118,7 +118,9 @@ pdc_read_next (pdc_t pdc, void *buffer, uint16_t size)
 }
 
 
-
+/** This polls the PDC and updates the next transfer pointer and count
+    as appropriate from the list of descriptors.  It could be called
+    from an ISR.  */
 pdc_descriptor_t *
 pdc_read_poll (pdc_t pdc)
 {
@@ -129,7 +131,8 @@ pdc_read_poll (pdc_t pdc)
     if (!current)
         return 0;
 
-    if (pdc->base->PERIPH_RCR != 0)
+    /* When a transfer is complete, RNCR -> RCR and 0 -> RNCR.  */
+    if (pdc->base->PERIPH_RNCR != 0)
         return 0;
         
     pdc->rx.count++;
@@ -150,6 +153,9 @@ pdc_read_poll (pdc_t pdc)
 }
 
 
+/** This polls the PDC and updates the next transfer pointer and count
+    as appropriate from the list of descriptors.  It could be called
+    from an ISR.  */
 pdc_descriptor_t *
 pdc_write_poll (pdc_t pdc)
 {
@@ -160,7 +166,8 @@ pdc_write_poll (pdc_t pdc)
     if (!current)
         return 0;
 
-    if (pdc->base->PERIPH_TCR != 0)
+    /* When a transfer is complete, TNCR -> TCR and 0 -> TNCR.  */
+    if (pdc->base->PERIPH_TNCR != 0)
         return 0;
         
     pdc->tx.count++;
