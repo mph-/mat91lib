@@ -53,6 +53,7 @@ mcu_sleep (const mcu_sleep_cfg_t *cfg)
                 break;
             }
         }
+        /* What if the specified PIO is not a wakeup pin?  */
     }
     
     switch (cfg->mode)
@@ -69,12 +70,33 @@ mcu_sleep (const mcu_sleep_cfg_t *cfg)
         
         /* Exit from backup mode occurs if there is an event on the
            WKUPEN0-15 pins, supply monitor (SM), RTC alarm, or RTT
-           alarm.  The supply monitor checks the voltage on the VDDIO pin
-           if it is enabled.  */
+           alarm.  The supply monitor monitors the voltage on the
+           VDDIO pin if it is enabled.  The MCU is reset.  */
+        break;
+
+    case MCU_SLEEP_MODE_WAIT:
+        
+        /* This mode is for fast wakeup.  The clocks of the core,
+           peripherals and memories are stopped but these devices are
+           still powered.  */
+
+        /* TODO: set fast RC oscillator, set FLPM bitfield in PMC_FSMR,
+           set flash waitstate to 0, set WAITMODE bit in CKGR_MOR.  */
+
+        irq_global_enable ();
+        cpu_wfi ();
+        break;
+
+    case MCU_SLEEP_MODE_SLEEP:
+        
+        /* This mode is for very fast wakeup.  Only the core clock is
+           stopped.  The MCU can be woken from an interrupt.  */
+        irq_global_enable ();
+        cpu_wfi ();
+        break;
 
     default:
         return;
-        
     }
 }
 
