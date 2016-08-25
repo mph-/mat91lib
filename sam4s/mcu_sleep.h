@@ -21,12 +21,12 @@ typedef struct mcu_sleep_cfg_struct
 {
     mcu_sleep_mode_t mode;
     pio_t pio;
-    bool active_high;
-} mcu_sleep_mode_cfg_t;
+    bool active;
+} mcu_sleep_cfg_t;
 
 
 void
-mcu_sleep (mcu_sleep_mode_cfg_t *cfg);
+mcu_sleep (const mcu_sleep_cfg_t *cfg);
 
 
 #endif /* MCU_SLEEP_H  */

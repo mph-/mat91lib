@@ -227,5 +227,3 @@ const sys_file_ops_t usart_file_ops =
     .read = (void *)usart_read,
     .write = (void *)usart_write
 };
-
-

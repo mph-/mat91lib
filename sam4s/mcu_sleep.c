@@ -11,7 +11,7 @@
 
 
 void
-mcu_sleep (mcu_sleep_mode_cfg_t *cfg)
+mcu_sleep (const mcu_sleep_cfg_t *cfg)
 {
     static const pio_t wakeup_pins[] = 
         {
@@ -44,7 +44,7 @@ mcu_sleep (mcu_sleep_mode_cfg_t *cfg)
         {
             if (wakeup_pins[i] == cfg->pio)
             {
-                if (cfg->active_high)
+                if (cfg->active)
                     SUPC->SUPC_WUIR = BIT (i) | BIT (i + 16);
                 else
                     SUPC->SUPC_WUIR = BIT (i);
@@ -57,7 +57,7 @@ mcu_sleep (mcu_sleep_mode_cfg_t *cfg)
     
     switch (cfg->mode)
     {
-    case  MCU_SLEEP_MODE_BACKUP:
+    case MCU_SLEEP_MODE_BACKUP:
 
         /* For backup mode, set DEEPSLEEP bit in CPU system control
            register and set the VROFF bit of SUPC_CR.  The CPU is
@@ -69,7 +69,7 @@ mcu_sleep (mcu_sleep_mode_cfg_t *cfg)
         
         /* Exit from backup mode occurs if there is an event on the
            WKUPEN0-15 pins, supply monitor (SM), RTC alarm, or RTT
-           alarm.  The supply monitor monitors the voltage on the VDDIO pin
+           alarm.  The supply monitor checks the voltage on the VDDIO pin
            if it is enabled.  */
 
     default:

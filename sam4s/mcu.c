@@ -64,7 +64,7 @@
 
 #define MCU_PLL_COUNT 0x3fu
 
-/* TODO: the requried number of slow clock cycles divided by 8.  */
+/* TODO: the required number of slow clock cycles divided by 8.  */
 #define MCU_MAINCK_COUNT 100
 
 #define MCU_USB_LOG2_DIV 0
