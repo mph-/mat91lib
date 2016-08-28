@@ -47,8 +47,9 @@ typedef struct pwm_cfg_struct
     pwm_period_t duty;
     pwm_align_t align;
     pwm_polarity_t polarity;
-    pwm_frequency_t frequency;         /* Hz  (this overrides period)  */
     pio_config_t stop_state;
+    pwm_frequency_t frequency;  /* Hz  (overrides period)  */
+    uint16_t duty_ppt;          /* parts per thousand (overrides duty)  */
 } pwm_cfg_t;
 
 typedef uint8_t pwm_channel_mask_t;
@@ -97,7 +98,7 @@ pwm_duty_get (pwm_t pwm);
     thousand).  This will block if the PWM is running until the end of
     a cycle.  */
 unsigned int
-pwm_duty_fraction_set (pwm_t pwm, unsigned int duty_ppt);
+pwm_duty_ppt_set (pwm_t pwm, unsigned int duty_ppt);
 
 
 /** Start selected channel.  */

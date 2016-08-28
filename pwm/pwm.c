@@ -221,7 +221,7 @@ pwm_duty_get (pwm_t pwm)
     thousand).  This will block if the PWM is running until the end of
     a cycle.  */
 unsigned int
-pwm_duty_fraction_set (pwm_t pwm, unsigned int duty_ppt)
+pwm_duty_ppt_set (pwm_t pwm, unsigned int duty_ppt)
 {
     pwm_period_t duty;
     pwm_period_t period;
@@ -271,6 +271,7 @@ pwm_init (const pwm_cfg_t *cfg)
     pwm_dev_t *pwm;
     unsigned int i;
     pwm_period_t period;
+    pwm_period_t duty;
 
     /* Find PWM channel matching selected PIO.  */
     pin = 0;
@@ -298,8 +299,12 @@ pwm_init (const pwm_cfg_t *cfg)
     period = cfg->period;
     if (cfg->frequency)
         period = PWM_PERIOD_DIVISOR (cfg->frequency);
+
+    duty = cfg->duty;
+    if (cfg->duty_ppt)
+        duty = period * cfg->duty_ppt / 1000;
     
-    pwm_config (pwm, period, cfg->duty, cfg->align, cfg->polarity);
+    pwm_config (pwm, period, duty, cfg->align, cfg->polarity);
 
     return pwm;
 }
