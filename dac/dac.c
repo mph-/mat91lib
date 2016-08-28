@@ -1,7 +1,7 @@
 /** @file   dac.c
-    @author 
-    @date   12 February 2008
-    @brief  Analogue to digital converter routines for AT91SAM7 processors
+    @author M. P. Hayes
+    @date   28 August 2016
+    @brief  Analogue to digital converter routines for AT91SAM processors
 */
 
 #include "dac.h"
@@ -10,6 +10,11 @@
 
 /* On reset the the PIO pins are configured as inputs with pullups.
    To make a PIO pin an DAC pin requires programming DAC_CHER.
+
+   The SAM4S requires 25 clocks for a conversion.
+
+   Note, the analog output voltage droops after 20 microseconds.
+   There is an automatic refresh mode.
 */
 
 
@@ -49,13 +54,7 @@ dac_reset (void)
 void
 dac_sleep (dac_t dac)
 {
-    dac_sample_t dummy;
-
-    /*  Errata for SAM7S256:RevisionB states that the DAC will not be
-        placed into sleep mode until a conversion has completed.  */
-    dac = dac_init (0);
     DAC->DACC_MR |= DACC_MR_SLEEP;
-    dac_read (dac, &dummy, sizeof (dummy));
 }
 
 
@@ -120,6 +119,21 @@ dac_clock_speed_kHz_set (dac_t dac, dac_clock_speed_t clock_speed_kHz)
 }
 
 
+/** Set number of clocks between refreshes or 0 to disable.  */
+static uint16_t
+dac_refresh_clocks_set (dac_t dac, uint16_t refresh_clocks)
+{
+    uint16_t refresh;
+
+    /* Need to use multiple of 1024 clocks so round to
+       nearest multiple.   */
+    refresh = (refresh_clocks + (1 << 9)) >> 10;
+    BITS_INSERT (dac->MR, refresh, 8, 15);
+
+    return refresh << 10;
+}
+
+
 /** Set the channels to convert.
     This is not actioned until dac_channels_select called.  */
 bool
@@ -176,6 +190,8 @@ dac_config_set (dac_t dac, const dac_cfg_t *cfg)
         dac_channels_set (dac, BIT (cfg->channel));
     else
         dac_channels_set (dac, cfg->channels);
+
+    dac_refresh_clocks_set (dac, cfg->refresh_clocks);
 }
 
 
@@ -238,12 +254,6 @@ dac_init (const dac_cfg_t *cfg)
     /* Note, the DAC is not configured until dac_config is called.  */
     dac_config (dac);
 
-#if 0
-    /* I'm not sure why a dummy read is required; it is probably a
-       quirk of the SAM7.  This will require a software trigger... */
-    dac_read (dac, &dummy, sizeof (dummy));
-#endif
-
     return dac;
 }
 
@@ -256,10 +266,10 @@ dac_ready_p (dac_t dac)
 }
 
 
-/** Blocking read.  This will hang if a trigger is not supplied
+/** Blocking write.  This will hang if a trigger is not supplied
     (except for software triggering mode).  */
 int8_t
-dac_read (dac_t dac, void *buffer, uint16_t size)
+dac_write (dac_t dac, void *buffer, uint16_t size)
 {
     uint16_t i;
     uint16_t samples;

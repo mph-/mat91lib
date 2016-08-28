@@ -44,6 +44,7 @@ typedef struct dac_dev_struct
     dac_channels_t channels;
     dac_trigger_t trigger;
     dac_clock_divisor_t clock_divisor;
+    uint16_t refresh_clocks;
     uint8_t bits;
     uint32_t MR;
 } dac_dev_t;
@@ -68,6 +69,9 @@ typedef struct dac_cfg_struct
 
     /* Clock speed in kHz (maximum).  */
     dac_clock_speed_t clock_speed_kHz;    
+
+    /* Number of clocks between refreshes.  */
+    uint16_t refresh_clocks;
 } dac_cfg_t;
 
 
@@ -99,9 +103,9 @@ bool
 dac_ready_p (dac_t dac);
 
 
-/** Blocking read.  */
+/** Blocking write.  */
 int8_t
-dac_read (dac_t dac, void *buffer, uint16_t size);
+dac_write (dac_t dac, void *buffer, uint16_t size);
 
 
 /** Puts DAC into sleep mode.  */
