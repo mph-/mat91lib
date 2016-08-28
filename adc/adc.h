@@ -10,11 +10,13 @@
 
 #include "config.h"
 
-/** ADC channels.  */
+/** ADC channels.  Note, channel 15 on the SAM4S is the temp. sensor.  */
 typedef enum
 {
     ADC_CHANNEL_0, ADC_CHANNEL_1, ADC_CHANNEL_2, ADC_CHANNEL_3, 
     ADC_CHANNEL_4, ADC_CHANNEL_5, ADC_CHANNEL_6, ADC_CHANNEL_7,
+    ADC_CHANNEL_8, ADC_CHANNEL_9, ADC_CHANNEL_10, ADC_CHANNEL_11,
+    ADC_CHANNEL_12, ADC_CHANNEL_13, ADC_CHANNEL_14, ADC_CHANNEL_15,
     ADC_CHANNEL_NUM
 } adc_channel_t;
 
@@ -26,6 +28,15 @@ typedef enum
     ADC_TRIGGER_TC0, ADC_TRIGGER_TC1, ADC_TRIGGER_TC2,
     ADC_TRIGGER_PWM0, ADC_TRIGGER_PWM1
 } adc_trigger_t;
+
+
+typedef enum 
+{
+    ADC_COMPARISON_MODE_LOW,
+    ADC_COMPARISON_MODE_HIGH,
+    ADC_COMPARISON_MODE_IN,
+    ADC_COMPARISON_MODE_OUT
+} adc_comparison_mode_t;
 
 
 /** ADC sample size.  */
@@ -121,6 +132,20 @@ adc_enable (adc_t adc);
 
 void
 adc_disable (adc_t adc);
+
+
+/** Returns true if a comparison event detected.  */
+bool
+adc_comparison_p (adc_t adc);
+
+
+/** The ADC can generate an event if the ADC value is above
+    a high threshold, below a low threshold, between the thresholds,
+    or outside the thresholds.  */
+int8_t
+adc_comparison_set (adc_t adc, adc_channel_t channel, bool all_channels,
+                    adc_comparison_mode_t mode, uint16_t low_threshold,
+                    uint16_t high_threshold);
 
 
 /** Initalises the ADC registers for specified configuration.  */

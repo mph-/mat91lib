@@ -28,7 +28,8 @@
    It then waits for the next trigger.
 
    SAM4S: A repetitive 16 channel sequence can be programmed using
-   ADC_SEQR1 and ADC_SEQR2 (enabled by USEQ in ADC_MR).
+   ADC_SEQR1 and ADC_SEQR2 (enabled by USEQ in ADC_MR).  This is not
+   supported yet.
 
    The minimum impedance (ohms) for the SAM7S driving the ADC is given by:
    
@@ -46,7 +47,8 @@
 */
 
 
-/* There is no limit.  */
+/* There is no limit.  This is arbitrary.  Note each device can
+   support multiple channels.  */
 #ifndef ADC_DEVICES_NUM
 #define ADC_DEVICES_NUM 8
 #endif
@@ -86,7 +88,7 @@ static adc_dev_t adc_devices[ADC_DEVICES_NUM];
 static adc_dev_t *adc_config_last = 0;
 
 
-/* Resets ADC.  */
+/** Reset ADC.  */
 static void
 adc_reset (void)
 {
@@ -94,7 +96,7 @@ adc_reset (void)
 }
 
 
-/** Puts ADC into sleep mode.
+/** Put ADC into sleep mode.
     It should wake on next trigger.  */
 void
 adc_sleep (adc_t adc)
@@ -109,7 +111,7 @@ adc_sleep (adc_t adc)
 }
 
 
-/* Set the ADC triggering.  */
+/** Set the ADC triggering.  */
 void
 adc_trigger_set (adc_t adc, adc_trigger_t trigger) 
 {
@@ -134,7 +136,7 @@ adc_trigger_set (adc_t adc, adc_trigger_t trigger)
 }
 
 
-/* Set the clock divider (prescaler).  */
+/** Set the clock divider (prescaler).  */
 static void
 adc_clock_divisor_set (adc_t adc, adc_clock_divisor_t clock_divisor) 
 {
@@ -151,6 +153,7 @@ adc_clock_divisor_set (adc_t adc, adc_clock_divisor_t clock_divisor)
 }
 
 
+/** Set clock speed.  */
 adc_clock_speed_t
 adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
 {
@@ -187,7 +190,8 @@ adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
 }
 
 
-/* This does not select the channel until adc_channels_select called.  */
+/** Set the channels to convert.
+    This is not actioned until adc_channels_select called.  */
 bool
 adc_channels_set (adc_t adc, adc_channels_t channels)
 {
@@ -196,6 +200,7 @@ adc_channels_set (adc_t adc, adc_channels_t channels)
 }
 
 
+/** Select the channels to convert.  */
 static void
 adc_channels_select (adc_t adc)
 {
@@ -204,6 +209,7 @@ adc_channels_select (adc_t adc)
 }
 
 
+/** Force an ADC conversion.  */
 static void
 adc_conversion_start (adc_t adc)
 {
@@ -212,6 +218,7 @@ adc_conversion_start (adc_t adc)
 }
 
 
+/** Set number of bits to convert.  */
 uint8_t
 adc_bits_set (adc_t adc, uint8_t bits)
 {
@@ -386,6 +393,38 @@ adc_read (adc_t adc, void *buffer, uint16_t size)
     ADC->ADC_CHDR = ~0;
 
     return samples * sizeof (adc_sample_t);
+}
+
+
+/** Returns true if a comparison event detected.  */
+bool
+adc_comparison_p (adc_t adc)
+{
+    return (ADC->ADC_ISR & ADC_ISR_COMPE) != 0;
+}
+
+
+/** The ADC can generate an event if the ADC value is above
+    a high threshold, below a low threshold, between the thresholds,
+    or outside the thresholds.  */
+int8_t
+adc_comparison_set (adc_t adc, adc_channel_t channel, bool all_channels,
+                    adc_comparison_mode_t mode, uint16_t low_threshold,
+                    uint16_t high_threshold)
+{
+    uint32_t emr = 0;
+    uint32_t cwr = 0;
+
+    BITS_INSERT(emr, mode, 0, 1);
+    BITS_INSERT(emr, channel, 4, 7);
+    BITS_INSERT(emr, all_channels, 9, 9);
+    ADC->ADC_EMR = emr;
+
+    BITS_INSERT(cwr, low_threshold, 0, 11);
+    BITS_INSERT(cwr, low_threshold, 16, 27);
+    ADC->ADC_CWR = cwr;    
+
+    return 1;
 }
 
 
