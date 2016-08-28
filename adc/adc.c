@@ -1,7 +1,7 @@
 /** @file   adc.c
-    @author 
+    @author M. P. Hayes
     @date   12 February 2008
-    @brief  Analogue to digital converter routines for AT91SAM7 processors
+    @brief  Analogue to digital converter routines for AT91SAM processors
 */
 
 #include "adc.h"

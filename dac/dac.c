@@ -187,9 +187,20 @@ dac_config_set (dac_t dac, const dac_cfg_t *cfg)
     dac_clock_speed_kHz_set (dac, cfg->clock_speed_kHz);
     dac_trigger_set (dac, cfg->trigger);
     if (cfg->channels == 0)
+    {
         dac_channels_set (dac, BIT (cfg->channel));
+        /* Select channel.  */
+        BITS_INSERT(dac->MR, BIT (cfg->channel), 16, 17);
+        /* Clear tag bit.  */
+        BITS_INSERT(dac->MR, 0, 20, 20);
+    }
     else
+    {
         dac_channels_set (dac, cfg->channels);
+        /* Set tag bit.  In this mode, bits 12 and 13 of the data
+           specify the channel.  */
+        BITS_INSERT(dac->MR, 1, 20, 20);
+    }
 
     dac_refresh_clocks_set (dac, cfg->refresh_clocks);
 }
@@ -282,18 +293,12 @@ dac_write (dac_t dac, void *buffer, uint16_t size)
 
     for (i = 0; i < samples; i++)
     {
-        /* When the DAC peripheral gets a trigger, it converts all the
-           enabled channels consecutively in numerical order.  */
-
         /* Should have timeout, especially for external trigger.  */
         while (!dac_ready_p (dac))
             continue;
 
         DAC->DACC_CDR = data[i];
     }
-
-    /* Disable channel.  */
-    DAC->DACC_CHDR = ~0;
 
     return samples * sizeof (dac_sample_t);
 }
