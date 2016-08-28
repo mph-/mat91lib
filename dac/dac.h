@@ -1,0 +1,132 @@
+/** @file   dac.h
+    @author M. P. Hayes, UCECE
+    @date   3 Feb 2005
+
+    @brief Routines to use AT91 onboard DAC in polling mode.
+*/
+
+#ifndef DAC_H
+#define DAC_H
+
+#include "config.h"
+
+/** DAC channels.  */
+typedef enum
+{
+    DAC_CHANNEL_0, DAC_CHANNEL_1, DAC_CHANNEL_NUM
+} dac_channel_t;
+
+
+typedef enum 
+{
+    DAC_TRIGGER_SW,
+    DAC_TRIGGER_EXT,
+    DAC_TRIGGER_TC0, DAC_TRIGGER_TC1, DAC_TRIGGER_TC2,
+    DAC_TRIGGER_PWM0, DAC_TRIGGER_PWM1
+} dac_trigger_t;
+
+
+/** DAC sample size.  */
+typedef uint16_t dac_sample_t;
+
+/** Bit mask to specify enabled channels.  */
+typedef uint16_t dac_channels_t;
+
+
+typedef uint16_t dac_clock_divisor_t;
+
+
+typedef uint32_t dac_clock_speed_t;
+
+
+typedef struct dac_dev_struct
+{
+    dac_channels_t channels;
+    dac_trigger_t trigger;
+    dac_clock_divisor_t clock_divisor;
+    uint8_t bits;
+    uint32_t MR;
+} dac_dev_t;
+
+
+typedef dac_dev_t *dac_t;
+
+
+typedef struct dac_cfg_struct
+{
+    /* This specifies the channel if the channels field is zero.  */
+    dac_channel_t channel;
+
+    /* This specifies the channels to convert as a bitmask.  */
+    dac_channels_t channels;
+
+    /* Conversion bits.  */
+    uint8_t bits;
+
+    /* Trigger source.  */
+    dac_trigger_t trigger;
+
+    /* Clock speed in kHz (maximum).  */
+    dac_clock_speed_t clock_speed_kHz;    
+} dac_cfg_t;
+
+
+void
+dac_trigger_set (dac_t dac, dac_trigger_t trigger);
+
+
+dac_clock_speed_t
+dac_clock_speed_kHz_set (dac_t dac, dac_clock_speed_t clock_speed_kHz);
+
+
+uint8_t
+dac_bits_set (dac_t dac, uint8_t bits);
+
+
+bool
+dac_channels_set (dac_t dac, dac_channels_t channels);
+
+
+/** Configure DAC peripheral registers in preparation for a conversion.
+    This is only needed for nefarious purposes since this gets performed
+    at the start of dac_read.  */
+bool
+dac_config (dac_t dac);
+
+
+/** Returns true if a conversion has finished.  */
+bool
+dac_ready_p (dac_t dac);
+
+
+/** Blocking read.  */
+int8_t
+dac_read (dac_t dac, void *buffer, uint16_t size);
+
+
+/** Puts DAC into sleep mode.  */
+void
+dac_sleep (dac_t dac);
+
+
+Pdc *
+dac_pdc_get (dac_t dac);
+
+
+void
+dac_enable (dac_t dac);
+
+
+void
+dac_disable (dac_t dac);
+
+
+/** Initalises the DAC registers for specified configuration.  */
+dac_t 
+dac_init (const dac_cfg_t *cfg);
+
+
+void
+dac_shutdown (dac_t dac);
+
+#endif
