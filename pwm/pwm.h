@@ -38,6 +38,8 @@ typedef pwm_dev_t *pwm_t;
 
 typedef uint32_t pwm_period_t;
 
+typedef uint32_t pwm_frequency_t;
+
 typedef struct pwm_cfg_struct
 {
     pio_t pio;
@@ -45,6 +47,7 @@ typedef struct pwm_cfg_struct
     pwm_period_t duty;
     pwm_align_t align;
     pwm_polarity_t polarity;
+    pwm_frequency_t frequency;         /* Hz  (this overrides period)  */
     pio_config_t stop_state;
 } pwm_cfg_t;
 
@@ -66,6 +69,11 @@ pwm_init (const pwm_cfg_t *cfg);
     the end of a cycle.  */
 pwm_period_t
 pwm_period_set (pwm_t pwm, pwm_period_t period);
+
+
+/** Set waveform frequency in Hz.  */
+pwm_frequency_t
+pwm_frequency_set (pwm_t pwm, pwm_frequency_t frequency);
 
 
 /** Return the waveform period (in CPU clocks).  */
@@ -90,7 +98,6 @@ pwm_duty_get (pwm_t pwm);
     a cycle.  */
 unsigned int
 pwm_duty_fraction_set (pwm_t pwm, unsigned int duty_ppt);
-
 
 
 /** Start selected channel.  */

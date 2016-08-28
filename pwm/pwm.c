@@ -87,7 +87,7 @@ pwm_prescale_set (pwm_t pwm, uint8_t prescale)
 }
 
 
-/** Set  waveform period (in CPU clocks).  This will change the 
+/** Set waveform period (in CPU clocks).  This will change the 
     prescaler as required.  This will block if the PWM is running until 
     the end of a cycle.  */
 pwm_period_t
@@ -151,6 +151,18 @@ pwm_period_t
 pwm_period_get (pwm_t pwm)
 {
     return pwm->base->PWM_CPRD << pwm->prescale;
+}
+
+
+pwm_frequency_t
+pwm_frequency_set (pwm_t pwm, pwm_frequency_t frequency)
+{
+    pwm_period_t period;
+
+    period = PWM_PERIOD_DIVISOR (frequency);
+    period = pwm_period_set (pwm, period);
+
+    return F_CPU / period;
 }
 
 
@@ -258,6 +270,7 @@ pwm_init (const pwm_cfg_t *cfg)
     const pinmap_t *pin;
     pwm_dev_t *pwm;
     unsigned int i;
+    pwm_period_t period;
 
     /* Find PWM channel matching selected PIO.  */
     pin = 0;
@@ -282,7 +295,11 @@ pwm_init (const pwm_cfg_t *cfg)
 
     pwm_stop (pwm);
 
-    pwm_config (pwm, cfg->period, cfg->duty, cfg->align, cfg->polarity);
+    period = cfg->period;
+    if (cfg->frequency)
+        period = PWM_PERIOD_DIVISOR (cfg->frequency);
+    
+    pwm_config (pwm, period, cfg->duty, cfg->align, cfg->polarity);
 
     return pwm;
 }
