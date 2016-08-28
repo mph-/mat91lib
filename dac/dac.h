@@ -98,9 +98,14 @@ bool
 dac_config (dac_t dac);
 
 
-/** Returns true if a conversion has finished.  */
+/** Returns true if FIFO can be written.  */
 bool
 dac_ready_p (dac_t dac);
+
+
+/** Returns true if a conversion has finished.  */
+bool
+dac_conversion_finished_p (dac_t dac);
 
 
 /** Blocking write.  */

@@ -269,9 +269,17 @@ dac_init (const dac_cfg_t *cfg)
 }
 
 
-/** Returns true if a conversion has finished.  */
+/** Returns true if FIFO can be written.  */
 bool
 dac_ready_p (dac_t dac)
+{
+    return (DAC->DACC_ISR & DACC_ISR_TXRDY) != 0;
+}
+
+
+/** Returns true if a conversion has finished.  */
+bool
+dac_conversion_finished_p (dac_t dac)
 {
     return (DAC->DACC_ISR & DACC_ISR_TXRDY) != 0;
 }
