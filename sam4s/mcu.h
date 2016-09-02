@@ -28,7 +28,7 @@ mcu_init (void);
 
 
 void
-mcu_power_mode_low (void);
+mcu_select_slowclock (void);
 
 
 void
