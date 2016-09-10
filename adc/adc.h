@@ -59,6 +59,9 @@ typedef struct adc_dev_struct
     adc_clock_divisor_t clock_divisor;
     uint8_t bits;
     uint32_t MR;
+    uint32_t EMR;
+    uint32_t CWR;
+    bool tag;
 } adc_dev_t;
 
 
@@ -84,20 +87,44 @@ typedef struct adc_cfg_struct
 } adc_cfg_t;
 
 
+/** Set the ADC triggering.  This does not take affect until
+    adc_config called.  */
 void
 adc_trigger_set (adc_t adc, adc_trigger_t trigger);
 
 
+/** Set clock speed.  This does not take affect until adc_config
+    called.  */
 adc_clock_speed_t
 adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz);
 
 
+/** Set number of bits to convert.  This does not take affect until
+    adc_config called.  */
 uint8_t
 adc_bits_set (adc_t adc, uint8_t bits);
 
 
+/** Set the channels to convert.  This does not take affect until
+    adc_config called.  */
 bool
 adc_channels_set (adc_t adc, adc_channels_t channels);
+
+
+/** The ADC can generate an event if the ADC value is above a high
+    threshold, below a low threshold, between the thresholds, or
+    outside the thresholds.  This does not take affect until
+    adc_config called.  */
+int8_t
+adc_comparison_set (adc_t adc, adc_channel_t channel, bool all_channels,
+                    adc_comparison_mode_t mode, adc_sample_t low_threshold,
+                    adc_sample_t high_threshold);
+
+
+/** When set, the channel index is appended to the conversion data in
+    the MSBs.  This does not take affect until adc_config called.  */
+void
+adc_tag_set (adc_t adc, bool tag);
 
 
 /** Configure ADC peripheral registers in preparation for a conversion.
@@ -137,15 +164,6 @@ adc_disable (adc_t adc);
 /** Returns true if a comparison event detected.  */
 bool
 adc_comparison_p (adc_t adc);
-
-
-/** The ADC can generate an event if the ADC value is above
-    a high threshold, below a low threshold, between the thresholds,
-    or outside the thresholds.  */
-int8_t
-adc_comparison_set (adc_t adc, adc_channel_t channel, bool all_channels,
-                    adc_comparison_mode_t mode, uint16_t low_threshold,
-                    uint16_t high_threshold);
 
 
 /** Initalises the ADC registers for specified configuration.  */

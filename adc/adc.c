@@ -111,7 +111,8 @@ adc_sleep (adc_t adc)
 }
 
 
-/** Set the ADC triggering.  */
+/** Set the ADC triggering.  This does not take affect until
+    adc_config called.  */
 void
 adc_trigger_set (adc_t adc, adc_trigger_t trigger) 
 {
@@ -136,7 +137,8 @@ adc_trigger_set (adc_t adc, adc_trigger_t trigger)
 }
 
 
-/** Set the clock divider (prescaler).  */
+/** Set the clock divider (prescaler).  This does not take affect
+    until adc_config called.  */
 static void
 adc_clock_divisor_set (adc_t adc, adc_clock_divisor_t clock_divisor) 
 {
@@ -153,7 +155,8 @@ adc_clock_divisor_set (adc_t adc, adc_clock_divisor_t clock_divisor)
 }
 
 
-/** Set clock speed.  */
+/** Set clock speed.  This does not take affect until adc_config
+    called.  */
 adc_clock_speed_t
 adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
 {
@@ -190,8 +193,8 @@ adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
 }
 
 
-/** Set the channels to convert.
-    This is not actioned until adc_channels_select called.  */
+/** Set the channels to convert.  This does not take affect until
+    adc_config called.  */
 bool
 adc_channels_set (adc_t adc, adc_channels_t channels)
 {
@@ -200,25 +203,8 @@ adc_channels_set (adc_t adc, adc_channels_t channels)
 }
 
 
-/** Select the channels to convert.  */
-static void
-adc_channels_select (adc_t adc)
-{
-    ADC->ADC_CHDR = ~0;
-    ADC->ADC_CHER = adc->channels;
-}
-
-
-/** Force an ADC conversion.  */
-static void
-adc_conversion_start (adc_t adc)
-{
-    /* Software trigger.  */
-    ADC->ADC_CR = ADC_CR_START;
-}
-
-
-/** Set number of bits to convert.  */
+/** Set number of bits to convert.  This does not take affect until
+    adc_config called.  */
 uint8_t
 adc_bits_set (adc_t adc, uint8_t bits)
 {
@@ -253,18 +239,46 @@ adc_bits_set (adc_t adc, uint8_t bits)
 }
 
 
-bool
-adc_config (adc_t adc)
+/** The ADC can generate an event if the ADC value is above a high
+    threshold, below a low threshold, between the thresholds, or
+    outside the thresholds.  This does not take affect until
+    adc_config called.  */
+int8_t
+adc_comparison_set (adc_t adc, adc_channel_t channel, bool all_channels,
+                    adc_comparison_mode_t mode, adc_sample_t low_threshold,
+                    adc_sample_t high_threshold)
 {
-    adc_channels_select (adc);
+    uint32_t emr = 0;
+    uint32_t cwr = 0;
 
-    if (adc == adc_config_last)
-        return 1;
-    adc_config_last = adc;
+    BITS_INSERT(emr, mode, 0, 1);
+    BITS_INSERT(emr, channel, 4, 7);
+    BITS_INSERT(emr, all_channels, 9, 9);
+    adc->EMR = emr;
 
-    /* Set mode register.  */
-    ADC->ADC_MR = adc->MR;
+    BITS_INSERT(cwr, low_threshold, 0, 11);
+    BITS_INSERT(cwr, low_threshold, 16, 27);
+    adc->CWR = cwr;    
+
     return 1;
+}
+
+
+/** When set, the channel index is appended to the conversion data in
+    the MSBs.  This does not take affect until adc_config called.  */
+void
+adc_tag_set (adc_t adc, bool tag)
+{
+    BITS_INSERT (adc->EMR, tag, 24, 24);
+}
+
+
+/** Select the channels to convert.  */
+static void
+adc_channels_select (adc_t adc)
+{
+    ADC->ADC_CHDR = ~0;
+    ADC->ADC_CHER = adc->channels;
 }
 
 
@@ -278,6 +292,36 @@ adc_config_set (adc_t adc, const adc_cfg_t *cfg)
         adc_channels_set (adc, BIT (cfg->channel));
     else
         adc_channels_set (adc, cfg->channels);
+}
+
+
+/** Force an ADC conversion.  */
+static void
+adc_conversion_start (adc_t adc)
+{
+    /* Software trigger.  */
+    ADC->ADC_CR = ADC_CR_START;
+}
+
+
+/* Configure ADC controller.  */
+bool
+adc_config (adc_t adc)
+{
+    adc_channels_select (adc);
+
+    if (adc == adc_config_last)
+        return 1;
+    adc_config_last = adc;
+
+    /* Set mode register.  */
+    ADC->ADC_MR = adc->MR;
+
+    /* Set extended mode register.  */
+    ADC->ADC_EMR = adc->EMR;
+
+    ADC->ADC_CWR = adc->CWR;
+    return 1;
 }
 
 
@@ -331,6 +375,9 @@ adc_init (const adc_cfg_t *cfg)
     adc_devices_num++;
     
     adc->MR = 0;
+    adc->EMR = 0;
+    adc->CWR = 0;
+
     /* The transfer field must have a value of 2.  */
     BITS_INSERT (adc->MR, 2, 28, 29);
 
@@ -339,7 +386,7 @@ adc_init (const adc_cfg_t *cfg)
 
     adc_config_set (adc, cfg);
 
-    /* Note, the ADC is not configured until adc_config is called.  */
+    /* Note, the ADC is not configured until adc_config called.  */
     adc_config (adc);
 
 #if 0
@@ -401,30 +448,6 @@ bool
 adc_comparison_p (adc_t adc)
 {
     return (ADC->ADC_ISR & ADC_ISR_COMPE) != 0;
-}
-
-
-/** The ADC can generate an event if the ADC value is above
-    a high threshold, below a low threshold, between the thresholds,
-    or outside the thresholds.  */
-int8_t
-adc_comparison_set (adc_t adc, adc_channel_t channel, bool all_channels,
-                    adc_comparison_mode_t mode, uint16_t low_threshold,
-                    uint16_t high_threshold)
-{
-    uint32_t emr = 0;
-    uint32_t cwr = 0;
-
-    BITS_INSERT(emr, mode, 0, 1);
-    BITS_INSERT(emr, channel, 4, 7);
-    BITS_INSERT(emr, all_channels, 9, 9);
-    ADC->ADC_EMR = emr;
-
-    BITS_INSERT(cwr, low_threshold, 0, 11);
-    BITS_INSERT(cwr, low_threshold, 16, 27);
-    ADC->ADC_CWR = cwr;    
-
-    return 1;
 }
 
 
