@@ -19,6 +19,8 @@ struct pwm_dev_struct
     const pinmap_t *pin;
     pio_config_t stop_state;
     uint8_t prescale;
+    pwm_period_t duty;
+    pwm_period_t period;
 };
 
 
@@ -96,6 +98,16 @@ pwm_period_set (pwm_t pwm, pwm_period_t period)
     pwm_channel_mask_t mask;
     uint8_t prescale;
 
+    if (pwm->period != 0)
+    {
+        pwm_period_t duty;
+
+        /* If change period, need to adjust duty pro-rata.  */
+        duty = (period * pwm->duty) / pwm->period;
+        pwm_duty_set (pwm, duty);
+    }
+    pwm->period = period;
+
     /* If the period is greater than 16-bits then need to select the
        appropriate prescaler.  This can be from 1 to 1024 in powers 
        of 2.  */
@@ -166,13 +178,14 @@ pwm_frequency_set (pwm_t pwm, pwm_frequency_t frequency)
 }
 
 
-/** Set  waveform duty (in CPU clocks).  This will block if the 
+/** Set waveform duty (in CPU clocks).  This will block if the 
     PWM is running until the end of a cycle.  */
 pwm_period_t
 pwm_duty_set (pwm_t pwm, pwm_period_t duty)
 {
     pwm_channel_mask_t mask;
 
+    pwm->duty = duty;
     duty = duty >> pwm->prescale;
 
     mask = pwm_channel_mask (pwm);
@@ -289,6 +302,8 @@ pwm_init (const pwm_cfg_t *cfg)
     pwm->pin = pin;
     pwm->base = &PWM->PWM_CH_NUM[pin->channel];
     pwm->stop_state = cfg->stop_state;
+    pwm->duty = 0;
+    pwm->period = 0;
 
     /* Enable PWM peripheral clock (this is not required to configure
        the PWM).  */
