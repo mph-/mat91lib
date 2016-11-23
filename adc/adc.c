@@ -171,7 +171,7 @@ adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
        for 8 bit.  */
 
     clock_speed = clock_speed_kHz * 1000;
-    adc_clock_divisor_set (adc, ((F_CPU / 2) + clock_speed - 1) / clock_speed);
+    adc_clock_divisor_set (adc, ((F_CPU_UL / 2) + clock_speed - 1) / clock_speed);
     clock_speed = (F_CPU / 2) / adc->clock_divisor;
 
     /* STARTUP: With 24 MHz clock need 288 clocks to start up on
@@ -421,24 +421,35 @@ adc_read (adc_t adc, void *buffer, uint16_t size)
     samples = size / sizeof (adc_sample_t);
     data = buffer;
 
-    for (i = 0; i < samples; i++)
+    if (adc->trigger == ADC_TRIGGER_SW)
     {
-        /* When the ADC peripheral gets a trigger, it converts all the
-           enabled channels consecutively in numerical order.  */
-
-        if (adc->trigger == ADC_TRIGGER_SW)
+        for (i = 0; i < samples; i++)
+        {
+            /* When the ADC peripheral gets a trigger, it converts all
+               the enabled channels consecutively in numerical order.
+               FIXME */
             adc_conversion_start (adc);
 
-        /* Should have timeout, especially for external trigger.  */
-        while (!adc_ready_p (adc))
-            continue;
+            while (!adc_ready_p (adc))
+                continue;
 
-        data[i] = ADC->ADC_LCDR;
+            data[i] = ADC->ADC_LCDR;
+        }
+    }
+    else
+    {
+        for (i = 0; i < samples; i++)
+        {
+            /* Should have timeout, especially for external trigger.  */
+            while (!adc_ready_p (adc))
+                continue;
+            
+            data[i] = ADC->ADC_LCDR;
+        }
     }
 
-    /* Disable channel.  */
+    /* Disable channel(s).  */
     ADC->ADC_CHDR = ~0;
-
     return samples * sizeof (adc_sample_t);
 }
 

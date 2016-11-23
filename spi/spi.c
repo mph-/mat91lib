@@ -360,7 +360,7 @@ spi_clock_speed_kHz_set (spi_t spi, spi_clock_speed_t clock_speed_kHz)
     uint32_t clock_speed;
 
     clock_speed = clock_speed_kHz * 1000;
-    spi_clock_divisor_set (spi, (F_CPU + clock_speed - 1) / clock_speed);
+    spi_clock_divisor_set (spi, (F_CPU_UL + clock_speed - 1) / clock_speed);
     clock_speed = F_CPU / spi->clock_divisor;
 
     return clock_speed / 1000;

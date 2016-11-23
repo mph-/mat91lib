@@ -35,7 +35,7 @@ ssc_clock_speed_kHz_set (ssc_t ssc, ssc_clock_speed_t clock_speed_kHz)
     uint32_t clock_speed;
 
     clock_speed = clock_speed_kHz * 1000;
-    ssc_clock_divisor_set (ssc, ((F_CPU / 2) + clock_speed - 1) / clock_speed);
+    ssc_clock_divisor_set (ssc, ((F_CPU_UL / 2) + clock_speed - 1) / clock_speed);
     clock_speed = (F_CPU / 2) / ssc->clock_divisor;
 
     return clock_speed / 1000;

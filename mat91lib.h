@@ -52,4 +52,6 @@ typedef uint8_t bool;
 #error "MCU family not defined"
 #endif
 
+#define F_CPU_UL ((unsigned long)F_CPU)
+
 #endif

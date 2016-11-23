@@ -107,7 +107,7 @@ dac_clock_speed_kHz_set (dac_t dac, dac_clock_speed_t clock_speed_kHz)
     uint32_t clock_speed;
 
     clock_speed = clock_speed_kHz * 1000;
-    dac_clock_divisor_set (dac, ((F_CPU / 2) + clock_speed - 1) / clock_speed);
+    dac_clock_divisor_set (dac, ((F_CPU_UL / 2) + clock_speed - 1) / clock_speed);
     clock_speed = (F_CPU / 2) / dac->clock_divisor;
 
     /* STARTUP: With 24 MHz clock need 288 clocks to start up on
