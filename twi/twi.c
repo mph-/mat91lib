@@ -70,8 +70,8 @@ twi_init (const twi_cfg_t *cfg)
 
     case TWI_CHANNEL_1:
         twi->base = TWI1;
-        pio_config_set (TWD1_PIO, TWD0_PERIPH);
-        pio_config_set (TWCK1_PIO, TWCK0_PERIPH);
+        pio_config_set (TWD1_PIO, TWD1_PERIPH);
+        pio_config_set (TWCK1_PIO, TWCK1_PERIPH);
         break;
 
     default:
