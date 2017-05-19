@@ -99,7 +99,7 @@ usart_init (const usart_cfg_t *cfg)
 }
 
 
-/* Return non-zero if there is a character ready to be read.  */
+/** Return non-zero if there is a character ready to be read.  */
 bool
 usart_read_ready_p (usart_t usart)
 {
@@ -109,7 +109,7 @@ usart_read_ready_p (usart_t usart)
 }
 
 
-/* Return non-zero if a character can be written without blocking.  */
+/** Return non-zero if a character can be written without blocking.  */
 bool
 usart_write_ready_p (usart_t usart)
 {
@@ -119,7 +119,7 @@ usart_write_ready_p (usart_t usart)
 }
 
 
-/* Return non-zero if transmitter finished.  */
+/** Return non-zero if transmitter finished.  */
 bool
 usart_write_finished_p (usart_t usart)
 {
@@ -129,7 +129,7 @@ usart_write_finished_p (usart_t usart)
 }
 
 
-/* Read character.  */
+/** Read character.  */
 int
 usart_getc (usart_t usart)
 {
@@ -145,7 +145,7 @@ usart_getc (usart_t usart)
 }
 
 
-/* Write character.  */
+/** Write character.  */
 int
 usart_putc (usart_t usart, char ch)
 {
@@ -161,7 +161,8 @@ usart_putc (usart_t usart, char ch)
 }
 
 
-/* Write string.  */
+/** Write string.  In non-blocking mode this is likely to 
+    ignore all but the first character.  */
 int
 usart_puts (usart_t usart, const char *str)
 {

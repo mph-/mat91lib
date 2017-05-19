@@ -10,7 +10,7 @@
 #include "usart0.h"
 
 
-/** usart configuration structure.  */
+/** USART configuration structure.  */
 typedef struct
 {
     /* 0 for USART0, 1 for USART1.  */
@@ -19,7 +19,13 @@ typedef struct
     uint32_t baud_rate;
     /* Baud rate divisor (this is used if baud_rate is zero).  */
     uint32_t baud_divisor;
-    /* Non-zero for blocking I/O.  */
+    /* Non-zero for blocking I/O.  With blocking I/O, the functions do
+       not return until all the I/O has been transferred.  This is not
+       very efficient since there is a lot of busy-wait polling on a
+       non-multitasked system.  With non-blocking I/O it is necessary
+       to check function returns in case the data was not
+       transferred.  In this case the return value is -1 and errno
+       is set to EAGAIN.  */
     bool block;
 }
 usart_cfg_t;
@@ -56,7 +62,8 @@ int
 usart_putc (usart_t usart, char ch);
 
 
-/** Write string.  */
+/** Write string.  In non-blocking mode this is likely to 
+    ignore all but the first character.  */
 int
 usart_puts (usart_t usart, const char *str);
 
