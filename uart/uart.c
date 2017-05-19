@@ -33,6 +33,7 @@ struct uart_dev_struct
     bool (*read_ready_p) (void);
     bool (*write_ready_p) (void);
     bool (*write_finished_p) (void);
+    bool block;
 };
 
 
@@ -87,7 +88,7 @@ uart_init (const uart_cfg_t *cfg)
 }
 
 
-/* Return non-zero if there is a character ready to be read.  */
+/** Return non-zero if there is a character ready to be read.  */
 bool
 uart_read_ready_p (uart_t uart)
 {
@@ -97,7 +98,7 @@ uart_read_ready_p (uart_t uart)
 }
 
 
-/* Return non-zero if a character can be written without blocking.  */
+/** Return non-zero if a character can be written without blocking.  */
 bool
 uart_write_ready_p (uart_t uart)
 {
@@ -107,7 +108,7 @@ uart_write_ready_p (uart_t uart)
 }
 
 
-/* Return non-zero if transmitter finished.  */
+/** Return non-zero if transmitter finished.  */
 bool
 uart_write_finished_p (uart_t uart)
 {
@@ -117,7 +118,7 @@ uart_write_finished_p (uart_t uart)
 }
 
 
-/* Read character.  */
+/** Read character.  */
 int
 uart_getc (uart_t uart)
 {
@@ -133,7 +134,7 @@ uart_getc (uart_t uart)
 }
 
 
-/* Write character.  */
+/** Write character.  */
 int
 uart_putc (uart_t uart, char ch)
 {
@@ -149,7 +150,8 @@ uart_putc (uart_t uart, char ch)
 }
 
 
-/* Write string.  */
+/** Write string.  In non-blocking mode this is likely to 
+    ignore all but the first character.  */
 int
 uart_puts (uart_t uart, const char *str)
 {

@@ -9,7 +9,7 @@
 #include "config.h"
 #include "uart0.h"
 
-/** uart configuration structure.  */
+/** UART configuration structure.  */
 typedef struct
 {
     /* 0 for UART0, 1 for UART1.  */
@@ -18,7 +18,13 @@ typedef struct
     uint32_t baud_rate;
     /* Baud rate divisor (this is used if baud_rate is zero).  */
     uint32_t baud_divisor;
-    /* Non-zero for blocking I/O.  */
+    /* Non-zero for blocking I/O.  With blocking I/O, the functions do
+       not return until all the I/O has been transferred.  This is not
+       very efficient since there is a lot of busy-wait polling on a
+       non-multitasked system.  With non-blocking I/O it is necessary
+       to check function returns in case the data was not
+       transferred.  In this case the return value is -1 and errno
+       is set to EAGAIN.  */    
     bool block;
 }
 uart_cfg_t;
@@ -45,17 +51,18 @@ bool
 uart_write_ready_p (uart_t uart);
 
 
-/** Read character.  This blocks.  */
+/** Read character.  */
 int
 uart_getc (uart_t uart);
 
 
-/** Write character.  This blocks until character written to transmit buffer.  */
+/** Write character.  */
 int
 uart_putc (uart_t uart, char ch);
 
 
-/** Write string.  This blocks until last character written to transmit buffer.  */
+/** Write string.  In non-blocking mode this is likely to 
+    ignore all but the first character.  */
 int
 uart_puts (uart_t uart, const char *str);
 
