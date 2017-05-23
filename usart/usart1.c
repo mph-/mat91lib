@@ -34,6 +34,11 @@ usart1_init (uint16_t baud_divisor)
     pio_config_set (RXD1_PIO, RXD1_PERIPH);
     pio_config_set (TXD1_PIO, TXD1_PERIPH);
 
+#ifdef USART1_USE_HANDSHAKING
+    pio_config_set (RTS1_PIO, RTS1_PERIPH);
+    pio_config_set (CTS1_PIO, CTS1_PERIPH);
+#endif
+    
     /* Enable USART1 clock.  */
     mcu_pmc_enable (ID_USART1);
     
