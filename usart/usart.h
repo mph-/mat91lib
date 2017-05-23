@@ -22,7 +22,6 @@
    By default hardware handshaking is not used for flow control.  This
    can be enabled by defining USART0_USE_HANDSHAKING or
    USART1_USE_HANDSHAKING in target.h  */
-*/
 #ifndef USART_H
 #define USART_H
 
