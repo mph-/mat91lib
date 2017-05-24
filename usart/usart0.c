@@ -9,6 +9,9 @@
 #include "usart0.h"
 #include "usart0_defs.h"
 
+/* Temporary hack.  */
+#undef USART0_USE_HANDSHAKING
+
 
 /* Define in target.h to use hardware flow control.   */
 #ifdef USART0_USE_HANDSHAKING

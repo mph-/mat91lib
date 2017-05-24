@@ -9,6 +9,10 @@
 #include "usart1.h"
 #include "usart1_defs.h"
 
+/* Temporary hack.  */
+#undef USART1_USE_HANDSHAKING
+
+
 /* Define in target.h to use hardware flow control.   */
 #ifdef USART1_USE_HANDSHAKING
 #define USART1_MODE US_MR_USART_MODE_HW_HANDSHAKING
