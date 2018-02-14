@@ -6,6 +6,11 @@
 #ifndef UART_H
 #define UART_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 #include "uart0.h"
 
@@ -71,4 +76,9 @@ uart_puts (uart_t uart, const char *str);
 void
 uart_shutdown (uart_t uart);
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

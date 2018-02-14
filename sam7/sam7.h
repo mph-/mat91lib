@@ -1,6 +1,11 @@
 #ifndef SAM7_H
 #define SAM7_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 /* This is fixed.  */
 #define PIT_CLOCK_DIVISOR 16
 
@@ -209,4 +214,9 @@
 #define ADC_ISR ADC_SR
 
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

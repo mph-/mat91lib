@@ -7,6 +7,11 @@
 #ifndef SPI_PRIVATE_H
 #define SPI_PRIVATE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 
 /* The fields in this structure are private.  Do not use.  */
@@ -29,4 +34,9 @@ typedef struct spi_dev_struct
 } spi_dev_t;
 
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

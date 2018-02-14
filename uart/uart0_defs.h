@@ -6,6 +6,11 @@
 #ifndef UART0_DEFS_H
 #define UART0_DEFS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 /* You should be using the functions defined in uart0.h.  These
    macros are not for general use except in dire performance
    circumstances.  */
@@ -40,4 +45,9 @@ do                                      \
 #define UART0_BAUD_DIVISOR_SET(DIVISOR)  UART0->UART_BRGR = (DIVISOR)
 
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif /* UART0_DEFS_H  */
+

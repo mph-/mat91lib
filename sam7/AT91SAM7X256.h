@@ -46,6 +46,11 @@
 #ifndef AT91SAM7X256_H
 #define AT91SAM7X256_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 typedef volatile unsigned int AT91_REG;// Hardware register definition
 
 // *****************************************************************************
@@ -2728,4 +2733,9 @@ typedef struct _AT91S_TDES {
 }
 
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

@@ -25,6 +25,11 @@
 #ifndef USART_H
 #define USART_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 #include "usart0.h"
 
@@ -101,4 +106,9 @@ usart_write (usart_t usart, const void *data, uint16_t size);
 void
 usart_shutdown (usart_t usart);
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

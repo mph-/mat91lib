@@ -42,6 +42,11 @@
 #ifndef AT91SAM7S64_H
 #define AT91SAM7S64_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 typedef volatile unsigned int AT91_REG;// Hardware register definition
 
 // *****************************************************************************
@@ -1918,4 +1923,9 @@ typedef struct _AT91S_UDP {
 #define AT91C_IFLASH     ((char *)      0x00100000) // Internal ROM base address
 #define AT91C_IFLASH_SIZE        ((unsigned int) 0x00010000) // Internal ROM size in byte (64 Kbyte)
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

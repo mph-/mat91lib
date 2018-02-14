@@ -55,6 +55,11 @@
 #ifndef AT91SAM7S256_H
 #define AT91SAM7S256_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #ifndef __ASSEMBLY__
 typedef volatile unsigned int AT91_REG;// Hardware register definition
 #define AT91_CAST(a) (a)
@@ -2226,4 +2231,9 @@ typedef struct _AT91S_UDP {
 #define AT91C_IFLASH_NB_OF_PAGES	 (1024) // Internal FLASH Number of Pages: 1024 bytes
 #define AT91C_IFLASH_NB_OF_LOCK_BITS	 (16) // Internal FLASH Number of Lock Bits: 16 bytes
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

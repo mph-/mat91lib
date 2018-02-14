@@ -8,6 +8,11 @@
 #ifndef ADC_H
 #define ADC_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 
 /** ADC channels.  Note, channel 15 on the SAM4S is the temp. sensor.  */
@@ -174,4 +179,9 @@ adc_init (const adc_cfg_t *cfg);
 void
 adc_shutdown (adc_t adc);
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

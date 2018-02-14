@@ -5,6 +5,11 @@
 #ifndef PINMAP_H
 #define PINMAP_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 
 #include "pio.h"
 
@@ -17,4 +22,9 @@ typedef struct pinmap_struct
 } pinmap_t;
 
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

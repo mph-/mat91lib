@@ -7,6 +7,11 @@
 #ifndef EXTINT_H
 #define EXTINT_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 #include "pio.h"
 
@@ -30,5 +35,10 @@ void extint_disable (extint_t extint);
 
 void extint_sleep (extint_t extint);
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+
 

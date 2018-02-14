@@ -6,6 +6,11 @@
 #ifndef USART1_IRDA_H
 #define USART1_IRDA_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 /* Initialise USART for IRDA mode.  */
 extern void
 usart1_irda_init (void);
@@ -18,4 +23,9 @@ usart1_irda_transmit (void);
 extern void
 usart1_irda_receive (void);
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif /* USART1_IRDA_H  */
+

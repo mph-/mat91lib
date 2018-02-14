@@ -6,6 +6,11 @@
 #ifndef MAT91LIB_H
 #define MAT91LIB_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include <stdint.h>
 
 #ifndef __cplusplus
@@ -54,4 +59,9 @@ typedef uint8_t bool;
 
 #define F_CPU_UL ((unsigned long)F_CPU)
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

@@ -9,6 +9,11 @@
 #ifndef TWI_H
 #define TWI_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 #include "pio.h"
 #include "twi_private.h"
@@ -233,7 +238,12 @@ twi_reset (twi_t twi);
 void
 twi_shutdown (twi_t twi);
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+
 
 
 

@@ -42,6 +42,11 @@
 #ifndef _SAM4S_
 #define _SAM4S_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #if defined __SAM4SA16B__
   #include "sam4sa16b.h"
 #elif defined __SAM4SA16C__
@@ -66,4 +71,9 @@
   #error Library does not support the specified device.
 #endif
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif /* _SAM4S_ */
+

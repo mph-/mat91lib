@@ -40,6 +40,11 @@
 #ifndef lib_AT91SAM7S256_H
 #define lib_AT91SAM7S256_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 /* *****************************************************************************
                 SOFTWARE API FOR AIC
    ***************************************************************************** */
@@ -3716,4 +3721,9 @@ __inline void AT91F_AIC_CfgPIO (void)
 		((unsigned int) AT91C_PA19_FIQ     )); // Peripheral B
 }
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif // lib_AT91SAM7S256_H
+

@@ -8,6 +8,11 @@
 #ifndef PIO_H
 #define PIO_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 
 #define PIO_AT91
@@ -339,5 +344,10 @@ pio_irq_clear (pio_t pio)
 }
 
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+
 

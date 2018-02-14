@@ -33,9 +33,6 @@ $(error unknown family)
 endif
 endif
 
-ifndef CXXFLAGS
-CXXFLAGS = $(CFLAGS)
-endif
 
 all: $(TARGET)
 

@@ -7,6 +7,11 @@
 #ifndef TWI_PRIVATE_H
 #define TWI_PRIVATE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 
 typedef uint8_t twi_slave_addr_t;
@@ -27,4 +32,9 @@ typedef struct twi_dev_struct
     uint32_t clock_config;
 } twi_dev_t;
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

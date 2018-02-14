@@ -6,6 +6,11 @@
 #ifndef BSSC_H
 #define BSSC_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 #include "ssc.h"
 #include "ring.h"
@@ -32,4 +37,9 @@ int bspi_read (bssc_t *dev, void *buffer, int size);
 void
 bssc_init (bssc_t *, const ssc_cfg_t *, char *, uint16_t, uint16_t );
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

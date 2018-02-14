@@ -8,6 +8,11 @@
 #ifndef SPI_DMA_H
 #define SPI_DMA_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "spi.h"
 
 /** Bitmask to select desired channel for DMA transfers.  */
@@ -88,4 +93,9 @@ spi_dma_enable (spi_t spi);
 extern void
 spi_dma_disable (spi_t spi);
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

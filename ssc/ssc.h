@@ -19,6 +19,11 @@
 #ifndef SSC_H
 #define SSC_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 
 typedef uint16_t ssc_clock_divisor_t;
@@ -285,5 +290,10 @@ ssc_init (const ssc_cfg_t *);
 void
 ssc_shutdown (ssc_t ssc);
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif //SSC_H
+
 

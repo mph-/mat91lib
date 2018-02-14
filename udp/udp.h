@@ -1,6 +1,11 @@
 #ifndef UDP_H
 #define UDP_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 #include "sys.h"
 
@@ -124,4 +129,9 @@ bool udp_poll (udp_t udp);
 
 udp_t udp_init (udp_cfg_t * cfg, udp_request_handler_t handler, void *arg);
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

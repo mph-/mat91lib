@@ -6,6 +6,11 @@
 #ifndef PIT_H
 #define PIT_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 
 #ifndef PIT_CLOCK_DIVISOR
@@ -40,4 +45,9 @@ pit_tick_t pit_wait (pit_tick_t period);
 /** Initialise pit.  */
 int pit_init (void);
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

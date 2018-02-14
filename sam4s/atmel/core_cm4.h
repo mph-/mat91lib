@@ -31,6 +31,11 @@
 #ifndef __CORE_CM4_H_GENERIC
 #define __CORE_CM4_H_GENERIC
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 /** \page CMSIS_MISRA_Exceptions  MISRA-C:2004 Compliance Exceptions
   CMSIS violates the following MISRA-C:2004 rules:
   
@@ -1686,4 +1691,9 @@ __STATIC_INLINE int32_t ITM_CheckChar (void) {
 
 #ifdef __cplusplus
 }
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

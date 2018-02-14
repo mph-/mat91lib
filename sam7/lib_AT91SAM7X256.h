@@ -43,6 +43,11 @@
 #ifndef lib_AT91SAM7X256_H
 #define lib_AT91SAM7X256_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 /* *****************************************************************************
                 SOFTWARE API FOR AIC
    ***************************************************************************** */
@@ -4555,4 +4560,9 @@ __inline void AT91F_PWMC_CfgPMC (void)
 		((unsigned int) 1 << AT91C_ID_PWMC));
 }
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif // lib_AT91SAM7X256_H
+

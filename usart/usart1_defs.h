@@ -6,6 +6,11 @@
 #ifndef USART1_DEFS_H
 #define USART1_DEFS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 /* You should be using the functions defined in usart1.h.  These
    macros are not for general use except in dire performance
    circumstances.  */
@@ -50,4 +55,9 @@ do                                      \
 } while (0)
 
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif /* USART1_DEFS_H  */
+

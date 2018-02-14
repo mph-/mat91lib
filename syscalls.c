@@ -252,7 +252,7 @@ sys_file_open (const char *pathname, int flags)
         return -1;
     }
 
-    arg = fs->file_ops->open (fs->private, pathname, flags);
+    arg = fs->file_ops->open (fs->handle, pathname, flags);
     if (!arg)
     {
         errno = EACCES;
@@ -411,7 +411,7 @@ _unlink (const char *pathname)
         errno = EACCES;
         return -1;
     }
-    return fs->fs_ops->unlink (fs->private, pathname);
+    return fs->fs_ops->unlink (fs->handle, pathname);
 }
 
 

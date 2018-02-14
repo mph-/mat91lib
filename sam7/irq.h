@@ -6,6 +6,11 @@
 #ifndef IRQ_H
 #define IRQ_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 #include "bits.h"
 #include "cpu.h"
@@ -108,4 +113,9 @@ void irq_global_enable (void)
     cpsr &= ~(CPU_I_BIT | CPU_F_BIT);
     cpu_cpsr_set (cpsr);
 }
+
+#ifdef __cplusplus
+}
+#endif    
 #endif /* IRQ_H  */
+

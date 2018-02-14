@@ -8,6 +8,11 @@
 #ifndef PIO_H
 #define PIO_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 #include "mcu.h"
 
@@ -462,4 +467,9 @@ pio_irq_clear (pio_t pio)
 }
 
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

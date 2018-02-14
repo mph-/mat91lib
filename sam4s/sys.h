@@ -6,6 +6,11 @@
 #ifndef SYS_H
 #define SYS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 
 
@@ -47,4 +52,9 @@ sys_watchdog_enable (void);
 
 
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif /* SYS_H  */
+

@@ -6,6 +6,11 @@
 #ifndef BUSART1_ISR_H
 #define BUSART1_ISR_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "irq.h"
 #include "usart1.h"
 #include "usart1_defs.h"
@@ -94,4 +99,9 @@ busart1_init (uint16_t baud_divisor)
     return dev;
 }
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif /* BUSART1_ISR_H  */
+

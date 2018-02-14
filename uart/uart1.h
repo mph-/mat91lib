@@ -7,6 +7,11 @@
 #ifndef UART1_H
 #define UART1_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 
 
@@ -47,4 +52,9 @@ uart1_init (uint16_t baud_divisor);
 /* Shutdown UART1 in preparation for sleep.  */
 void
 uart1_shutdown (void);
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

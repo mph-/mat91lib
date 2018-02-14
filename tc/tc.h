@@ -10,6 +10,11 @@
 #ifndef TC_H
 #define TC_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 #include "pio.h"
 
@@ -176,5 +181,10 @@ void
 tc_sync (void);
 
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+
 

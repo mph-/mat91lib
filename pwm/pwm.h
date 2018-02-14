@@ -8,6 +8,11 @@
 #ifndef PWM_H
 #define PWM_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 #include "pio.h"
 
@@ -125,7 +130,12 @@ pwm_channels_stop (pwm_channel_mask_t channel_mask);
 pwm_channel_mask_t
 pwm_channel_mask (pwm_t pwm);
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+
 
 
 

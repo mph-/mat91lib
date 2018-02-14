@@ -6,6 +6,11 @@
 #ifndef IRQ_H
 #define IRQ_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 #include "bits.h"
 
@@ -103,4 +108,9 @@ void irq_global_enable (void)
 {
     __asm__ ("\tcpsie i");
 }
+
+#ifdef __cplusplus
+}
+#endif    
 #endif /* IRQ_H  */
+

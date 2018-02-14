@@ -6,6 +6,11 @@
 #ifndef USART0_DEFS_H
 #define USART0_DEFS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 /* You should be using the functions defined in usart0.h.  These
    macros are not for general use except in dire performance
    circumstances.  */
@@ -40,4 +45,9 @@ do                                      \
 #define USART0_BAUD_DIVISOR_SET(DIVISOR)  USART0->US_BRGR = (DIVISOR)
 
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif /* USART0_DEFS_H  */
+

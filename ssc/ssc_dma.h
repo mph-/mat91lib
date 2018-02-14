@@ -9,6 +9,11 @@
 #ifndef SSC_DMA_H
 #define SSC_DMA_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 #include "ssc.h"
 
@@ -149,4 +154,9 @@ ssc_dma_enable ( void );
 void
 ssc_dma_disable ( void );
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif //SSC_DMA_H
+

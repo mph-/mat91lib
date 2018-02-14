@@ -6,6 +6,11 @@
 #ifndef MCU_SLEEP_H
 #define MCU_SLEEP_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 #include "pio.h"
 
@@ -29,4 +34,9 @@ void
 mcu_sleep (const mcu_sleep_cfg_t *cfg);
 
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif /* MCU_SLEEP_H  */
+

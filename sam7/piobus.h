@@ -8,6 +8,11 @@
 #ifndef PIOBUS_H
 #define PIOBUS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "pio.h"
 
 #ifdef PIOB
@@ -119,4 +124,9 @@ uint32_t piobus_input_get (piobus_t piobus)
 
 
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

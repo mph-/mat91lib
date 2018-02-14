@@ -1,6 +1,11 @@
 #ifndef SYS_H
 #define SYS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 #include <unistd.h>
 
@@ -52,7 +57,7 @@ typedef struct sys_fs_struct
     /* The flags could be used for read-only.  */
     int flags;
     /* This is a handle for a file system implementation.  */
-    void *private;
+    void *handle;
 } sys_fs_t;
 
 
@@ -90,4 +95,9 @@ ssize_t
 sys_write_timeout (void *dev, const void *data, size_t size,
                    uint32_t timeout_us, sys_write_t dev_write);
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

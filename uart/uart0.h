@@ -7,6 +7,11 @@
 #ifndef UART0_H
 #define UART0_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 
 
@@ -48,4 +53,9 @@ uart0_init (uint16_t baud_divisor);
 void
 uart0_shutdown (void);
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

@@ -6,6 +6,11 @@
 #ifndef MCU_H
 #define MCU_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 #include "bits.h"
 #include "irq.h"
@@ -312,4 +317,9 @@ void
 mcu_cpu_idle (void);
 
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif /* MCU_H  */
+

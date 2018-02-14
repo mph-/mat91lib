@@ -6,6 +6,11 @@
 #ifndef DELAY_H
 #define DELAY_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 #include "cpu.h"
 #include "mcu.h"
@@ -59,4 +64,9 @@ void delay_ms (int x)
 }
 
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif /* DELAY_H  */
+

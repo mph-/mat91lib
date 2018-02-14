@@ -8,6 +8,11 @@
 #ifndef PDC_H
 #define PDC_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 
 
@@ -112,4 +117,9 @@ pdc_enable (pdc_t pdc);
 void
 pdc_disable (pdc_t pdc);
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif 
+

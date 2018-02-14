@@ -28,6 +28,11 @@
 #ifndef __CORE_CM4_SIMD_H
 #define __CORE_CM4_SIMD_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 
 /*******************************************************************************
  *                Hardware Abstraction Layer
@@ -646,4 +651,9 @@ __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __QSUB(uint32_t op1,
 
 #ifdef __cplusplus
 }
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

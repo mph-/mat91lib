@@ -8,6 +8,11 @@
 #ifndef DAC_H
 #define DAC_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 
 /** DAC channels.  */
@@ -138,4 +143,9 @@ dac_init (const dac_cfg_t *cfg);
 void
 dac_shutdown (dac_t dac);
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

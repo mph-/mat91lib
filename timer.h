@@ -9,6 +9,11 @@
 #ifndef TIMER_H
 #define TIMER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 
 #define TIMER_CHANNEL_0     0
@@ -133,7 +138,12 @@ uint8_t
 timer_disable (uint8_t channel);
 
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+
 
 
 

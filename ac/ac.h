@@ -8,6 +8,11 @@
 #ifndef AC_H
 #define AC_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 
 /** AC channels.  */
@@ -121,4 +126,9 @@ ac_init (const ac_cfg_t *cfg);
 void
 ac_shutdown (ac_t ac);
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

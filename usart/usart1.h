@@ -8,6 +8,11 @@
 #ifndef USART1_H
 #define USART1_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 
 
@@ -48,4 +53,9 @@ usart1_init (uint16_t baud_divisor);
 /* Shutdown USART1 in preparation for sleep.  */
 void
 usart1_shutdown (void);
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

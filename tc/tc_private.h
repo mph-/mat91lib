@@ -7,6 +7,11 @@
 #ifndef TC_PRIVATE_H
 #define TC_PRIVATE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 
 typedef struct
@@ -22,4 +27,9 @@ typedef struct
     int capture_state;
 } tc_dev_t;
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+

@@ -1,6 +1,11 @@
 #ifndef BYTEORDER_H_
 #define BYTEORDER_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 //! \brief  Converts a byte array to a word value using the big endian format
 #define WORDB(bytes)            ((uint16_t) ((bytes[0] << 8) | bytes[1]))
 
@@ -27,4 +32,9 @@
     bytes[0] = (uint8_t) (((word) >> 8) & 0xFF); \
     bytes[1] = (uint8_t) ((word) & 0xFF);
 
+
+#ifdef __cplusplus
+}
+#endif    
 #endif /*BYTEORDER_H_*/
+

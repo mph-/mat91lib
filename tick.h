@@ -6,6 +6,11 @@
 #ifndef TICK_H
 #define TICK_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
+
 #include "config.h"
 #include "pit.h"
 
@@ -42,4 +47,9 @@ tick_wait (void)
     /* Wait for next clock tick.  */
     TICK_WAIT ();
 }
+
+#ifdef __cplusplus
+}
+#endif    
 #endif
+
