@@ -47,7 +47,9 @@ typedef uint8_t bool;
 #define __packed__
 #endif
 
+#ifndef __inline
 #define __inline static inline
+#endif
 
 #if defined (__SAM7__)
 #include "sam7.h"

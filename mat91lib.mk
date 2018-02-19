@@ -184,8 +184,13 @@ program: $(TARGET)
 
 # Reset the device.
 .PHONY: reset
-reset: $(TARGET)
-	$(TOOLCHAIN)-gdb -batch -x $(SCRIPTS)/reset.gdb $^
+reset:
+	$(TOOLCHAIN)-gdb -batch -x $(SCRIPTS)/reset.gdb
+
+# Enable booting from flash.
+.PHONY: bootflash
+bootflash:
+	$(TOOLCHAIN)-gdb -batch -x $(SCRIPTS)/bootflash.gdb
 
 # Attach debugger.
 .PHONY: debug
