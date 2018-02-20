@@ -245,8 +245,3 @@ twi_shutdown (twi_t twi);
 #endif
 
 
-
-
-
-
-
