@@ -40,15 +40,16 @@
    ports.   The USB device is in the not powered state.
 
    When a device is connected to a hub downstream port, VBUS goes to
-   5V and the device is in the powered state.  Currently, this has to
-   be polled; perhaps an interrupt can be used to detect the change?
-   TODO.
+   5V and the device is in the powered state.  If there is a
+   UDP_VBUS_PIO defined an interrupt can be used to detect the change.
+   Otherwise it needs to be polled.
 
    The device then connects a 1.5 K pull-up resistor on D+ (this might
-   be switched using a MOSFET or connected to VBUS).  The USB bus line
-   goes into IDLE state, D+ is pulled up by the device 1.5 K resistor
-   to 3.3 V and D- is pulled down by the 15 K resistor of the host.
-   The USB device is in the attached state.
+   be switched using a MOSFET or connected to VBUS.  The SAM4S UDP
+   controller does this internally.).  The USB bus line goes into IDLE
+   state, D+ is pulled up by the device 1.5 K resistor to 3.3 V and D-
+   is pulled down by the 15 K resistor of the host.  The USB device is
+   in the attached state.
 
    The device then waits for an end of bus reset from the host (both
    D+ and D- pulled low for at least 10 ms) and then enters the
