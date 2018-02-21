@@ -518,7 +518,7 @@ sys_device_register (const char *devicename, const sys_file_ops_t *file_ops,
 }
 
 
-/* Helper blocking read function for device drivers.  */
+/* Helper read function for device drivers.  */
 ssize_t
 sys_read_timeout (void *dev, void *data, size_t size,
                   uint32_t timeout_us, sys_read_t dev_read)
@@ -529,7 +529,7 @@ sys_read_timeout (void *dev, void *data, size_t size,
 
     count = 0;
     left = size;
-    while (left && timeout_us)
+    while (left)
     {
         int ret;
 
@@ -538,6 +538,8 @@ sys_read_timeout (void *dev, void *data, size_t size,
         if (ret < 0)
         {
             if (errno != EAGAIN)
+                return ret;
+            if (timeout_us == 0)
                 return ret;
             timeout_us--;
             DELAY_US (1);
@@ -552,7 +554,7 @@ sys_read_timeout (void *dev, void *data, size_t size,
 }
 
 
-/* Helper blocking write function for device drivers.  */
+/* Helper write function for device drivers.  */
 ssize_t
 sys_write_timeout (void *dev, const void *data, size_t size,
                    uint32_t timeout_us, sys_write_t dev_write)
@@ -563,7 +565,7 @@ sys_write_timeout (void *dev, const void *data, size_t size,
 
     count = 0;
     left = size;
-    while (left && timeout_us)
+    while (left)
     {
         int ret;
 
@@ -573,6 +575,8 @@ sys_write_timeout (void *dev, const void *data, size_t size,
         {
             if (errno != EAGAIN)
                 return ret;
+            if (timeout_us == 0)
+                return ret;            
             timeout_us--;
             DELAY_US (1);
             continue;

@@ -68,8 +68,9 @@ typedef struct usb_setup_struct
 /** usb configuration structure.  */
 typedef struct
 {
-    /* Non-zero for blocking I/O.  */
-    bool block;
+    /* Zero for non-blocking I/O.  */
+    uint32_t read_timeout_us;
+    uint32_t write_timeout_us;
 }
 udp_cfg_t;
 

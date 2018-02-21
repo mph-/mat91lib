@@ -459,7 +459,8 @@ struct udp_dev_struct
     volatile udp_state_t prev_state;
     udp_setup_t setup;
     udp_ep_info_t eps[UDP_EP_NUM];
-    bool block;
+    uint32_t read_timeout_us;
+    uint32_t write_timeout_us;    
 };
 
 
@@ -1500,8 +1501,8 @@ udp_endpoint_write (udp_t udp, udp_ep_t endpoint,
 }
 
 
-ssize_t
-udp_read (udp_t udp, void *data, size_t size)
+static int16_t
+udp_read_nonblock (udp_t udp, void *data, uint16_t size)
 {
     uint8_t *buffer = data;
     size_t left;
@@ -1515,7 +1516,39 @@ udp_read (udp_t udp, void *data, size_t size)
 
         ret = udp_endpoint_read (udp, UDP_EP_OUT, buffer, left);
 
-        if (ret == 0 && ! udp->block)
+        if (ret == 0)
+        {
+            if (count == 0)
+            {
+                errno = EAGAIN;
+                return -1;
+            }
+            return count;
+        }
+        count += ret;
+        left -= ret;
+        buffer += ret;
+    }
+    return count;
+}    
+
+
+static ssize_t
+udp_write_nonblock (udp_t udp, const void *data, size_t size)
+{
+    const uint8_t *buffer = data;
+    size_t left;
+    size_t count;
+
+    count = 0;
+    left = size;
+    while (left)
+    {
+        int ret;
+
+        ret = udp_endpoint_write (udp, UDP_EP_IN, buffer, left);
+
+        if (ret == 0)
         {
             if (count == 0)
             {
@@ -1532,35 +1565,23 @@ udp_read (udp_t udp, void *data, size_t size)
 }
 
 
+/** Read size bytes.  Block until all the bytes have been read or
+    until timeout occurs.  */
+ssize_t
+udp_read (udp_t udp, void *data, size_t size)
+{
+    return sys_read_timeout (udp, data, size, udp->read_timeout_us,
+                             (void *)udp_read_nonblock);
+}
+
+
+/** Write size bytes.  Block until all the bytes have been transferred
+    to the transmit ring buffer or until timeout occurs.  */
 ssize_t
 udp_write (udp_t udp, const void *data, size_t size)
 {
-    const uint8_t *buffer = data;
-    size_t left;
-    size_t count;
-
-    count = 0;
-    left = size;
-    while (left)
-    {
-        int ret;
-
-        ret = udp_endpoint_write (udp, UDP_EP_IN, buffer, left);
-
-        if (ret == 0 && ! udp->block)
-        {
-            if (count == 0)
-            {
-                errno = EAGAIN;
-                return -1;
-            }
-            return count;
-        }
-        count += ret;
-        left -= ret;
-        buffer += ret;
-    }
-    return count;
+    return sys_write_timeout (udp, data, size, udp->write_timeout_us,
+                              (void *)udp_write_nonblock);
 }
 
 
@@ -1782,7 +1803,8 @@ udp_t udp_init (udp_cfg_t *cfg, udp_request_handler_t request_handler, void *arg
 {
     udp_t udp = &udp_dev;
 
-    udp->block = cfg->block;
+    udp->read_timeout_us = cfg->read_timeout_us;
+    udp->write_timeout_us = cfg->write_timeout_us;    
     udp->request_handler = request_handler;
     udp->request_handler_arg = arg;
     udp->setup.request = 0;

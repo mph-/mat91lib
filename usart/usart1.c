@@ -107,7 +107,7 @@ usart1_write_finished_p (void)
 }
 
 
-/* Write character to USART1.  */
+/* Write character to USART1.  This blocks.  */
 int
 usart1_putc (char ch)
 {
@@ -119,13 +119,15 @@ usart1_putc (char ch)
 }
 
 
-/* Read character from USART1.  This blocks until a character is read.  */
+/* Read character from USART1.  This does not block.  */
 int
 usart1_getc (void)
 {
-    /* Wait for something in receive buffer.  */
-    while (!USART1_READ_READY_P ())
-        continue;
+    if (! USART1_READ_READY_P ())
+    {
+        errno = EAGAIN;
+        return -1;
+    }
 
     return USART1_READ ();
 }

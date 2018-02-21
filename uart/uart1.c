@@ -90,7 +90,7 @@ uart1_write_finished_p (void)
 }
 
 
-/* Write character to UART1.  */
+/* Write character to UART1.  This blocks.  */
 int
 uart1_putc (char ch)
 {
@@ -102,13 +102,15 @@ uart1_putc (char ch)
 }
 
 
-/* Read character from UART1.  This blocks until a character is read.  */
+/* Read character from UART1.  This does not block.  */
 int
 uart1_getc (void)
 {
-    /* Wait for something in receive buffer.  */
-    while (!UART1_READ_READY_P ())
-        continue;
+    if (! UART1_READ_READY_P ())
+    {
+        errno = EAGAIN;
+        return -1;
+    }
 
     return UART1_READ ();
 }

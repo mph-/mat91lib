@@ -93,25 +93,30 @@ uart0_write_finished_p (void)
 }
 
 
-/* Write character to UART0.  */
+/* Write character to UART0.  This does not block.  */
 int
 uart0_putc (char ch)
 {
-    if (ch == '\n')
-        uart0_putc ('\r');
+    if (! UART0_WRITE_READY_P ())
+    {
+        errno = EAGAIN;
+        return -1;
+    }
 
     UART0_PUTC (ch);
     return ch;
 }
 
 
-/* Read character from UART0.  This blocks until a character is read.  */
+/* Read character from UART0.  This does not block.  */
 int
 uart0_getc (void)
 {
-    /* Wait for something in receive buffer.  */
-    while (!UART0_READ_READY_P ())
-        continue;
+    if (! UART0_READ_READY_P ())
+    {
+        errno = EAGAIN;
+        return -1;
+    }
 
     return UART0_READ ();
 }

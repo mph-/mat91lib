@@ -30,7 +30,7 @@ extern "C" {
 #endif
     
 
-#include "config.h"
+#include "sys.h"
 #include "usart0.h"
 
 
@@ -43,14 +43,15 @@ typedef struct
     uint32_t baud_rate;
     /* Baud rate divisor (this is used if baud_rate is zero).  */
     uint32_t baud_divisor;
-    /* Non-zero for blocking I/O.  With blocking I/O, the functions do
+    /* Zero for non-blocking I/O.  With blocking I/O, the functions do
        not return until all the I/O has been transferred.  This is not
        very efficient since there is a lot of busy-wait polling on a
        non-multitasked system.  With non-blocking I/O it is necessary
-       to check function returns in case the data was not
+       to check the function returns in case the data was not
        transferred.  In this case the return value is -1 and errno
        is set to EAGAIN.  */
-    bool block;
+    uint32_t read_timeout_us;
+    uint32_t write_timeout_us;
 }
 usart_cfg_t;
 
@@ -76,6 +77,21 @@ bool
 usart_write_ready_p (usart_t usart);
 
 
+/** Read size bytes.  */
+ssize_t
+usart_read (usart_t usart, void *data, size_t size);
+
+
+/** Write size bytes.  */
+ssize_t
+usart_write (usart_t usart, const void *data, size_t size);
+
+
+/* Shutdown UART to save power.  */
+void
+usart_shutdown (usart_t usart);
+
+
 /** Read character.  */
 int
 usart_getc (usart_t usart);
@@ -89,23 +105,8 @@ usart_putc (usart_t usart, char ch);
 /** Write string.  In non-blocking mode this is likely to 
     ignore all but the first character.  */
 int
-usart_puts (usart_t usart, const char *str);
-
-
-/** Read size bytes.  */
-int16_t
-usart_read (usart_t usart, void *data, uint16_t size);
-
-
-/** Write size bytes.  */
-int16_t
-usart_write (usart_t usart, const void *data, uint16_t size);
-
-
-/* Shutdown UART to save power.  */
-void
-usart_shutdown (usart_t usart);
-
+usart_puts (usart_t usart, const char *str);    
+    
 
 #ifdef __cplusplus
 }

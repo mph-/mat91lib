@@ -33,7 +33,8 @@ struct uart_dev_struct
     bool (*read_ready_p) (void);
     bool (*write_ready_p) (void);
     bool (*write_finished_p) (void);
-    bool block;
+    uint32_t read_timeout_us;
+    uint32_t write_timeout_us;    
 };
 
 
@@ -43,7 +44,7 @@ struct uart_dev_struct
 
 static uart_dev_t uart0_dev = {uart0_putc, uart0_getc,
                                uart0_read_ready_p, uart0_write_ready_p,
-                               uart0_write_finished_p};
+                               uart0_write_finished_p, 0, 0};
 #endif
 
 #if UART1_ENABLE
@@ -51,7 +52,7 @@ static uart_dev_t uart0_dev = {uart0_putc, uart0_getc,
 
 static uart_dev_t uart1_dev = {uart1_putc, uart1_getc,
                                uart1_read_ready_p, uart1_write_ready_p,
-                               uart1_write_finished_p};
+                               uart1_write_finished_p, 0, 0};
 #endif
 
 
@@ -67,7 +68,7 @@ uart_init (const uart_cfg_t *cfg)
         baud_divisor = UART_BAUD_DIVISOR (cfg->baud_rate);
 
 #if UART0_ENABLE
-    if (channel == 0)
+    if (cfg->channel == 0)
     {
         uart0_init (baud_divisor);
         dev = &uart0_dev;
@@ -75,14 +76,15 @@ uart_init (const uart_cfg_t *cfg)
 #endif
 
 #if UART1_ENABLE
-    if (channel == 1)
+    if (cfg->channel == 1)
     {
         uart1_init (baud_divisor);
         dev = &uart1_dev;
     }
 #endif
 
-    dev->block = cfg->block;
+    dev->read_timeout_us = cfg->read_timeout_us;
+    dev->write_timeout_us = cfg->write_timeout_us;
 
     return dev;
 }
@@ -118,19 +120,91 @@ uart_write_finished_p (uart_t uart)
 }
 
 
+/** Read size bytes.  */
+static int16_t
+uart_read_nonblock (uart_t uart, void *data, uint16_t size)
+{
+    uint16_t count = 0;
+    char *buffer = data;
+    uart_dev_t *dev = uart;    
+
+    for (count = 0; count < size; count++)
+    {
+        if (! uart_read_ready_p (uart))
+        {
+            if (count == 0)
+            {
+                errno = EAGAIN;
+                return -1;
+            }
+            return count;
+        }
+        *buffer++ = dev->getch ();
+    }
+    return size;
+}
+
+
+/** Write size bytes.  */
+int16_t
+uart_write_nonblock (uart_t uart, const void *data, uint16_t size)
+{
+    uint16_t count = 0;
+    const char *buffer = data;
+    uart_dev_t *dev = uart;    
+
+    for (count = 0; count < size; count++)
+    {
+        if (! uart_write_ready_p (uart))
+        {
+            if (count == 0)
+            {
+                errno = EAGAIN;
+                return -1;
+            }
+            return count;
+        }
+        dev->putch (*buffer++);
+    }
+    return size;
+}
+
+
+/** Read size bytes.  Block until all the bytes have been read or
+    until timeout occurs.  */
+ssize_t
+uart_read (uart_t uart, void *data, size_t size)
+{
+    uart_dev_t *dev = uart;
+    
+    return sys_read_timeout (uart, data, size, dev->read_timeout_us,
+                             (void *)uart_read_nonblock);
+}
+
+
+/** Write size bytes.  Block until all the bytes have been transferred
+    to the transmit ring buffer or until timeout occurs.  */
+ssize_t
+uart_write (uart_t uart, const void *data, size_t size)
+{
+    uart_dev_t *dev = uart;
+    
+    return sys_write_timeout (uart, data, size, dev->write_timeout_us,
+                              (void *)uart_write_nonblock);
+}
+
+
 /** Read character.  */
 int
 uart_getc (uart_t uart)
 {
-    uart_dev_t *dev = uart;
-
-    if (! dev->block && ! uart_read_ready_p (uart))
-    {
-        errno = EAGAIN;
-        return - 1;
-    }
-
-    return dev->getch ();
+    int ret;
+    char ch;
+    
+    ret = uart_read (uart, &ch, 1);
+    if (ret == 1)
+        return ch;
+    return ret;
 }
 
 
@@ -138,15 +212,12 @@ uart_getc (uart_t uart)
 int
 uart_putc (uart_t uart, char ch)
 {
-    uart_dev_t *dev = uart;
-
-    if (! dev->block && ! uart_write_ready_p (uart))
-    {
-        errno = EAGAIN;
-        return - 1;
-    }
-
-    return dev->putch (ch);
+    int ret;
+    
+    ret = uart_write (uart, &ch, 1);
+    if (ret == 1)
+        return ch;
+    return ret;
 }
 
 
@@ -157,60 +228,14 @@ uart_puts (uart_t uart, const char *str)
 {
     while (*str)
     {
-        if (uart_putc (uart, *str++) < 0)
-            return -1;
+        int ret;
+        
+        ret = uart_putc (uart, *str++);
+        if (ret < 1)
+            return ret;
     }
-
     return 1;
 }
-
-
-/** Read size bytes.  */
-int16_t
-uart_read (uart_t uart, void *data, uint16_t size)
-{
-    uint16_t count = 0;
-    char *buffer = data;
-
-    for (count = 0; count < size; count++)
-    {
-        int ch;
-
-        ch = uart_getc (uart);
-        if (ch < 0)
-        {
-            if (count == 0 && errno == EAGAIN)
-                return -1;
-            return count;
-        }
-        *buffer++ = ch;
-    }
-    return size;
-}
-
-
-/** Write size bytes.  */
-int16_t
-uart_write (uart_t uart, const void *data, uint16_t size)
-{
-    uint16_t count = 0;
-    const char *buffer = data;
-
-    for (count = 0; count < size; count++)
-    {
-        int ret;
-
-        ret = uart_putc (uart, *buffer++);
-        if (ret < 0)
-        {
-            if (count == 0 && errno == EAGAIN)
-                return -1;
-            return count;
-        }
-    }
-    return size;
-}
-
 
 const sys_file_ops_t uart_file_ops =
 {

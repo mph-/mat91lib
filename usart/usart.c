@@ -23,7 +23,6 @@
    can be enabled by defining USART0_USE_HANDSHAKING or
    USART1_USE_HANDSHAKING in target.h  */
 
-#include "errno.h"
 #include "usart.h"
 #include "sys.h"
 #include "peripherals.h"
@@ -44,7 +43,8 @@ struct usart_dev_struct
     bool (*read_ready_p) (void);
     bool (*write_ready_p) (void);
     bool (*write_finished_p) (void);
-    bool block;
+    uint32_t read_timeout_us;
+    uint32_t write_timeout_us;
 };
 
 
@@ -54,7 +54,7 @@ struct usart_dev_struct
 
 static usart_dev_t usart0_dev = {usart0_putc, usart0_getc,
                                  usart0_read_ready_p, usart0_write_ready_p,
-                                 usart0_write_finished_p, 0};
+                                 usart0_write_finished_p, 0, 0};
 #endif
 
 #if USART1_ENABLE
@@ -62,7 +62,7 @@ static usart_dev_t usart0_dev = {usart0_putc, usart0_getc,
 
 static usart_dev_t usart1_dev = {usart1_putc, usart1_getc,
                                  usart1_read_ready_p, usart1_write_ready_p,
-                                 usart1_write_finished_p, 0};
+                                 usart1_write_finished_p, 0, 0};
 #endif
 
 
@@ -93,8 +93,8 @@ usart_init (const usart_cfg_t *cfg)
     }
 #endif
 
-    dev->block = cfg->block;
-
+    dev->read_timeout_us = cfg->read_timeout_us;
+    dev->write_timeout_us = cfg->write_timeout_us;
     return dev;
 }
 
@@ -129,19 +129,91 @@ usart_write_finished_p (usart_t usart)
 }
 
 
+/** Read size bytes.  */
+static int16_t
+usart_read_nonblock (usart_t usart, void *data, uint16_t size)
+{
+    uint16_t count = 0;
+    char *buffer = data;
+    usart_dev_t *dev = usart;    
+
+    for (count = 0; count < size; count++)
+    {
+        if (! usart_read_ready_p (usart))
+        {
+            if (count == 0)
+            {
+                errno = EAGAIN;
+                return -1;
+            }
+            return count;
+        }
+        *buffer++ = dev->getch ();
+    }
+    return size;
+}
+
+
+/** Write size bytes.  */
+int16_t
+usart_write_nonblock (usart_t usart, const void *data, uint16_t size)
+{
+    uint16_t count = 0;
+    const char *buffer = data;
+    usart_dev_t *dev = usart;    
+
+    for (count = 0; count < size; count++)
+    {
+        if (! usart_write_ready_p (usart))
+        {
+            if (count == 0)
+            {
+                errno = EAGAIN;
+                return -1;
+            }
+            return count;
+        }
+        dev->putch (*buffer++);
+    }
+    return size;
+}
+
+
+/** Read size bytes.  Block until all the bytes have been read or
+    until timeout occurs.  */
+ssize_t
+usart_read (usart_t usart, void *data, size_t size)
+{
+    usart_dev_t *dev = usart;
+    
+    return sys_read_timeout (usart, data, size, dev->read_timeout_us,
+                             (void *)usart_read_nonblock);
+}
+
+
+/** Write size bytes.  Block until all the bytes have been transferred
+    to the transmit ring buffer or until timeout occurs.  */
+ssize_t
+usart_write (usart_t usart, const void *data, size_t size)
+{
+    usart_dev_t *dev = usart;
+    
+    return sys_write_timeout (usart, data, size, dev->write_timeout_us,
+                              (void *)usart_write_nonblock);
+}
+
+
 /** Read character.  */
 int
 usart_getc (usart_t usart)
 {
-    usart_dev_t *dev = usart;
-
-    if (! dev->block && ! usart_read_ready_p (usart))
-    {
-        errno = EAGAIN;
-        return - 1;
-    }
-
-    return dev->getch ();
+    int ret;
+    char ch;
+    
+    ret = usart_read (usart, &ch, 1);
+    if (ret == 1)
+        return ch;
+    return ret;
 }
 
 
@@ -149,15 +221,12 @@ usart_getc (usart_t usart)
 int
 usart_putc (usart_t usart, char ch)
 {
-    usart_dev_t *dev = usart;
-
-    if (! dev->block && ! usart_write_ready_p (usart))
-    {
-        errno = EAGAIN;
-        return - 1;
-    }
-
-    return dev->putch (ch);
+    int ret;
+    
+    ret = usart_write (usart, &ch, 1);
+    if (ret == 1)
+        return ch;
+    return ret;
 }
 
 
@@ -168,58 +237,13 @@ usart_puts (usart_t usart, const char *str)
 {
     while (*str)
     {
-        if (usart_putc (usart, *str++) < 0)
-            return -1;
-    }
-
-    return 1;
-}
-
-
-/** Read size bytes.  */
-int16_t
-usart_read (usart_t usart, void *data, uint16_t size)
-{
-    uint16_t count = 0;
-    char *buffer = data;
-
-    for (count = 0; count < size; count++)
-    {
-        int ch;
-
-        ch = usart_getc (usart);
-        if (ch < 0)
-        {
-            if (count == 0 && errno == EAGAIN)
-                return -1;
-            return count;
-        }
-        *buffer++ = ch;
-    }
-    return size;
-}
-
-
-/** Write size bytes.  */
-int16_t
-usart_write (usart_t usart, const void *data, uint16_t size)
-{
-    uint16_t count = 0;
-    const char *buffer = data;
-
-    for (count = 0; count < size; count++)
-    {
         int ret;
-
-        ret = usart_putc (usart, *buffer++);
-        if (ret < 0)
-        {
-            if (count == 0 && errno == EAGAIN)
-                return -1;
-            return count;
-        }
+        
+        ret = usart_putc (usart, *str++);
+        if (ret < 1)
+            return ret;
     }
-    return size;
+    return 1;
 }
 
 

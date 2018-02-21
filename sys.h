@@ -7,6 +7,7 @@ extern "C" {
     
 
 #include "config.h"
+#include "errno.h"
 #include <unistd.h>
 
 typedef ssize_t (*sys_write_t) (void *file, const void *buffer, size_t size);

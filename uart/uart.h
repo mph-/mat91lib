@@ -11,7 +11,7 @@ extern "C" {
 #endif
     
 
-#include "config.h"
+#include "sys.h"
 #include "uart0.h"
 
 /** UART configuration structure.  */
@@ -23,14 +23,15 @@ typedef struct
     uint32_t baud_rate;
     /* Baud rate divisor (this is used if baud_rate is zero).  */
     uint32_t baud_divisor;
-    /* Non-zero for blocking I/O.  With blocking I/O, the functions do
+    /* Zero for non-blocking I/O.  With blocking I/O, the functions do
        not return until all the I/O has been transferred.  This is not
        very efficient since there is a lot of busy-wait polling on a
        non-multitasked system.  With non-blocking I/O it is necessary
-       to check function returns in case the data was not
+       to check the function returns in case the data was not
        transferred.  In this case the return value is -1 and errno
-       is set to EAGAIN.  */    
-    bool block;
+       is set to EAGAIN.  */
+    uint32_t read_timeout_us;
+    uint32_t write_timeout_us;
 }
 uart_cfg_t;
 
@@ -56,6 +57,20 @@ bool
 uart_write_ready_p (uart_t uart);
 
 
+/** Read size bytes.  */
+ssize_t
+uart_read (uart_t uart, void *data, size_t size);
+
+
+/** Write size bytes.  */
+ssize_t
+uart_write (uart_t uart, const void *data, size_t size);
+    
+    
+/* Shutdown UART to save power.  */
+void
+uart_shutdown (uart_t uart);
+
 /** Read character.  */
 int
 uart_getc (uart_t uart);
@@ -69,13 +84,8 @@ uart_putc (uart_t uart, char ch);
 /** Write string.  In non-blocking mode this is likely to 
     ignore all but the first character.  */
 int
-uart_puts (uart_t uart, const char *str);
-
-
-/* Shutdown UART to save power.  */
-void
-uart_shutdown (uart_t uart);
-
+uart_puts (uart_t uart, const char *str);    
+   
 
 #ifdef __cplusplus
 }

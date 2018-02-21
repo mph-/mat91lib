@@ -12,7 +12,7 @@ extern "C" {
 #endif
     
 
-#include "config.h"
+#include "sys.h"
 
 
 #define UART1_BAUD_DIVISOR(BAUD_RATE)  ((F_CPU / 16) / (BAUD_RATE))
@@ -22,8 +22,7 @@ extern "C" {
 bool
 uart1_read_ready_p (void);
 
-/* Read character from UART1.  This blocks if nothing
-   is available to read.  */
+/* Read character from UART1.  This does not block.  */
 int
 uart1_getc (void);
 
@@ -39,10 +38,6 @@ uart1_write_finished_p (void);
    the character could not be written.  */
 int
 uart1_putc (char ch);
-
-/* Write string to UART1.  */
-int
-uart1_puts (const char *str);
 
 /* Initialise UART1 and set baud rate.  */
 int

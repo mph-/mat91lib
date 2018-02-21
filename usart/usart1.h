@@ -13,7 +13,7 @@ extern "C" {
 #endif
     
 
-#include "config.h"
+#include "sys.h"
 
 
 #define USART1_BAUD_DIVISOR(BAUD_RATE)  ((F_CPU / 16) / (BAUD_RATE))
@@ -23,8 +23,7 @@ extern "C" {
 bool
 usart1_read_ready_p (void);
 
-/* Read character from USART1.  This blocks if nothing
-   is available to read.  */
+/* Read character from USART1.  This does not block.   */
 int
 usart1_getc (void);
 
@@ -36,14 +35,9 @@ usart1_write_ready_p (void);
 bool
 usart1_write_finished_p (void);
 
-/* Write character to USART1.  This returns zero if
-   the character could not be written.  */
+/* Write character to USART1.  This does not block.  */
 int
 usart1_putc (char ch);
-
-/* Write string to USART1.  */
-int
-usart1_puts (const char *str);
 
 /* Initialise USART1 and set baud rate.  */
 int
