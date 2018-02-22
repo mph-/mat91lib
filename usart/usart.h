@@ -79,12 +79,12 @@ usart_write_ready_p (usart_t usart);
 
 /** Read size bytes.  */
 ssize_t
-usart_read (usart_t usart, void *data, size_t size);
+usart_read (void *usart, void *data, size_t size);
 
 
 /** Write size bytes.  */
 ssize_t
-usart_write (usart_t usart, const void *data, size_t size);
+usart_write (void *usart, const void *data, size_t size);
 
 
 /* Shutdown UART to save power.  */

@@ -173,7 +173,7 @@ uart_write_nonblock (uart_t uart, const void *data, uint16_t size)
 /** Read size bytes.  Block until all the bytes have been read or
     until timeout occurs.  */
 ssize_t
-uart_read (uart_t uart, void *data, size_t size)
+uart_read (void *uart, void *data, size_t size)
 {
     uart_dev_t *dev = uart;
     
@@ -185,7 +185,7 @@ uart_read (uart_t uart, void *data, size_t size)
 /** Write size bytes.  Block until all the bytes have been transferred
     to the transmit ring buffer or until timeout occurs.  */
 ssize_t
-uart_write (uart_t uart, const void *data, size_t size)
+uart_write (void *uart, const void *data, size_t size)
 {
     uart_dev_t *dev = uart;
     
