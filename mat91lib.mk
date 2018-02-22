@@ -56,6 +56,9 @@ OBJCOPY = $(TOOLCHAIN)-objcopy
 SIZE = $(TOOLCHAIN)-size
 DEL = rm -f
 
+# Disable run time type information so virtual members work
+# in the interim.
+CXXFLAGS += -fno-rtti
 
 INCLUDES += -I.
 
