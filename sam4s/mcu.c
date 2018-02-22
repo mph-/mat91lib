@@ -263,6 +263,15 @@ mcu_watchdog_disable (void)
 }
 
 
+/** Disable JTAG but allow SWD.  */
+void
+mcu_jtag_disable (void)
+{
+    /* Allow PB4 and PB5 for general I/O.  */
+    REG_CCFG_SYSIO |= (BIT (4) | BIT (5));
+}
+
+
 /** Initialise flash, disable watchdog, set up clocks.  This and any
     functions it calls must be for the C runtime startup to
     work.  */

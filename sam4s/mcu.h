@@ -88,6 +88,10 @@ void
 mcu_cpu_idle (void);
 
 
+/** Disable JTAG.  */
+void
+mcu_jtag_disable (void);
+    
 
 #ifdef __cplusplus
 }
