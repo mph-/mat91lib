@@ -100,7 +100,8 @@ twi_init (const twi_cfg_t *cfg);
 twi_ret_t
 twi_master_addr_write_timeout (twi_t twi, twi_slave_addr_t slave_addr,
                                twi_iaddr_t addr, uint8_t addr_size,
-                               void *buffer, twi_size_t size, twi_timeout_t timeout_us);
+                               const void *buffer, twi_size_t size,
+                               twi_timeout_t timeout_us);
 
 
 /** Perform a master write to the specified slave address with internal address
@@ -115,7 +116,7 @@ twi_master_addr_write_timeout (twi_t twi, twi_slave_addr_t slave_addr,
 */    
 twi_ret_t
 twi_master_addr_write (twi_t twi, twi_slave_addr_t slave, twi_iaddr_t addr,
-                       uint8_t addr_size, void *buffer, twi_size_t size);
+                       uint8_t addr_size, const void *buffer, twi_size_t size);
 
 
 /** Perform a master write to the specified slave address without internal address
@@ -127,7 +128,7 @@ twi_master_addr_write (twi_t twi, twi_slave_addr_t slave, twi_iaddr_t addr,
     @return number of bytes read or negative value for an error
 */
 twi_ret_t
-twi_master_write (twi_t twi, uint8_t addr_size, void *buffer, twi_size_t size);
+twi_master_write (twi_t twi, uint8_t addr_size, const void *buffer, twi_size_t size);
 
 
 /** Perform a master read to the specified slave address with internal address

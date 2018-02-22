@@ -177,11 +177,11 @@ twi_master_wait_txcomp (twi_t twi, twi_timeout_t timeout_us)
 twi_ret_t
 twi_master_addr_write_timeout (twi_t twi, twi_slave_addr_t slave_addr,
                                twi_iaddr_t addr, uint8_t addr_size,
-                               void *buffer, twi_size_t size,
+                               const void *buffer, twi_size_t size,
                                twi_timeout_t timeout_us)
 {
     twi_size_t i;
-    uint8_t *data = buffer;
+    const uint8_t *data = buffer;
     twi_ret_t ret;
 
     /* If addr size is zero, need to set start and stop bits at same
@@ -243,7 +243,7 @@ twi_master_addr_write_timeout (twi_t twi, twi_slave_addr_t slave_addr,
 twi_ret_t
 twi_master_addr_write (twi_t twi, twi_slave_addr_t slave_addr,
                        twi_iaddr_t addr, uint8_t addr_size,
-                       void *buffer, twi_size_t size)
+                       const void *buffer, twi_size_t size)
 {
     return twi_master_addr_write_timeout (twi, slave_addr, addr, addr_size,
                                           buffer, size, TWI_TIMEOUT_US_DEFAULT);
@@ -260,7 +260,7 @@ twi_master_addr_write (twi_t twi, twi_slave_addr_t slave_addr,
 */    
 twi_ret_t
 twi_master_write (twi_t twi, twi_slave_addr_t slave_addr,
-                  void *buffer, twi_size_t size)
+                  const void *buffer, twi_size_t size)
 {
     return twi_master_addr_write (twi, slave_addr, 0, 0, buffer, size);
 }
