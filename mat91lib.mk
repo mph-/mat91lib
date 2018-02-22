@@ -5,6 +5,9 @@
 # MAT91LIB_DIR path to mat91lib
 # PERIPHERALS list of peripherals to build
 
+# Note.  If weird errors occur it is because the makefile fragments are
+# loaded in the wrong order.  mmuclib.mk should be included last.
+
 ifndef MCU
 $(error MCU undefined, this needs to be defined in the Makefile)
 endif
@@ -73,9 +76,13 @@ CCSRC = $(filter %.cpp, $(SRC))
 OBJDIR = objs
 DEPDIR = deps
 
+OBJ1 = $(CCSRC:.cpp=.o) $(CSRC:.c=.o) 
+
+DEP1 = $(CSRC:.c=.d) $(CCSRC:.cpp=.d)
+
 # Create list of object and dependency files.  Note, sort removes duplicates.
-OBJS = $(sort $(addprefix $(OBJDIR)/, $(notdir $(sort $(CSRC:.c=.o) $(CCSRC:.cpp=.o)))))
-DEPS = $(sort $(addprefix $(DEPDIR)/, $(notdir $(sort $(CSRC:.c=.d) $(CCSRC:.cpp=.d)))))
+OBJS = $(sort $(addprefix $(OBJDIR)/, $(notdir $(sort $(OBJ1)))))
+DEPS = $(sort $(addprefix $(DEPDIR)/, $(notdir $(sort $(DEP1)))))
 SRC_DIRS = $(sort $(dir $(SRC)))
 
 
@@ -85,6 +92,8 @@ include $(MAT91LIB_DIR)/peripherals.mk
 
 EXTRA_OBJS = $(OBJDIR)/crt0.o $(OBJDIR)/mcu.o
 
+print-drivers:
+	@echo $(DRIVERS)
 
 print-deps:
 	@echo $(DEPS)
@@ -102,6 +111,19 @@ print-cflags:
 print-src:
 	@echo $(SRC)
 
+print-csrc:
+	@echo $(CSRC)
+
+print-ccsrc:
+	@echo $(CCSRC)
+
+print-vpath:
+	@echo $(VPATH)
+
+print-includes:
+	@echo $(INCLUDES)
+
+# Create dirs if they do not exist
 $(OBJDIR):
 	mkdir -p $(OBJDIR)
 
@@ -150,17 +172,17 @@ else
 # strategy 1 since the .d file is regenerated whenever a file
 # compiled.
 
-$(OBJDIR)/%.o: %.cpp Makefile
-	$(CXX) -c $(CXXFLAGS) $< -o $@
-# Generate dependencies to see if object file needs recompiling.
-	@echo -n "$(OBJDIR)/" > deps/$*.d
-	$(CXX) -MM $(CXXFLAGS) $< >> deps/$*.d
-
 $(OBJDIR)/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 # Generate dependencies to see if object file needs recompiling.
 	@echo -n "$(OBJDIR)/" > deps/$*.d
 	$(CC) -MM $(CFLAGS) $< >> deps/$*.d
+
+$(OBJDIR)/%.o: %.cpp Makefile
+	$(CXX) -c $(CXXFLAGS) $< -o $@
+# Generate dependencies to see if object file needs recompiling.
+	@echo -n "$(OBJDIR)/" > deps/$*.d
+	$(CXX) -MM $(CXXFLAGS) $< >> deps/$*.d
 endif
 
 # Link object files to form output file.
