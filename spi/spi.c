@@ -853,6 +853,26 @@ spi_transfer (spi_t spi, const void *txbuffer, void *rxbuffer,
 
 
 spi_ret_t
+spi_transact (spi_t spi, spi_transfer_t *transfer, uint8_t size)
+{
+    uint8_t i;
+    spi_ret_t bytes;
+    spi_ret_t ret;    
+
+    bytes = 0;
+    for (i = 0; i < size; i++)
+    {
+        ret = spi_transfer (spi, transfer[i].txbuffer, transfer[i].rxbuffer,
+                            transfer[i].size, i == size - 1);
+        if (ret < 0)
+            return ret;
+        bytes += ret;
+    }
+    return bytes;
+}
+
+
+spi_ret_t
 spi_write (spi_t spi, const void *buffer, spi_size_t len, bool terminate)
 {
     return spi_transfer (spi, buffer, 0, len, terminate);

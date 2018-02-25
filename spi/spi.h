@@ -149,6 +149,14 @@ typedef struct
 typedef spi_dev_t *spi_t;
 
 
+typedef struct
+{
+    const void *txbuffer;
+    void *rxbuffer;
+    spi_size_t size;
+} spi_transfer_t;
+
+    
 /* Function prototypes.  */
 
 
@@ -184,6 +192,15 @@ spi_read (spi_t spi, void *buffer, spi_size_t len, bool terminate);
 spi_ret_t
 spi_transfer (spi_t spi, const void *txbuffer, void *rxbuffer, 
               spi_size_t len, bool terminate);
+
+
+/** Transfer a sequence of bytes to/from SPI using multiple buffers.
+    @param spi SPI channel to use.
+    @param transfer Array of transmit/receive buffers and sizes.  
+    @param size Size of transfer array.
+ */
+spi_ret_t
+spi_transact (spi_t spi, spi_transfer_t *transfer, uint8_t size);
 
 
 /** Return non-zero if there is a character ready to be read.  */
