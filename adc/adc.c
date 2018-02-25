@@ -409,8 +409,8 @@ adc_ready_p (adc_t adc)
 
 /** Blocking read.  This will hang if a trigger is not supplied
     (except for software triggering mode).  */
-int8_t
-adc_read (adc_t adc, void *buffer, uint16_t size)
+ssize_t
+adc_read (adc_t adc, void *buffer, size_t size)
 {
     uint16_t i;
     uint16_t samples;

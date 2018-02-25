@@ -14,6 +14,8 @@ extern "C" {
     
 
 #include "config.h"
+#include "sys.h"
+    
 
 /** ADC channels.  Note, channel 15 on the SAM4S is the temp. sensor.  */
 typedef enum
@@ -145,8 +147,8 @@ adc_ready_p (adc_t adc);
 
 
 /** Blocking read.  */
-int8_t
-adc_read (adc_t adc, void *buffer, uint16_t size);
+ssize_t
+adc_read (adc_t adc, void *buffer, size_t size);
 
 
 /** Puts ADC into sleep mode.  */
