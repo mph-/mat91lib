@@ -76,6 +76,11 @@ CSRC = $(filter %.c, $(SRC))
 #CCSRC = $(filter %.cc %.cpp, $(SRC))
 CCSRC = $(filter %.cpp, $(SRC))
 
+ifneq ($(CCSRC), )
+LDFLAGS += -lstdc++
+endif
+
+
 OBJDIR = objs
 DEPDIR = deps
 
