@@ -1,7 +1,7 @@
 /** @file   pwm.h
     @author 
     @date   13 February 2008
-    @brief  Pulse Width Modulation routines for AT91SAM7 processors.
+    @brief  Pulse Width Modulation routines for AT91SAM processors.
     @note   The API needs a complete re-write.
 */
 
@@ -135,10 +135,5 @@ pwm_channel_mask (pwm_t pwm);
 }
 #endif    
 #endif
-
-
-
-
-
 
 
