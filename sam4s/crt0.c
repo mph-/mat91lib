@@ -171,7 +171,7 @@ void _reset_handler (void)
     /* Set up clocks, etc.  */
     mcu_init ();
 
-    /* Initialise C library.  */
+    /* Call constructors and init functions.   */
     __libc_init_array ();
     
     main ();
