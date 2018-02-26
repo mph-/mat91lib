@@ -664,13 +664,9 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
     spi_size_t i;
     const uint8_t *txdata = txbuffer;
     uint8_t *rxdata = rxbuffer;
+    uint8_t rx;
+    uint8_t tx = 0;
         
-    if (!len)
-        return 0;
-
-    if (!txdata)
-        txdata = rxdata;
-
     spi_config (spi);
 
     i = 0;
@@ -681,10 +677,8 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
         {
             for (i = 0; i < len; i++)
             {
-                uint8_t rx;
-                uint8_t tx;
-                
-                tx = *txdata++;
+                if (txdata)
+                    tx = *txdata++;
                 
                 SPI_XFER (spi->base, tx, rx);
                 
@@ -698,17 +692,15 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
         {
             for (i = 0; i < len; i++)
             {
-                uint8_t rx;
-                uint8_t tx;
-
                 /* Defer CS assertion a few cycles.  This can be
                    deferred further with spi_cs_setup_set.
                    This works by delaying the time when the SPI
                    controller starts the shift clock from when the
                    transmit data register is written.  */
                 spi_cs_assert (spi);
-                
-                tx = *txdata++;
+
+                if (txdata)
+                    tx = *txdata++;
                 
                 SPI_XFER (spi->base, tx, rx);
                 
@@ -723,19 +715,18 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
         
     case SPI_CS_MODE_FRAME:
     case SPI_CS_MODE_HIGH:
-        if (spi->cs_mode == SPI_CS_MODE_FRAME)
+        if (len != 0 && spi->cs_mode == SPI_CS_MODE_FRAME)
             spi_cs_assert (spi);
 
         for (i = 0; i < len; i++)
         {
-            uint8_t rx;
-            uint8_t tx;
-            
-            tx = *txdata++;
+            if (txdata)
+                tx = *txdata++;
             
             SPI_XFER (spi->base, tx, rx);
 
-            *rxdata++ = rx;
+            if (rxdata)
+                *rxdata++ = rx;
         }
         
         if (terminate && spi->cs_mode == SPI_CS_MODE_FRAME)
@@ -754,12 +745,8 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
     spi_size_t i;
     const uint16_t *txdata = txbuffer;
     uint16_t *rxdata = rxbuffer;
-    
-    if (!len)
-        return 0;
-
-    if (!txdata)
-        txdata = rxdata;
+    uint16_t rx;
+    uint16_t tx = 0;
     
     spi_config (spi);
     
@@ -771,10 +758,8 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
         {
             for (i = 0; i < len; i += 2)
             {
-                uint16_t rx;
-                uint16_t tx;
-                
-                tx = *txdata++;
+                if (txdata)
+                    tx = *txdata++;
                 
                 SPI_XFER (spi->base, tx, rx);
                 
@@ -788,17 +773,15 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
         {
             for (i = 0; i < len; i += 2)
             {
-                uint16_t rx;
-                uint16_t tx;
-                
                 /* Defer CS assertion a few cycles.  This can be
                    deferred further with spi_cs_setup_set.
                    This works by delaying the time when the SPI
                    controller starts the shift clock from when the
                    transmit data register is written.  */
                 spi_cs_assert (spi);
-                
-                tx = *txdata++;
+
+                if (txdata)
+                    tx = *txdata++;
                 
                 SPI_XFER (spi->base, tx, rx);
                 
@@ -813,15 +796,13 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
         
     case SPI_CS_MODE_FRAME:
     case SPI_CS_MODE_HIGH:
-        if (spi->cs_mode == SPI_CS_MODE_FRAME)
+        if (len != 0 && spi->cs_mode == SPI_CS_MODE_FRAME)
             spi_cs_assert (spi);
 
         for (i = 0; i < len; i += 2)
         {
-            uint16_t rx;
-            uint16_t tx;
-            
-            tx = *txdata++;
+            if (txdata)
+                tx = *txdata++;
             
             SPI_XFER (spi->base, tx, rx);
             
