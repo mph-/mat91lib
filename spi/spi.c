@@ -15,7 +15,7 @@
 /* This driver only configures the SPI controller as a master.
 
    The AT91 SPI peripheral can transmit either 8 or 16 bit data with
-   MSB first.  It has 4 separate chip select registers and can control
+   MSB first.  It has 4 separate control status registers and can control
    4 different types of SPI peripheral using the separate chip select
    registers.  Each peripheral can have its own chip select that is
    automatically driven for each transfer.

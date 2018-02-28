@@ -188,7 +188,9 @@ spi_read (spi_t spi, void *buffer, spi_size_t len, bool terminate);
     @param txbuffer Data buffer to write from (or NULL just for reading).
     @param rxbuffer Data buffer to read into (or NULL just for writing).
     @param len Number of bytes to transfer.
-    @param terminate True to negate CS when last byte transferred.  */
+    @param terminate True to negate CS when last byte transferred. 
+    @return Number of bytes transferred.
+*/
 spi_ret_t
 spi_transfer (spi_t spi, const void *txbuffer, void *rxbuffer, 
               spi_size_t len, bool terminate);
@@ -198,6 +200,7 @@ spi_transfer (spi_t spi, const void *txbuffer, void *rxbuffer,
     @param spi SPI channel to use.
     @param transfer Array of transmit/receive buffers and sizes.  
     @param size Size of transfer array.
+    @return Number of bytes transferred.
  */
 spi_ret_t
 spi_transact (spi_t spi, spi_transfer_t *transfer, uint8_t size);
