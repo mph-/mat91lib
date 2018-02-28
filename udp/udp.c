@@ -265,7 +265,7 @@
 #endif
 
 
-#define UDP_TIMEOUT_US 500000
+#define UDP_TIMEOUT_US 100000
 
 
 #ifdef USB_PIO_DETECT
@@ -837,7 +837,8 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
         udp_endpoint_error (udp, endpoint, UDP_ERROR_FISHY);
     
     /* This should be automatically cleared when a FIFO's contents are
-       sent to the host.  */
+       sent to the host.  I think this happens when the device is
+       disconnected and there is no VBUS detection.  */
     if (UDP->UDP_CSR[endpoint] & UDP_CSR_TXPKTRDY)
         udp_endpoint_error (udp, endpoint, UDP_ERROR_WEIRD);
     
@@ -1482,8 +1483,9 @@ udp_endpoint_write (udp_t udp, udp_ep_t endpoint,
         != UDP_STATUS_SUCCESS)
         return 0;
 
-    /* We may have a race condition if someone else grabs the endpoint
-       as soon as it goes idle.  I'm not sure if this can happen.  */
+    /*  Wait for interrupt handler to change pep->state.  We may have
+        a race condition if someone else grabs the endpoint as soon as
+        it goes idle.  I'm not sure if this can happen.  */
 
     timeout = UDP_TIMEOUT_US;
     while (pep->state != UDP_EP_STATE_IDLE)
@@ -1504,64 +1506,33 @@ udp_endpoint_write (udp_t udp, udp_ep_t endpoint,
 static int16_t
 udp_read_nonblock (udp_t udp, void *data, uint16_t size)
 {
-    uint8_t *buffer = data;
-    size_t left;
-    size_t count;
-
-    count = 0;
-    left = size;
-    while (left)
+    int ret;
+    
+    ret = udp_endpoint_read (udp, UDP_EP_OUT, data, size);
+    
+    if (ret == 0)
     {
-        int ret;
-
-        ret = udp_endpoint_read (udp, UDP_EP_OUT, buffer, left);
-
-        if (ret == 0)
-        {
-            if (count == 0)
-            {
-                errno = EAGAIN;
-                return -1;
-            }
-            return count;
-        }
-        count += ret;
-        left -= ret;
-        buffer += ret;
+        errno = EAGAIN;
+        return -1;
     }
-    return count;
+    return ret;
 }    
 
 
 static ssize_t
 udp_write_nonblock (udp_t udp, const void *data, size_t size)
 {
-    const uint8_t *buffer = data;
-    size_t left;
-    size_t count;
+    int ret;
 
-    count = 0;
-    left = size;
-    while (left)
+    /* This blocks until data written....  */
+    ret = udp_endpoint_write (udp, UDP_EP_IN, data, size);
+    
+    if (ret == 0)
     {
-        int ret;
-
-        ret = udp_endpoint_write (udp, UDP_EP_IN, buffer, left);
-
-        if (ret == 0)
-        {
-            if (count == 0)
-            {
-                errno = EAGAIN;
-                return -1;
-            }
-            return count;
-        }
-        count += ret;
-        left -= ret;
-        buffer += ret;
+        errno = EAGAIN;
+        return -1;
     }
-    return count;
+    return ret;
 }
 
 
