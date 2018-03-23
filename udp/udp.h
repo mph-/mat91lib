@@ -65,16 +65,6 @@ typedef struct usb_setup_struct
 } udp_setup_t;
 
 
-/** usb configuration structure.  */
-typedef struct
-{
-    /* Zero for non-blocking I/O.  */
-    uint32_t read_timeout_us;
-    uint32_t write_timeout_us;
-}
-udp_cfg_t;
-
-
 typedef struct udp_dev_struct udp_dev_t;
 
 typedef udp_dev_t *udp_t;
@@ -97,10 +87,9 @@ bool udp_halt_p (udp_t udp, udp_ep_t endpoint);
 
 bool udp_read_ready_p (udp_t udp);
 
-ssize_t udp_read (udp_t udp, void *buffer, size_t length);
-
-ssize_t udp_write (udp_t udp, const void *buffer, size_t length);
-
+int16_t
+udp_read_nonblock (udp_t udp, void *data, uint16_t size);
+    
 udp_status_t udp_write_async (udp_t udp, 
                               udp_ep_t endpoint,
                               const void *buffer, 
@@ -128,7 +117,7 @@ void udp_shutdown (void);
 /** Return non-zero if configured.  */
 bool udp_poll (udp_t udp);
 
-udp_t udp_init (udp_cfg_t * cfg, udp_request_handler_t handler, void *arg);
+udp_t udp_init (udp_request_handler_t handler, void *arg);
 
 
 #ifdef __cplusplus

@@ -265,9 +265,6 @@
 #endif
 
 
-#define UDP_TIMEOUT_US 100000
-
-
 #ifdef USB_PIO_DETECT
 #define USB_VBUS_PIO USB_PIO_DETECT
 #endif
@@ -418,10 +415,10 @@ typedef struct
        since they are written by both the ISR and main code.
        transferred should not be read until the endpoint is in the
        idle state.  */
-    udp_status_t status;
-    uint16_t remaining;
-    uint16_t buffered;
-    uint16_t transferred;
+    volatile udp_status_t status;
+    volatile uint16_t remaining;
+    volatile uint16_t buffered;
+    volatile uint16_t transferred;
 
     /* For debugging.  */
     uint16_t requested;
@@ -459,8 +456,6 @@ struct udp_dev_struct
     volatile udp_state_t prev_state;
     udp_setup_t setup;
     udp_ep_info_t eps[UDP_EP_NUM];
-    uint32_t read_timeout_us;
-    uint32_t write_timeout_us;    
 };
 
 
@@ -625,6 +620,7 @@ void udp_endpoint_complete (udp_t udp, udp_ep_t endpoint, udp_status_t status)
         TRACE_DEBUG (UDP, "UDP:EoT%d %d\n", endpoint, pep->transferred);
 
         pep->status = status;
+        pep->state = UDP_EP_STATE_IDLE;
         
         /* Invoke callback if present.  */
         if (pep->callback != 0) 
@@ -636,7 +632,6 @@ void udp_endpoint_complete (udp_t udp, udp_ep_t endpoint, udp_status_t status)
 
             pep->callback (pep->arg, &transfer);
         }
-        pep->state = UDP_EP_STATE_IDLE;
     }
 }
 
@@ -815,6 +810,10 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
 {
     udp_ep_info_t *pep = &udp->eps[endpoint];
 
+    /* Perhaps have disconnect status?  */
+    if (0 && ! udp_configured_p (udp))
+        return UDP_STATUS_ERROR;
+
     if (pep->state != UDP_EP_STATE_IDLE) 
         return UDP_STATUS_BUSY;
 
@@ -961,6 +960,10 @@ udp_read_async (udp_t udp, udp_ep_t endpoint, void *pdata, unsigned int len,
                 udp_callback_t callback, void *arg)
 {
     udp_ep_info_t *pep = &udp->eps[endpoint];
+
+    /* Perhaps have disconnect status?  */
+    if (0 && ! udp_configured_p (udp))
+        return UDP_STATUS_ERROR;
 
     if (pep->state != UDP_EP_STATE_IDLE)
         return UDP_STATUS_BUSY;
@@ -1467,43 +1470,7 @@ udp_endpoint_read (udp_t udp, udp_ep_t endpoint, void *buffer, udp_size_t len)
 }
 
 
-udp_size_t
-udp_endpoint_write (udp_t udp, udp_ep_t endpoint,
-                    const void *buffer, udp_size_t len)
-{
-    unsigned int timeout;
-    udp_ep_info_t *pep = &udp->eps[endpoint];
-
-    /* This is slower than the old method of writing directly to the
-       FIFOs, especially when sending single characters, but should be
-       more robust since it uses the standard endpoint handling
-       code.  */
-
-    if (udp_write_async (udp, endpoint, buffer, len, 0, 0)
-        != UDP_STATUS_SUCCESS)
-        return 0;
-
-    /*  Wait for interrupt handler to change pep->state.  We may have
-        a race condition if someone else grabs the endpoint as soon as
-        it goes idle.  I'm not sure if this can happen.  */
-
-    timeout = UDP_TIMEOUT_US;
-    while (pep->state != UDP_EP_STATE_IDLE)
-    {
-        timeout--;
-        if (! timeout || ! udp_configured_p (udp))
-        {
-            udp_endpoint_error (udp, endpoint, UDP_ERROR_WRITE_TIMEOUT);
-            udp_endpoint_complete (udp, endpoint, UDP_STATUS_TIMEOUT);
-            break;
-        }
-        DELAY_US (1);
-    }
-    return pep->transferred;
-}
-
-
-static int16_t
+int16_t
 udp_read_nonblock (udp_t udp, void *data, uint16_t size)
 {
     int ret;
@@ -1517,43 +1484,6 @@ udp_read_nonblock (udp_t udp, void *data, uint16_t size)
     }
     return ret;
 }    
-
-
-static ssize_t
-udp_write_nonblock (udp_t udp, const void *data, size_t size)
-{
-    int ret;
-
-    /* This blocks until data written....  */
-    ret = udp_endpoint_write (udp, UDP_EP_IN, data, size);
-    
-    if (ret == 0)
-    {
-        errno = EAGAIN;
-        return -1;
-    }
-    return ret;
-}
-
-
-/** Read size bytes.  Block until all the bytes have been read or
-    until timeout occurs.  */
-ssize_t
-udp_read (udp_t udp, void *data, size_t size)
-{
-    return sys_read_timeout (udp, data, size, udp->read_timeout_us,
-                             (void *)udp_read_nonblock);
-}
-
-
-/** Write size bytes.  Block until all the bytes have been transferred
-    to the transmit ring buffer or until timeout occurs.  */
-ssize_t
-udp_write (udp_t udp, const void *data, size_t size)
-{
-    return sys_write_timeout (udp, data, size, udp->write_timeout_us,
-                              (void *)udp_write_nonblock);
-}
 
 
 /* Signal the host by pulling D+ high (drive a K state).  */
@@ -1770,12 +1700,10 @@ udp_vbus_interrupt_handler (void)
 #endif
 
 
-udp_t udp_init (udp_cfg_t *cfg, udp_request_handler_t request_handler, void *arg)
+udp_t udp_init (udp_request_handler_t request_handler, void *arg)
 {
     udp_t udp = &udp_dev;
 
-    udp->read_timeout_us = cfg->read_timeout_us;
-    udp->write_timeout_us = cfg->write_timeout_us;    
     udp->request_handler = request_handler;
     udp->request_handler_arg = arg;
     udp->setup.request = 0;
@@ -1784,7 +1712,7 @@ udp_t udp_init (udp_cfg_t *cfg, udp_request_handler_t request_handler, void *arg
     udp->connection = 0;
     udp->prev_state = UDP_STATE_NOT_POWERED;
     udp->state = UDP_STATE_NOT_POWERED;
-    
+
     udp_unsignal (udp);
 
 #ifdef USB_VBUS_PIO
