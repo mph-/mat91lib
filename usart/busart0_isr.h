@@ -57,7 +57,7 @@ busart0_isr (void)
 {
     busart_dev_t *dev = &busart0_dev;
 
-    if (USART0_WRITE_READY_P ())
+    if (USART0_TX_IRQ_ENABLED_P () && USART0_WRITE_READY_P ())
     {
         int ret;
 
