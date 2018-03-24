@@ -51,6 +51,7 @@ typedef enum
 typedef struct udp_transfer_struct
 {
     udp_status_t status;
+    uint8_t *pdata;    
     uint16_t transferred;
 } udp_transfer_t;
 

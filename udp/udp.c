@@ -628,6 +628,7 @@ void udp_endpoint_complete (udp_t udp, udp_ep_t endpoint, udp_status_t status)
             udp_transfer_t transfer;
 
             transfer.status = pep->status;
+            transfer.pdata = pep->pdata - pep->transferred;
             transfer.transferred = pep->transferred;
 
             pep->callback (pep->arg, &transfer);
@@ -809,6 +810,7 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
                  unsigned int len, udp_callback_t callback, void *arg)
 {
     udp_ep_info_t *pep = &udp->eps[endpoint];
+    uint32_t status;
 
     /* Perhaps have disconnect status?  */
     if (0 && ! udp_configured_p (udp))
@@ -832,13 +834,15 @@ udp_write_async (udp_t udp, udp_ep_t endpoint, const void *pdata,
     pep->requested_prev = pep->requested;
     pep->requested = len;
 
-    if (UDP->UDP_CSR[endpoint] & UDP_CSR_TXCOMP)
+    status = UDP->UDP_CSR[endpoint];
+    
+    if (status & UDP_CSR_TXCOMP)
         udp_endpoint_error (udp, endpoint, UDP_ERROR_FISHY);
     
     /* This should be automatically cleared when a FIFO's contents are
        sent to the host.  I think this happens when the device is
        disconnected and there is no VBUS detection.  */
-    if (UDP->UDP_CSR[endpoint] & UDP_CSR_TXPKTRDY)
+    if (status & UDP_CSR_TXPKTRDY)
         udp_endpoint_error (udp, endpoint, UDP_ERROR_WEIRD);
     
     udp_endpoint_interrupt_disable (udp, endpoint);
@@ -1023,96 +1027,102 @@ udp_setup_read (udp_t udp, udp_ep_t endpoint)
 
 
 void
+udp_endpoint_write_complete (udp_t udp, udp_ep_t endpoint)
+{
+    udp_ep_info_t *pep = &udp->eps[endpoint];
+
+    pep->buffered = 0;
+        
+    /* Transfer completed.  */
+    UDP_CSR_CLR (endpoint, UDP_CSR_TXCOMP);
+    
+    /* Terminate transfer and call callback.  */
+    udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
+}
+
+
+void
 udp_endpoint_write_handler (udp_t udp, udp_ep_t endpoint)
 {
     udp_ep_info_t *pep = &udp->eps[endpoint];
     unsigned int status = UDP->UDP_CSR[endpoint];
 
-    if (pep->state == UDP_EP_STATE_WRITE)
-    {
-        /* The endpoint is in the write state.
-           The scenarios are:
-           1: no more data to send (buffered <= packet_size
-                                          && remaining == 0)
-           1: just buffered data to send (buffered > packet_size
-                                          && remaining == 0)
-           2: buffered data and more to send (remaining > 0 and ping-pong)
-           3: no buffered data and more to send (remaining > 0 and non-ping-pong)
-        */
-
-        if ((pep->buffered <= pep->fifo_size && pep->remaining == 0)
-            || (((status & UDP_CSR_EPTYPE_Msk) == UDP_CSR_EPTYPE_CTRL)
-                && (pep->remaining == 0)
-                && (pep->buffered == pep->fifo_size)))
-        {
-            /* Case 1: Transfer completed.  */
-
-            pep->transferred += pep->buffered;
-            pep->buffered = 0;
-            
-            UDP_CSR_CLR (endpoint, UDP_CSR_TXCOMP);
-
-            /* Terminate transfer and call callback.  */
-            udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
-        }
-        else
-        {
-            pep->transferred += pep->fifo_size;
-            pep->buffered -= pep->fifo_size;
-            
-            /* Transfer next block of data.  */
-            if (pep->num_fifo == 1)
-            {
-                /* No double buffering, so load FIFO and say it is
-                   ready.  */
-                udp_endpoint_fifo_write (udp, endpoint);
-
-                UDP_CSR_SET (endpoint, UDP_CSR_TXPKTRDY);
-
-                /* Acknowledge TXCOMP interrupt.  The datasheet says
-                 * this must be cleared adfter TXPKTRDY is set. */
-                UDP_CSR_CLR (endpoint, UDP_CSR_TXCOMP);
-            }
-            else
-            {
-                /* Say another packet ready and acknowledge TXCOMP
-                   interrupt.  The data sheet shows this should be
-                   cleared after TXPKTRDY set and before the FIFO is
-                   written.  The tutorial says the other way around!
-                   Let's try both at the same time.  */
-
-                status = (status & ~UDP_CSR_TXCOMP) | UDP_CSR_TXPKTRDY;
-                while (UDP->UDP_CSR[endpoint] != status)
-                    UDP->UDP_CSR[endpoint] = status;
-
-                /* Load other FIFO with data.  */
-                if (pep->remaining)
-                    udp_endpoint_fifo_write (udp, endpoint);
-                else if (pep->buffered <= pep->fifo_size)
-                {
-                    /* The transfer will terminate soon since
-                       there is only pep->buffered samples to send.
-                       So just poll for TXCOMP going high.  */
-                    while ((UDP->UDP_CSR[endpoint] & UDP_CSR_TXCOMP) == 0)
-                        continue;
-
-                    pep->transferred += pep->buffered;
-                    pep->buffered = 0;
-            
-                    UDP_CSR_CLR (endpoint, UDP_CSR_TXCOMP);
-
-                    /* Terminate transfer and call callback.  */
-                    udp_endpoint_complete (udp, endpoint, UDP_STATUS_SUCCESS);
-                }
-            }
-        }
-    }
-    else
+    if (pep->state != UDP_EP_STATE_WRITE)
     {
         /* Hmmm, how did we get here?  */
         UDP_CSR_CLR (endpoint, UDP_CSR_TXCOMP);
         pep->spurious++;
+        return;
     }
+
+    /* buffered is the number of bytes written to the FIFO(s).   This
+       is between 1 and 2 * FIFO size.  
+       remaining is the number of bytes still to transfer.
+    */
+
+    if (pep->num_fifo == 1)
+    {
+        /* No double buffering.   */
+
+        pep->transferred += pep->buffered;
+        pep->buffered = 0;        
+
+        if (pep->remaining == 0)
+        {
+            udp_endpoint_write_complete (udp, endpoint);
+            return;
+        }
+
+        udp_endpoint_fifo_write (udp, endpoint);
+        
+        UDP_CSR_SET (endpoint, UDP_CSR_TXPKTRDY);
+        
+        /* Acknowledge TXCOMP interrupt.  The datasheet says
+           this must be cleared adfter TXPKTRDY is set.  */
+        UDP_CSR_CLR (endpoint, UDP_CSR_TXCOMP);
+        return;        
+    }
+
+    /* Have double buffering.   */
+    
+    if (pep->buffered <= pep->fifo_size && pep->remaining == 0)
+    {
+        /* Transfer completed.  */
+        pep->transferred += pep->buffered;
+        udp_endpoint_write_complete (udp, endpoint);
+        return;
+    }
+
+    pep->transferred += pep->fifo_size;
+    pep->buffered -= pep->fifo_size;
+    
+    /* Have more data to send.
+
+       Start by saying another packet ready and acknowledge TXCOMP
+       interrupt.  The data sheet shows this should be cleared after
+       TXPKTRDY set and before the FIFO is written.  The tutorial says
+       the other way around!  Let's try both at the same time.  */
+    
+    status = (status & ~UDP_CSR_TXCOMP) | UDP_CSR_TXPKTRDY;
+    while (UDP->UDP_CSR[endpoint] != status)
+        UDP->UDP_CSR[endpoint] = status;
+    
+    if (pep->remaining)
+    {
+        /* Load other FIFO with data.  */
+        udp_endpoint_fifo_write (udp, endpoint);
+        return;
+    }
+    
+    /* The transfer will terminate soon since there is only
+       pep->buffered samples being sent.  So just poll for TXCOMP
+       going high.  */
+    while ((UDP->UDP_CSR[endpoint] & UDP_CSR_TXCOMP) == 0)
+        continue;
+    
+    pep->transferred += pep->buffered;
+    udp_endpoint_write_complete (udp, endpoint);    
+    return;
 }
 
 
