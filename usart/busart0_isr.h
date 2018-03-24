@@ -55,12 +55,15 @@ busart0_tx_finished_p (void)
 static void
 busart0_isr (void)
 {
-    busart_dev_t *dev = &busart0_dev;
+    busart_dev_t *dev = &busart0_dev;    
+    uint32_t status;
 
-    if (USART0_TX_IRQ_ENABLED_P () && USART0_WRITE_READY_P ())
+    status = USART0->US_CSR;
+    
+    if (USART0_TX_IRQ_ENABLED_P () && ((status & US_CSR_TXRDY) != 0))
     {
         int ret;
-
+        
         ret = ring_getc (&dev->tx_ring);        
         if (ret >= 0)
             USART0_WRITE (ret);
@@ -68,13 +71,13 @@ busart0_isr (void)
             USART0_TX_IRQ_DISABLE ();
     }
 
-    if (USART0_READ_READY_P ())
+    if ((status & US_CSR_RXRDY) != 0)
     {
-	char ch;
+        char ch;
 
-	ch = USART0_READ ();
+        ch = USART0_READ ();
 
-	/* What about buffer overflow?  */
+        /* What about buffer overflow?  */
 	ring_putc (&dev->rx_ring, ch);
     }
 }

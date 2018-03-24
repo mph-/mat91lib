@@ -57,8 +57,11 @@ static void
 busart1_isr (void)
 {
     busart_dev_t *dev = &busart1_dev;
+    uint32_t status;
 
-    if (USART1_TX_IRQ_ENABLED_P () && USART1_WRITE_READY_P ())
+    status = USART1->US_CSR;
+    
+    if (USART1_TX_IRQ_ENABLED_P () && ((status & US_CSR_TXRDY) != 0))
     {
         int ret;
         
@@ -69,7 +72,7 @@ busart1_isr (void)
             USART1_TX_IRQ_DISABLE ();
     }
 
-    if (USART1_READ_READY_P ())
+    if ((status & US_CSR_RXRDY) != 0)
     {
         char ch;
 

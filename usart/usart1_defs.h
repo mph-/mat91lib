@@ -45,17 +45,6 @@ do                                      \
 #define USART1_BAUD_DIVISOR_SET(DIVISOR)  USART1->US_BRGR = (DIVISOR)
 
 
-#define USART1_IRQ_CONFIG(ISR)          \
-do                                      \
-{                                       \
-    USART1_RX_IRQ_ENABLE ();            \
-    irq_config (AT91C_ID_USART1, 1,        \
-                AT91C_AIC_SRCTYPE_INT_LEVEL_SENSITIVE, (ISR));  \
-    irq_enable (AT91C_ID_USART1);          \
-} while (0)
-
-
-
 #ifdef __cplusplus
 }
 #endif    
