@@ -30,7 +30,7 @@ extern "C" {
 enum {PORT_A, PORT_B, PORT_C};
 
 /* Enumerate all the PIOs.  */
-#define PIO_DEFINE(PORT, PORTBIT) (((PORT) << 5) + (PORTBIT))
+#define PIO_DEFINE(PORT, PORTBIT) ((pio_t)(((PORT) << 5) + (PORTBIT)))
 
 
 /** Private macro to lookup bitmask.  */
