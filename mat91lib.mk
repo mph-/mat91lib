@@ -84,9 +84,16 @@ endif
 OBJDIR = objs
 DEPDIR = deps
 
-OBJ1 = $(CCSRC:.cpp=.o) $(CSRC:.c=.o) 
+# Dirty hack: add _x suffix for C++ files as a workaround for Windows'
+# lack of case discrimination where Adc.o is considered the same as
+# adc.o.  This could be conditionally applied depending on the OS.  A
+# better fix to create a hierarchical build tree or to prefix the
+# filename with the library name.  An even better approach is to
+# rewrite using cmake.
 
-DEP1 = $(CSRC:.c=.d) $(CCSRC:.cpp=.d)
+OBJ1 = $(CCSRC:.cpp=_x.o) $(CSRC:.c=.o) 
+
+DEP1 = $(CCSRC:.cpp=_x.d) $(CSRC:.c=.d) 
 
 # Create list of object and dependency files.  Note, sort removes duplicates.
 OBJS = $(sort $(addprefix $(OBJDIR)/, $(notdir $(sort $(OBJ1)))))
@@ -153,7 +160,7 @@ ifeq (1, 0)
 # created when a pre-requisite is modified.
 
 # Rule to compile .cpp file to .o file.
-$(OBJDIR)/%.o: %.cpp Makefile
+$(OBJDIR)/%_x.o: %.cpp Makefile
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 # Rule to compile .c file to .o file.
@@ -161,10 +168,10 @@ $(OBJDIR)/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 # Rule to create .d file from .cpp file.
-$(DEPDIR)/%.d: %.cpp
+$(DEPDIR)/%_x.d: %.cpp
 	@set -e; $(DEL) $@; \
 	$(CC) -MM $(CXXFLAGS) $< > $@.$$$$; \
-	sed 's,\($*\)\.o[ :]*,$(OBJDIR)/\1.o $@ : ,g' < $@.$$$$ > $@; \
+	sed 's,\($*\)x_\.o[ :]*,$(OBJDIR)/x_\1.o $@ : ,g' < $@.$$$$ > $@; \
 	$(DEL) $@.$$$$
 
 # Rule to create .d file from .c file.
@@ -186,11 +193,11 @@ $(OBJDIR)/%.o: %.c Makefile
 	@echo -n "$(OBJDIR)/" > deps/$*.d
 	$(CC) -MM $(CFLAGS) $< >> deps/$*.d
 
-$(OBJDIR)/%.o: %.cpp Makefile
+$(OBJDIR)/%_x.o: %.cpp Makefile
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 # Generate dependencies to see if object file needs recompiling.
-	@echo -n "$(OBJDIR)/" > deps/$*.d
-	$(CXX) -MM $(CXXFLAGS) $< >> deps/$*.d
+	@echo -n "$(OBJDIR)/" > deps/$*_x.d
+	$(CXX) -MM $(CXXFLAGS) $< >> deps/$*_x.d
 endif
 
 # Link object files to form output file.
