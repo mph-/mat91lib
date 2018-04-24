@@ -1729,7 +1729,7 @@ udp_t udp_init (udp_request_handler_t request_handler, void *arg)
     pio_init (USB_VBUS_PIO);
     pio_config_set (USB_VBUS_PIO, PIO_INPUT);
 
-    pio_irq_config_set (USB_VBUS_PIO, PIO_IRQ_EDGE);
+    pio_irq_config_set (USB_VBUS_PIO, PIO_IRQ_ANY_EDGE);
 
     irq_config (PIO_ID (USB_VBUS_PIO), 1, udp_vbus_interrupt_handler);
     
