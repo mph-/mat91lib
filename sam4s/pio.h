@@ -458,8 +458,9 @@ pio_irq_disable (pio_t pio)
 
 
 /** Clear interrupt for specified PIO.  Unfortunately, this has the
- gnarly side-effect of clearing ALL the PIO interrupts on the same
- port.  */
+    gnarly side-effect of clearing ALL the PIO interrupts on the same
+    port.  The work-around is to have a common interrupt handler that
+    delegates to previously registered sub-handlers.  */
 static inline uint32_t
 pio_irq_clear (pio_t pio)
 {

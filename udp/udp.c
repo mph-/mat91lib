@@ -1702,6 +1702,11 @@ udp_vbus_interrupt_handler (void)
 {
     udp_t udp = &udp_dev;
 
+    /* FIXME.  Reading PIO_ISR automatically clears all PIO
+       interrupts.  pio.c needs modifying to register separate PIO
+       interrupt handlers. */
+    pio_irq_clear (USB_VBUS_PIO);    
+    
     if (pio_input_get (USB_VBUS_PIO) != 0)
         udp_attach (udp);
     else
