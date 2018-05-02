@@ -190,13 +190,13 @@ else
 $(OBJDIR)/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 # Generate dependencies to see if object file needs recompiling.
-	@echo -n "$(OBJDIR)/" > deps/$*.d
+	@printf "$(OBJDIR)/" > deps/$*.d
 	$(CC) -MM $(CFLAGS) $< >> deps/$*.d
 
 $(OBJDIR)/%_x.o: %.cpp Makefile
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 # Generate dependencies to see if object file needs recompiling.
-	@echo -n "$(OBJDIR)/" > deps/$*_x.d
+	@printf "$(OBJDIR)/" > deps/$*_x.d
 	$(CXX) -MM $(CXXFLAGS) $< >> deps/$*_x.d
 endif
 
