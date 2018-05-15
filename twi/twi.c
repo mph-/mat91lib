@@ -17,11 +17,21 @@
    acknowledged by the slave.  
 
    A master read consists of a write followed by a read.  The write
-    consists of the slave address followed by the internal address.  A
-    repeated START is then sent followed by the slave address.  The
-    master the reads the data payload from the slave.  The master
-    acknowledges each byte and controls the number of bytes read by
-    sending a STOP.
+   consists of the slave address followed by the internal address.  A
+   repeated START is then sent followed by the slave address.  The
+   master the reads the data payload from the slave.  The master
+   acknowledges each byte and controls the number of bytes read by
+   sending a STOP.
+
+   Note, the TWI1 controller on a SAM4S shares TWCK1/TWD1 pins with
+   JTAG.  By default, these are configured for JTAG.  They can be
+   reconfigured by calling mcu_jtag_disable.
+
+   If the MCU is reset in the middle of a transfer, some slave devices
+   hold the SDA/TWD line low.  This condition can be resolved by
+   sending out a number of SCL/TWCK pulses to advance the slave's
+   state machine.
+ 
 */
 
 
@@ -81,8 +91,6 @@ twi_init (const twi_cfg_t *cfg)
     /* Enable TWIx peripheral clock.  */
     mcu_pmc_enable (ID_TWI0 + cfg->channel);
     
-    twi = &twi_devices[cfg->channel];
-
     twi->clock_config = TWI_CWGR_CLDIV (cfg->period - 4) 
         | TWI_CWGR_CHDIV (cfg->period - 4)
         | TWI_CWGR_CKDIV ((cfg->period - 4) >> 8);
