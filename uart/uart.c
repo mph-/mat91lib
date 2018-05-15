@@ -10,7 +10,7 @@
    support for synchronous operation. 
 
    Note the UART does not provide hardware handshaking using RTS/CTS
-   signals; only the USART supports this. 
+   signals; only the UART supports this. 
 */
 
 
