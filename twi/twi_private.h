@@ -30,6 +30,7 @@ typedef struct twi_dev_struct
     twi_slave_addr_t slave_addr;
     twi_mode_t mode;
     uint32_t clock_config;
+    uint8_t channel;
 } twi_dev_t;
 
 

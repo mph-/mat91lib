@@ -184,7 +184,7 @@ else
 # Strategy 2 for automatic dependency generation.  Dependency files
 # are included if they exist.  When a .c file is compiled, a
 # dependency file (.d) is created.  This is slightly slower than
-# strategy 1 since the .d file is regenerated whenever a file
+# strategy 1 since the .d file is regenerated whenever a file is
 # compiled.
 
 $(OBJDIR)/%.o: %.c Makefile

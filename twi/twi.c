@@ -46,6 +46,57 @@
 static twi_dev_t twi_devices[TWI_DEVICES_NUM];
 
 
+static void twi_unstick (twi_t twi)
+{
+    unsigned int i;
+    
+    switch (twi->channel)
+    {
+    case TWI_CHANNEL_0:
+        pio_config_set (TWD0_PIO, PIO_PULLUP);
+        pio_config_set (TWCK0_PIO, PIO_PULLUP);
+        /* If the data line is stuck low, send some dummy clocks until
+           it goes high.  */
+        if (! pio_input_get (TWD0_PIO))
+        {
+            for (i = 0; i < 16; i++)
+            {
+                pio_config_set (TWCK0_PIO, PIO_OUTPUT_LOW);
+                DELAY_US (5);
+                pio_config_set (TWCK0_PIO, PIO_PULLUP);
+                DELAY_US (5);
+                if (pio_input_get (TWD0_PIO))
+                    break;
+            }
+        }
+        pio_config_set (TWD0_PIO, TWD0_PERIPH);
+        pio_config_set (TWCK0_PIO, TWCK0_PERIPH);            
+        break;
+
+    case TWI_CHANNEL_1:
+        pio_config_set (TWD1_PIO, PIO_PULLUP);
+        pio_config_set (TWCK1_PIO, PIO_PULLUP);
+        /* If the data line is stuck low, send some dummy clocks until
+           it goes high.  */
+        if (! pio_input_get (TWD1_PIO))
+        {
+            for (i = 0; i < 16; i++)
+            {
+                pio_config_set (TWCK1_PIO, PIO_OUTPUT_LOW);
+                DELAY_US (5);
+                pio_config_set (TWCK1_PIO, PIO_PULLUP);
+                DELAY_US (5);
+                if (pio_input_get (TWD1_PIO))
+                    break;
+            }
+        }
+        pio_config_set (TWD1_PIO, TWD1_PERIPH);
+        pio_config_set (TWCK1_PIO, TWCK1_PERIPH);            
+        break;
+    }
+}
+
+
 void
 twi_reset (twi_t twi)
 {
@@ -60,6 +111,25 @@ twi_reset (twi_t twi)
 
     /* Clock ony required for master mode.  Set a 50% duty cycle.  */
     twi->base->TWI_CWGR = twi->clock_config;
+
+    twi_unstick (twi);
+}
+
+
+static void twi_config (twi_t twi)
+{
+    switch (twi->channel)
+    {
+    case TWI_CHANNEL_0:
+        pio_config_set (TWD0_PIO, TWD0_PERIPH);
+        pio_config_set (TWCK0_PIO, TWCK0_PERIPH);
+        break;
+
+    case TWI_CHANNEL_1:
+        pio_config_set (TWD1_PIO, TWD1_PERIPH);
+        pio_config_set (TWCK1_PIO, TWCK1_PERIPH);
+        break;
+    }
 }
 
 
@@ -74,20 +144,19 @@ twi_init (const twi_cfg_t *cfg)
     {
     case TWI_CHANNEL_0:
         twi->base = TWI0;
-        pio_config_set (TWD0_PIO, TWD0_PERIPH);
-        pio_config_set (TWCK0_PIO, TWCK0_PERIPH);
         break;
 
     case TWI_CHANNEL_1:
         twi->base = TWI1;
-        pio_config_set (TWD1_PIO, TWD1_PERIPH);
-        pio_config_set (TWCK1_PIO, TWCK1_PERIPH);
         break;
 
     default:
         return 0;
     }
 
+    twi->channel = cfg->channel;
+    twi_config (twi);
+    
     /* Enable TWIx peripheral clock.  */
     mcu_pmc_enable (ID_TWI0 + cfg->channel);
     
