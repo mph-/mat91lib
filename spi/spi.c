@@ -111,7 +111,7 @@ enum
 #define SPI_READY_P(BASE) ((BASE)->SPI_SR & SPI_SR_RDRF)
 #endif
 
-#define SPI_TXEMPTY_P(BASE) ((BASE)->SPI_SR & SPI_SR_TXEMPTY)
+#define SPI_TXEMPTY_P(BASE) ((BASE)->SPI_SR & SPI_SR_TDRE)
 
 /* Set lastxfer bit for use in fixed mode.  */
 #define SPI_LASTXFER(BASE) ((BASE)->SPI_CR = SPI_CR_LASTXFER)
@@ -883,7 +883,7 @@ spi_read_ready_p (spi_t spi)
 bool
 spi_write_ready_p (spi_t spi)
 {
-    return SPI_READY_P (spi->base);
+    return SPI_TXEMPTY_P (spi->base);
 }
 
 
