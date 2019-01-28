@@ -358,11 +358,22 @@ spi_clock_speed_t
 spi_clock_speed_kHz_set (spi_t spi, spi_clock_speed_t clock_speed_kHz)
 {
     uint32_t clock_speed;
+    uint32_t divisor;
 
     clock_speed = clock_speed_kHz * 1000;
-    spi_clock_divisor_set (spi, (F_CPU_UL + clock_speed - 1) / clock_speed);
-    clock_speed = F_CPU / spi->clock_divisor;
 
+    /* Calculate the appropriate clock divisor. This must be in the range 1 to
+     * 255 inclusive. Adding the speed and subtracting 1 rounds up when used
+     * with integer division.  */
+    divisor = (F_CPU_UL + clock_speed - 1) / clock_speed;
+    if (divisor > 255)
+        divisor = 255;
+    else if (divisor == 0)
+        divisor = 1;
+
+    /* Set the divisor and return the actual clock speed. */
+    spi_clock_divisor_set (spi, (spi_clock_divisor_t)divisor);
+    clock_speed = F_CPU / spi->clock_divisor;
     return clock_speed / 1000;
 }
 

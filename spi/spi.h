@@ -265,7 +265,11 @@ spi_clock_divisor_set (spi_t spi, spi_clock_divisor_t clock_divisor);
 
 
 /** Change the clock speed.  This does not take affect until spi_config
-    or one of the I/O routines is called.  */
+    or one of the I/O routines is called. The desired speed is given in kHz.
+    N.B., the clock divisor calculated by this routine is rounded up, i.e., the
+    clock will be slower than or equal to the given speed. It is also clipped
+    to the allowable range of divisors. The actual clock speed (also in kHz) is
+    returned.  */
 spi_clock_speed_t
 spi_clock_speed_kHz_set (spi_t spi, spi_clock_speed_t clock_speed);
 
