@@ -3,7 +3,7 @@
     @date   2 Jun 2007
     @brief  PIO abstraction for SAM4S microcontroller.
     @note   Macros and inline functions are used to avoid function
-            call overhead and to allow compile-time constant folding. 
+            call overhead and to allow compile-time constant folding.
 */
 #ifndef PIO_H
 #define PIO_H
@@ -15,7 +15,7 @@ extern "C" {
 
 #include "config.h"
 #include "mcu.h"
-
+#include "irq.h"
 
 #define PIO_SAM4S
 
@@ -51,7 +51,7 @@ enum {PORT_A, PORT_B, PORT_C};
 
 typedef uint32_t pio_mask_t;
 
-typedef enum pio_config_enum 
+typedef enum pio_config_enum
 {
     PIO_INPUT = 1,          /* Configure as input pin.  */
     PIO_PULLUP,             /* Configure as input pin with pullup.  */
@@ -324,7 +324,7 @@ pio_output_high (pio_t pio)
 
 /** Set PIO low.
     @param pio  */
-static inline void 
+static inline void
 pio_output_low (pio_t pio)
 {
     PIO_BASE (pio)->PIO_CODR = PIO_BITMASK_ (pio);
@@ -332,7 +332,7 @@ pio_output_low (pio_t pio)
 
 
 /** Set PIO to desired state.
-    @param pio 
+    @param pio
     @param state  */
 static inline void
 pio_output_set (pio_t pio, bool state)
@@ -378,19 +378,27 @@ void
 pio_shutdown (pio_t pio);
 
 
-typedef enum pio_irq_config_enum 
+typedef enum pio_irq_config_enum
 {
-    PIO_IRQ_FALLING_EDGE = 1, 
-    PIO_IRQ_RISING_EDGE, 
-    PIO_IRQ_ANY_EDGE, 
-    PIO_IRQ_LOW_LEVEL, 
+    PIO_IRQ_FALLING_EDGE = 1,
+    PIO_IRQ_RISING_EDGE,
+    PIO_IRQ_ANY_EDGE,
+    PIO_IRQ_LOW_LEVEL,
     PIO_IRQ_HIGH_LEVEL
 } pio_irq_config_t;
 
+/**
+ * Initialize PIO pin as interrupt input
+ * @param pio PIO pin
+ * @param config trigger condition of interrupt
+ * @param isr interrupt service routine (interrupt handler) on specific pin
+ */
+void
+pio_irq_init(pio_t pio, pio_irq_config_t config, irq_handler_t isr);
 
 /** Configure PIO for interrupt
     @param pio  */
-static inline bool 
+static inline bool
 pio_irq_config_set (pio_t pio, pio_irq_config_t config)
 {
 
