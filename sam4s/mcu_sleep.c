@@ -10,8 +10,8 @@
 #include "irq.h"
 
 
-void
-mcu_sleep (const mcu_sleep_cfg_t *cfg)
+bool
+mcu_sleep_wakeup_set (const mcu_sleep_wakeup_cfg_t *cfg)
 {
     static const pio_t wakeup_pins[] = 
         {
@@ -34,7 +34,7 @@ mcu_sleep (const mcu_sleep_cfg_t *cfg)
         };
 
     if (!cfg)
-        return;
+        return 0;
 
     if (cfg->pio)
     {
@@ -44,18 +44,21 @@ mcu_sleep (const mcu_sleep_cfg_t *cfg)
         {
             if (wakeup_pins[i] == cfg->pio)
             {
-                if (cfg->active)
-                    SUPC->SUPC_WUIR = BIT (i) | BIT (i + 16);
-                else
-                    SUPC->SUPC_WUIR = BIT (i);
-
-                /* Set debounce period here...  */
-                break;
+                /* Set wakeup inputs register.  */
+                SUPC->SUPC_WUIR |= BIT (i);                
+                if (cfg->active_high)
+                    SUPC->SUPC_WUIR |= BIT (i + 16);
+                return 1;
             }
         }
-        /* What if the specified PIO is not a wakeup pin?  */
     }
-    
+    return 0;
+}
+
+
+void
+mcu_sleep (const mcu_sleep_cfg_t *cfg)
+{
     switch (cfg->mode)
     {
     case MCU_SLEEP_MODE_BACKUP:
@@ -65,8 +68,6 @@ mcu_sleep (const mcu_sleep_cfg_t *cfg)
            reset when on wake up.  */
         SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
         SUPC->SUPC_CR = SUPC_CR_KEY (0xA5u) | SUPC_CR_VROFF_STOP_VREG;
-        irq_global_enable ();
-        cpu_wfi ();
         
         /* Exit from backup mode occurs if there is an event on the
            WKUPEN0-15 pins, supply monitor (SM), RTC alarm, or RTT
@@ -80,11 +81,15 @@ mcu_sleep (const mcu_sleep_cfg_t *cfg)
            peripherals and memories are stopped but these devices are
            still powered.  */
 
-        /* TODO: set fast RC oscillator, set FLPM bitfield in PMC_FSMR,
-           set flash waitstate to 0, set WAITMODE bit in CKGR_MOR.  */
+        /* TODO: set fast RC oscillator?  For flash low powr mode, set
+           FLPM bitfield in PMC_FSMR, set flash waitstate to 0.  */
 
-        irq_global_enable ();
-        cpu_wfi ();
+        PMC->CKGR_MOR |= CKGR_MOR_KEY (0x37) | CKGR_MOR_WAITMODE;
+
+        /* Exit from backup mode occurs if there is an event on the
+           WKUPEN0-15 pins, USB wakeup, RTC alarm, or RTT
+           alarm.  The supply monitor monitors the voltage on the
+           VDDIO pin if it is enabled.  The MCU is not reset.  */        
         break;
 
     case MCU_SLEEP_MODE_SLEEP:

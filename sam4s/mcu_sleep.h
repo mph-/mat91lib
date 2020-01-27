@@ -22,17 +22,25 @@ typedef enum
 } mcu_sleep_mode_t;
 
 
+typedef struct mcu_sleep_wakeup_cfg_struct
+{
+    pio_t pio;
+    bool active_high;
+} mcu_sleep_wakeup_cfg_t;
+
+
 typedef struct mcu_sleep_cfg_struct
 {
     mcu_sleep_mode_t mode;
-    pio_t pio;
-    bool active;
-} mcu_sleep_cfg_t;
+} mcu_sleep_cfg_t;    
+    
 
+bool
+mcu_sleep_wakeup_set (const mcu_sleep_wakeup_cfg_t *cfg);    
 
+    
 void
 mcu_sleep (const mcu_sleep_cfg_t *cfg);
-
 
 
 #ifdef __cplusplus
