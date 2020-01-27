@@ -44,7 +44,7 @@ include $(MAT91LIB_DIR)/$(FAMILY)/$(FAMILY).mk
 SCRIPTS = $(MAT91LIB_DIR)/$(FAMILY)/scripts
 LDSCRIPTS = $(MAT91LIB_DIR)/$(FAMILY)
 
-# To keep things simple, don't like with g++.  This is only
+# To keep things simple, don't link with g++.  This is only
 # needed if use c++ libraries.
 #LD = $(TOOLCHAIN)-g++
 LD = $(TOOLCHAIN)-gcc
