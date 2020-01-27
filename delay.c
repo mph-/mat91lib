@@ -1,9 +1,9 @@
+#include "delay.h"
+
 void delay_us (unsigned int us)
 {
-
-
+    DELAY_US (us);
 }
-
 
 
 void delay_ms (unsigned int ms)
