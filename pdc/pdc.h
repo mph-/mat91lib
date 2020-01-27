@@ -2,7 +2,7 @@
     @author Michael Hayes
     @date   2 July 2014
 
-    @brief Routines for interfacing to the PDC bus with DMA access.
+    @brief Routines for interfacing to the PDC.
 */
 
 #ifndef PDC_H
