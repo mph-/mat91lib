@@ -26,6 +26,14 @@ extern "C" {
 
 #define USART0_RX_IRQ_ENABLE() (USART0->US_IER = US_CSR_RXRDY)
 
+#ifndef USART0_TX_FLOW_CONTROL
+#define USART0_TX_FLOW_CONTROL
+#endif
+
+#ifndef USART0_IRQ_PRIORITY
+#define USART0_IRQ_PRIORITY 4
+#endif    
+    
 
 static busart_dev_t busart0_dev;
 
@@ -66,7 +74,10 @@ busart0_isr (void)
         
         ret = ring_getc (&dev->tx_ring);        
         if (ret >= 0)
+        {
+            USART0_TX_FLOW_CONTROL;
             USART0_WRITE (ret);
+        }            
         else
             USART0_TX_IRQ_DISABLE ();
     }
@@ -94,7 +105,7 @@ busart0_init (uint16_t baud_divisor)
 
     usart0_init (baud_divisor);
 
-    irq_config (ID_USART0, 1, busart0_isr);
+    irq_config (ID_USART0, USART0_IRQ_PRIORITY, busart0_isr);    
 
     irq_enable (ID_USART0);
 

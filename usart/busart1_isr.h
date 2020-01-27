@@ -12,6 +12,7 @@ extern "C" {
     
 
 #include "irq.h"
+#include "pio.h"    
 #include "usart1.h"
 #include "usart1_defs.h"
 
@@ -26,6 +27,14 @@ extern "C" {
 
 #define USART1_RX_IRQ_ENABLE() (USART1->US_IER = US_CSR_RXRDY)
 
+#ifndef USART1_TX_FLOW_CONTROL
+#define USART1_TX_FLOW_CONTROL
+#endif
+
+
+#ifndef USART1_IRQ_PRIORITY
+#define USART1_IRQ_PRIORITY 4
+#endif        
 
 static busart_dev_t busart1_dev;
 
@@ -64,10 +73,13 @@ busart1_isr (void)
     if (USART1_TX_IRQ_ENABLED_P () && ((status & US_CSR_TXRDY) != 0))
     {
         int ret;
-        
+
         ret = ring_getc (&dev->tx_ring);        
         if (ret >= 0)
+        {
+            USART1_TX_FLOW_CONTROL;
             USART1_WRITE (ret);
+        }
         else
             USART1_TX_IRQ_DISABLE ();
     }
@@ -95,7 +107,7 @@ busart1_init (uint16_t baud_divisor)
 
     usart1_init (baud_divisor);
 
-    irq_config (ID_USART1, 1, busart1_isr);
+    irq_config (ID_USART1, USART1_IRQ_PRIORITY, busart1_isr);
 
     irq_enable (ID_USART1);
 
