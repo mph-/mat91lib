@@ -89,7 +89,7 @@ static adc_dev_t *adc_config_last = 0;
 
 
 /** Reset ADC.  */
-static void
+void
 adc_reset (void)
 {
     ADC->ADC_CR = ADC_CR_SWRST;
@@ -468,3 +468,17 @@ adc_shutdown (adc_t adc)
     /* TODO.  */
     mcu_pmc_disable (ID_ADC);
 }
+
+
+int16_t *
+adc_convert_bipolar (adc_sample_t *src, int16_t *dst, uint16_t samples)
+{
+    uint16_t i;
+
+    for (i = 0; i < samples; i++)
+        *dst++ = *src++ - 2048;
+
+    return dst;
+}
+
+

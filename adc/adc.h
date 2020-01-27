@@ -182,6 +182,13 @@ void
 adc_shutdown (adc_t adc);
 
 
+void
+adc_reset (void);
+
+
+int16_t *adc_convert_bipolar (adc_sample_t *src, int16_t *dst, uint16_t samples);
+    
+
 #ifdef __cplusplus
 }
 #endif    
