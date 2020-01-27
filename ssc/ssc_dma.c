@@ -15,6 +15,8 @@
 #include "bits.h"
 
 
+/* Note, this has been superseded by pdc.  */
+
 bool
 ssc_dma_write_finished_p (void)
 {

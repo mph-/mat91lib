@@ -63,7 +63,7 @@ bssc_init (bssc_t *dev, const ssc_cfg_t *cfg,
     // Configure the ISR
     irq_config (ID_SSC, 1, bssc_isr);
     
-    // Enable interrupts globally
+    // Enable interrupts
     irq_enable (ID_SSC);
     
     dev->cfg = *cfg;
