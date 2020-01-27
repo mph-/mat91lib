@@ -39,7 +39,8 @@ static inline void irq_type_set (irq_id_t id, irq_type_t type)
 
 static inline void irq_priority_set (irq_id_t id, irq_priority_t priority)
 {
-    /* TODO.  */
+    // The smaller the number the higher the priority.
+    NVIC->IP[id] = priority << 4;
 }
 
 
@@ -86,7 +87,7 @@ static inline void irq_config (irq_id_t id, irq_priority_t priority,
                                irq_vector_t isr)
 {
     irq_disable (id);
-    /* Priority is 0 (lowest) to 7 (highest).  */
+    /* Priority is 0 (highest) to 15 (lowest).  */
     irq_priority_set (id, priority);
     irq_vector_set (id, isr);
     irq_clear (id);
