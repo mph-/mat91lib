@@ -24,7 +24,7 @@ extern "C" {
 
 
 // Ensure constant folding optimization
-__attribute__((optimize (O2)))    
+__attribute__((optimize (2)))    
 static inline unsigned int 
 _delay_us_loops (double delay_us)
 {
@@ -40,7 +40,7 @@ _delay_us_loops (double delay_us)
 }
 
     
-__attribute__((optimize (O2)))
+__attribute__((optimize (2)))
 static inline void DELAY_US (double delay_us)
 {
     unsigned int ticks;                      
