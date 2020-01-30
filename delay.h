@@ -40,7 +40,7 @@ _delay_us_loops (double delay_us)
 }
 
     
-__attribute__((optimize (2)))
+__always_inline__
 static inline void DELAY_US (double delay_us)
 {
     unsigned int ticks;                      

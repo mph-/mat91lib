@@ -18,7 +18,7 @@ extern "C" {
 #define MCU_FLASH_READ_CYCLES 3
 #endif
 
-static inline void
+static __always_inline__ void
 mcu_delay_loop (unsigned int loops)
 {
     /* Need to use l constraint to select a low register otherwise a
