@@ -24,9 +24,9 @@ extern "C" {
 
 
 // Ensure constant folding optimization
-__attribute__((optimize (2)))    
-static inline unsigned int 
-_delay_us_loops (double delay_us)
+__attribute__((optimize (2)))
+__always_inline__
+static inline unsigned int _delay_us_loops (double delay_us)
 {
     double tmp = ((double)F_CPU * (delay_us)) / (DELAY_LOOP_CYCLES * 1e6);
     unsigned int ticks;
