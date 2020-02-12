@@ -126,14 +126,12 @@ cadc_t cadc_init (const cadc_cfg_t *cfg)
 
 
 void
-cadc_start (void)
+cadc_start (cadc_t dev)
 {
-    cadc_t dev = &cadc_dev;
-    
     if (dev->started)
         return;
     
-    pdc_config (cadc_dev.pdc, 0, dev->descriptors);
+    pdc_config (dev->pdc, 0, dev->descriptors);
 
     // There is a problem with restarting.   It sees like the ADC
     // needs a hardware reset to reset the multiplexer sequencer
@@ -142,37 +140,36 @@ cadc_start (void)
     
     adc_enable (dev->adc);
     pdc_start (dev->pdc);
-    cadc_dev.count = 0;
-    cadc_dev.prev = 0;
+    dev->count = 0;
+    dev->prev = 0;
     dev->started = 1;
     dev->prev = 0;    
 }
 
 
 void
-cadc_stop (void)
+cadc_stop (cadc_t dev)
 {
     // adc_disable does nothing; the ADC runs on...
-    adc_disable (cadc_dev.adc);
+    adc_disable (dev->adc);
     // ... but the DMA is stopped
-    pdc_stop (cadc_dev.pdc);
+    pdc_stop (dev->pdc);
 }
 
 
 void
-cadc_shutdown (void)
+cadc_shutdown (cadc_t dev)
 {
-    cadc_stop ();
-    adc_shutdown (cadc_dev.adc);
-    tc_shutdown (cadc_dev.tc);
+    cadc_stop (dev);
+    adc_shutdown (dev->adc);
+    tc_shutdown (dev->tc);
 }
 
 
-void cadc_callback_register (cadc_callback_t callback_func,
+void cadc_callback_register (cadc_t dev,
+                             cadc_callback_t callback_func,
                              void *callback_data)
 {
-    cadc_t dev = &cadc_dev;
-
     dev->callback_func = callback_func;
     dev->callback_data = callback_data;    
 }

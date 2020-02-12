@@ -36,13 +36,13 @@ typedef void (*cadc_callback_t) (void *handle, adc_sample_t *buffer,
     
 cadc_t cadc_init (const cadc_cfg_t *cfg);
 
-void cadc_start (void);
+void cadc_start (cadc_t dev);
 
-void cadc_stop (void);
+void cadc_stop (cadc_t dev);
 
-void cadc_shutdown (void);
+void cadc_shutdown (cadc_t dev);
 
-void cadc_callback_register (cadc_callback_t callback_func,
+void cadc_callback_register (cadc_t dev, cadc_callback_t callback_func,
                              void *callback_data);
     
 #ifdef __cplusplus
