@@ -40,10 +40,13 @@ void cadc_start (cadc_t dev);
 
 void cadc_stop (cadc_t dev);
 
-void cadc_shutdown (cadc_t dev);
-
+uint8_t cadc_num_channels_get (cadc_t dev);
+    
 void cadc_callback_register (cadc_t dev, cadc_callback_t callback_func,
                              void *callback_data);
+
+void cadc_shutdown (cadc_t dev);
+
     
 #ifdef __cplusplus
 }

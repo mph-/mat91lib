@@ -173,3 +173,9 @@ void cadc_callback_register (cadc_t dev,
     dev->callback_func = callback_func;
     dev->callback_data = callback_data;    
 }
+
+
+uint8_t cadc_num_channels_get (cadc_t dev)
+{
+    return dev->num_channels;
+}
