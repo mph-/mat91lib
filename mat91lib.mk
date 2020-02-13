@@ -24,11 +24,11 @@ ifndef TOOLCHAIN
 TOOLCHAIN = arm-none-eabi
 endif
 
-ifeq (, $(shell which $(TOOLCHAIN)-gdb))
-GCC = $(TOOLCHAIN)-gdb
+ifneq (, $(shell which $(TOOLCHAIN)-gdb))
+GDB = $(TOOLCHAIN)-gdb
 else
 # This supersedes arm-none-eabi-gdb
-GCC = gdb-multiarch
+GDB = gdb-multiarch
 endif
 
 TARGET_MAP = $(addsuffix .map, $(basename $(TARGET)))
