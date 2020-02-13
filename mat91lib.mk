@@ -24,6 +24,13 @@ ifndef TOOLCHAIN
 TOOLCHAIN = arm-none-eabi
 endif
 
+ifeq (, $(shell which $(TOOLCHAIN)-gdb))
+GCC = $(TOOLCHAIN)-gdb
+else
+# This supersedes arm-none-eabi-gdb
+GCC = gdb-multiarch
+endif
+
 TARGET_MAP = $(addsuffix .map, $(basename $(TARGET)))
 
 ifneq (, $(findstring SAM7, $(MCU)))
@@ -217,20 +224,20 @@ clean:
 # Program the device.
 .PHONY: program
 program: $(TARGET)
-	$(TOOLCHAIN)-gdb -batch -x $(SCRIPTS)/program.gdb $^
+	$(GDB) -batch -x $(SCRIPTS)/program.gdb $^
 
 # Reset the device.
 .PHONY: reset
 reset:
-	$(TOOLCHAIN)-gdb -batch -x $(SCRIPTS)/reset.gdb
+	$(GDB) -batch -x $(SCRIPTS)/reset.gdb
 
 # Enable booting from flash.
 .PHONY: bootflash
 bootflash:
-	$(TOOLCHAIN)-gdb -batch -x $(SCRIPTS)/bootflash.gdb
+	$(GDB) -batch -x $(SCRIPTS)/bootflash.gdb
 
 # Attach debugger.
 .PHONY: debug
 debug:
-	$(TOOLCHAIN)-gdb  -x $(SCRIPTS)/debug.gdb $(TARGET)
+	$(GDB)  -x $(SCRIPTS)/debug.gdb $(TARGET)
 
