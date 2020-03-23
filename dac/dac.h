@@ -3,6 +3,9 @@
     @date   3 Feb 2005
 
     @brief Routines to use AT91 onboard DAC in polling mode.
+
+    Note, the DAC switches between Vref / 6 to 5 * Vref / 6.
+
 */
 
 #ifndef DAC_H
