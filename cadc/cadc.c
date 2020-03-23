@@ -89,7 +89,8 @@ cadc_t cadc_init (const cadc_cfg_t *cfg)
     if (! dev->adc)
         return 0;
 
-    tc_start (dev->tc);
+    // adc_tag_set (dev->adc, 1);
+    // adc_config (dev->adc);
 
     channels = cfg->adc.channels;
     num_channels = 0;
@@ -120,6 +121,8 @@ cadc_t cadc_init (const cadc_cfg_t *cfg)
     ADC->ADC_IER = ADC_ISR_ENDRX;
     irq_config (ID_ADC, ADC_IRQ_PRIORITY, cadc_isr);
     irq_enable (ID_ADC);
+
+    tc_start (dev->tc);
     
     return dev;
 }
