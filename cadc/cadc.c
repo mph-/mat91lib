@@ -12,6 +12,7 @@
 #include "pdc.h"
 #include "irq.h"
 #include "delay.h"
+#include "bits.h"
 
 
 #ifndef ADC_IRQ_PRIORITY
@@ -27,9 +28,10 @@ struct cadc_dev
     uint16_t dma_size;
     uint16_t *prev;
     uint32_t count;
-    uint8_t num_channels;
     volatile uint32_t isr_count;
     uint8_t num_buffers;
+    uint8_t num_channels;
+    uint8_t last_channel;    
     bool started;
     pdc_descriptor_t *descriptors;
     volatile adc_sample_t **buffers;
@@ -37,9 +39,21 @@ struct cadc_dev
     cadc_callback_t callback_func;
 };
 
-
 static struct cadc_dev cadc_dev;
 
+void cadc_sync (cadc_t dev, uint8_t channel)
+{
+    uint8_t val;
+
+    // FIXME, brutal hack to fix ADC synchronisation.  This blocks
+    // and should have a timeout.
+    while (1)
+    {
+        val = ADC->ADC_LCDR >> 12;
+        if (val == channel)
+            break;
+    }
+}
 
 
 static void
@@ -89,20 +103,24 @@ cadc_t cadc_init (const cadc_cfg_t *cfg)
     if (! dev->adc)
         return 0;
 
-    // adc_tag_set (dev->adc, 1);
-    // adc_config (dev->adc);
-
+    // Enable tagging of the data.  The four MSBs of each 16-bit sample
+    // specify the channel number.  This is useful for when the ADC MUX
+    // gets out of whack.
+    adc_tag_set (dev->adc, 1);
+    adc_config (dev->adc);
+    
     channels = cfg->adc.channels;
-    num_channels = 0;
-    while (channels)
+    dev->num_channels = 0;
+    for (i = 0; channels; channels >>= 1, i++)
     {
         if (channels & 1)
-            num_channels++;
-        channels >>= 1;
+        {
+            dev->num_channels++;
+            dev->last_channel = i;
+        }
     }
-    dev->num_channels = num_channels;
 
-    if (! num_channels)
+    if (! dev->num_channels)
         return 0;
 
     dev->descriptors = calloc (dev->num_buffers, sizeof (*dev->descriptors));
@@ -118,11 +136,12 @@ cadc_t cadc_init (const cadc_cfg_t *cfg)
     dev->started = 0;
     dev->pdc = pdc_init (adc_pdc_get (dev->adc), 0, dev->descriptors);
 
-    ADC->ADC_IER = ADC_ISR_ENDRX;
     irq_config (ID_ADC, ADC_IRQ_PRIORITY, cadc_isr);
     irq_enable (ID_ADC);
 
     tc_start (dev->tc);
+
+    ADC->ADC_IER = ADC_ISR_ENDRX;
     
     return dev;
 }
@@ -142,6 +161,9 @@ cadc_start (cadc_t dev)
     // It is best to leave the ADC running.
     
     adc_enable (dev->adc);
+    
+    // cadc_sync (dev, 0);
+    
     pdc_start (dev->pdc);
     dev->count = 0;
     dev->prev = 0;
