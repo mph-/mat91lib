@@ -313,6 +313,34 @@ adc_conversion_start (adc_t adc)
 }
 
 
+/** Start calibration.   This is required every time the ADC is reset.  */
+void
+adc_calibration_start (adc_t adc)
+{
+    /* Software trigger.  */
+    ADC->ADC_CR = ADC_CR_AUTOCAL;
+}
+
+
+/** Returns true if a calibration has finished.  */
+bool
+adc_calibration_finished_p (adc_t adc)
+{
+    return (ADC->ADC_ISR & ADC_ISR_EOCAL) != 0;
+}
+
+
+void
+adc_calibrate (adc_t adc)
+{
+    adc_calibration_start (adc);
+
+    // This takes 306 ADC clocks.
+    while (! adc_calibration_finished_p (adc))
+        continue;
+}
+
+
 /* Configure ADC controller.  */
 bool
 adc_config (adc_t adc)
