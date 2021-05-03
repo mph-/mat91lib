@@ -12,9 +12,15 @@
 
 
 /* A word can be transmitted over TD during the frame sync period,
-   using the contents of the 16-bit TSHR register.  Similarly, RD can
-   be sampled during the frame sync period and stored in the 16-bit
-   RSHR.  */
+   using the contents of the 16-bit TSHR register (this is a
+   preamble).  Similarly, RD can be sampled during the frame sync
+   period and stored in the 16-bit RSHR.
+
+   The following data packet can be up to 32 bits long.  Thus if one
+   is cunning, a 48 bit word can be transferred: 16 bits in the
+   preamble and 32 bits after.  However, the 48 bits cannot be sent by
+   DMA.
+*/
 
 
 static ssc_dev_t ssc_dev;
