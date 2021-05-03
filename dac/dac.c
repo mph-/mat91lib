@@ -1,7 +1,7 @@
 /** @file   dac.c
     @author M. P. Hayes
     @date   28 August 2016
-    @brief  Analogue to digital converter routines for AT91SAM processors
+    @brief  Digital to analogue converter routines for AT91SAM processors
 */
 
 #include "dac.h"

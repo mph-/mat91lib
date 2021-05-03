@@ -232,7 +232,7 @@ pio_shutdown (pio_t pio)
 
 /** Configure PIO
     @param pio  */
-static inline bool
+static inline __attribute__((optimize (2))) bool
 pio_config_set (pio_t pio, pio_config_t config)
 {
     switch (config)
@@ -315,7 +315,7 @@ pio_config_set (pio_t pio, pio_config_t config)
 
 /** Set PIO high.
     @param pio  */
-static inline void
+static inline __attribute__((optimize (2))) void
 pio_output_high (pio_t pio)
 {
     PIO_BASE (pio)->PIO_SODR = PIO_BITMASK_ (pio);
@@ -324,7 +324,7 @@ pio_output_high (pio_t pio)
 
 /** Set PIO low.
     @param pio  */
-static inline void 
+static inline __attribute__((optimize (2))) void 
 pio_output_low (pio_t pio)
 {
     PIO_BASE (pio)->PIO_CODR = PIO_BITMASK_ (pio);
@@ -334,7 +334,7 @@ pio_output_low (pio_t pio)
 /** Set PIO to desired state.
     @param pio 
     @param state  */
-static inline void
+static inline __attribute__((optimize (2))) void
 pio_output_set (pio_t pio, bool state)
 {
     state ? pio_output_high (pio) : pio_output_low (pio);
@@ -344,7 +344,7 @@ pio_output_set (pio_t pio, bool state)
 /** Get output state of PIO.
     @param pio
     @return state  */
-static inline bool
+static inline __attribute__((optimize (2))) bool
 pio_output_get (pio_t pio)
 {
     return (PIO_BASE (pio)->PIO_ODSR & PIO_BITMASK_ (pio)) != 0;
@@ -354,7 +354,7 @@ pio_output_get (pio_t pio)
 /** Read input state of PIO.
     @param pio
     @return state  */
-static inline bool
+static inline __attribute__((optimize (2))) bool
 pio_input_get (pio_t pio)
 {
     return (PIO_BASE (pio)->PIO_PDSR & PIO_BITMASK_ (pio)) != 0;
@@ -363,7 +363,7 @@ pio_input_get (pio_t pio)
 
 /** Toggle PIO.
     @param pio  */
-static inline void
+static inline __attribute__((optimize (2))) void
 pio_output_toggle (pio_t pio)
 {
     pio_output_get (pio) ? pio_output_low (pio) : pio_output_high (pio);
