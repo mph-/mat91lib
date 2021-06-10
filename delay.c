@@ -1,5 +1,6 @@
 #include "delay.h"
 
+__attribute__((optimize(2)))
 void delay_us (unsigned int us)
 {
     DELAY_US (us);
