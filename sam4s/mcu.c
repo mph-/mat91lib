@@ -9,12 +9,13 @@
 #include "cpu.h"
 #include "irq.h"
 
-/* TODO: CHECKME  */
-#define MCU_FLASH_SPEED 30e6
 
-#ifndef MCU_FLASH_READ_CYCLES 
-#define MCU_FLASH_READ_CYCLES 2
+#ifndef MCU_FLASH_READ_CYCLES
+/* 5 wait states for 96 MHz, 6 wait states for 120 MHz.  */
+#define MCU_FLASH_READ_CYCLES (int(((F_CPU / 1e6) + 20) / 21))
 #endif
+
+#define MCU_FLASH_WAIT_STATES (MCU_FLASH_READ_CYCLES - 1)
 
 
 #ifdef CPU_PLL_DIV
@@ -90,36 +91,10 @@
 static void
 mcu_flash_init (void)
 {
-#if 0
-    /* TODO  */
-    switch (MCU_FLASH_READ_CYCLES)
-    {
-    case 1:
-        /* Set 0 flash wait states for reading, 1 for writing.  */
-        EEFC->MC_FMR = MC_FWS_0FWS;
-        break;
-
-    case 2:
-        /* Set 1 flash wait state for reading, 2 for writing.  */
-        EEFC->MC_FMR = MC_FWS_1FWS;
-        break;
-
-    case 3:
-        /* Set 2 flash wait states for reading, 3 for writing.  */
-        EEFC->MC_FMR = MC_FWS_2FWS;
-        break;
-
-    default:
-        /* Set 3 flash wait states for reading, 4 for writing.  */
-        EEFC->MC_FMR = MC_FWS_3FWS;
-        break;
-    }
-
     /* Set number of MCK cycles per microsecond for the Flash
        microsecond cycle number (FMCN) field of the Flash mode
        register (FMR).  */
-    BITS_INSERT (EEFC->MC_FMR, (uint16_t) (F_CPU / 1e6), 16, 23);
-#endif
+    BITS_INSERT (EEFC->MC_FMR, MCU_FLASH_WAIT_STATES, 16, 23);
 }
 
 
@@ -340,10 +315,10 @@ mcu_reset (void)
 void
 mcu_select_slowclock (void)
 {
-    /* Switch main clock (MCK) from PLLACLK to SLCK.  Note the prescale
+    /* Switch master clock (MCK) from PLLACLK to SLCK.  Note the prescale
        (PRES) and clock source (CSS) fields cannot be changed at the
        same time.  We first switch from the PLLACLK to SLCK then set
-       the prescaler to divide by 64. */
+       the prescaler to divide by 64.  */
     PMC->PMC_MCKR = (PMC->PMC_MCKR & PMC_MCKR_PRES_Msk)
         | PMC_MCKR_CSS_SLOW_CLK;
 
