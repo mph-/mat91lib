@@ -25,33 +25,42 @@
 #define MCU_PLL_MUL CPU_PLL_MUL
 #endif
 
-#if MCU_PLL_MUL > 80
-#error MCU_PLL_MUL must be less than 80
+#ifndef MCU_PLLA_MUL
+#define MCU_PLLA_MUL MCU_PLL_MUL
+#endif
+
+#ifndef MCU_PLLA_DIV
+#define MCU_PLLA_DIV MCU_PLL_DIV
 #endif
 
 
-#define F_PLL_IN  (F_XTAL / MCU_PLL_DIV)
-#define F_PLL_OUT  (F_PLL_IN * MCU_PLL_MUL)
+#if MCU_PLLA_MUL > 80
+#error MCU_PLLA_MUL must be less than 80
+#endif
 
-/* The PLL input frequency needs to be between 3 and 32 MHz.  This is
+
+#define F_PLLA_IN  (F_XTAL / MCU_PLLA_DIV)
+#define F_PLLA_OUT  (F_PLLA_IN * MCU_PLLA_MUL)
+
+/* The PLLA input frequency needs to be between 3 and 32 MHz.  This is
    the frequency after the divider and before the frequency
    multiplier.  */
-#define F_PLL_IN_MIN    3000000
-#define F_PLL_IN_MAX   32000000
+#define F_PLLA_IN_MIN    3000000
+#define F_PLLA_IN_MAX   32000000
 
 
-/* The PLL output frequency needs to be between 80 and 240 MHz.   */
-#define F_PLL_OUT_MIN  80000000
-#define F_PLL_OUT_MAX 240000000
+/* The PLLA output frequency needs to be between 80 and 240 MHz.   */
+#define F_PLLA_OUT_MIN  80000000
+#define F_PLLA_OUT_MAX 240000000
 
 #if 0
 /* Not all C preprocessors can handle floating point macros.  */
-#if F_PLL_IN < F_PLL_IN_MIN
-#error MCU_PLL_MUL is too large, the PLL input frequency is too low
+#if F_PLLA_IN < F_PLLA_IN_MIN
+#error MCU_PLLA_MUL is too large, the PLLA input frequency is too low
 #endif
 
-#if F_PLL_IN > F_PLL_IN_MAX
-#error MCU_PLL_MUL is too small, the PLL input frequency is too high
+#if F_PLLA_IN > F_PLLA_IN_MAX
+#error MCU_PLLA_MUL is too small, the PLLA input frequency is too high
 #endif
 #endif
 
@@ -69,7 +78,7 @@
 
 #define MCU_USB_LOG2_DIV 0
 
-/* The PLL frequency is given by (F_XTAL * MCU_PLL_MUL) / MCU_PLL_DIV.
+/* The PLLA frequency is given by (F_XTAL * MCU_PLLA_MUL) / MCU_PLLA_DIV.
    This is then divided by the prescaler (assumed 2) for MCK.  */
 
 
@@ -147,7 +156,7 @@ mcu_mck_ready_wait (void)
 }
 
 
-/** Set up the main clock (MAINCK), PLL clock, and master clock (MCK).   */
+/** Set up the main clock (MAINCK), PLLA clock, and master clock (MCK).   */
 static int
 mcu_clock_init (void)
 {
@@ -165,15 +174,14 @@ mcu_clock_init (void)
        clock).
        
        The main oscillator (external crystal) can range from 3--20 MHz.
-       The PLL frequency can range from 80--240 MHz.
+       The PLLA frequency can range from 80--240 MHz.
 
        Here we assume that an external crystal is used for the MAINCK
        and this is multiplied by PLLA to drive MCK.
 
-       PLLB is not touched here.  Currently, the USB clock is derived
-       from PLLA; this restricts MCK to be a multiple of 48 MHz
-       required for the USB clock.  This restriction could be relaxed
-       using PLLB for the USB.
+       If the USB clock is derived from PLLA this restricts MCK to be
+       a multiple of 48 MHz required for the USB clock.  This
+       restriction can be relaxed using PLLB for the USB.
 
        Initially MCK is driven from the 4 MHz internal fast RC oscillator.
     */
@@ -204,17 +212,31 @@ mcu_clock_init (void)
     /* Disable PLLA if it is running and reset fields.  */
     PMC->CKGR_PLLAR = CKGR_PLLAR_ONE | CKGR_PLLAR_MULA (0);
 
-    /* Configure and start PLLA.  The PLL start delay is MCU_PLL_COUNT
+    /* Configure and start PLLA.  The PLLA start delay is MCU_PLL_COUNT
        SLCK cycles.  Note, PLLA (but not PLBB) needs the mysterious
        bit CKGR_PLLAR_ONE set.  */
-    PMC->CKGR_PLLAR = CKGR_PLLAR_MULA (MCU_PLL_MUL - 1) 
-        | CKGR_PLLAR_DIVA (MCU_PLL_DIV) 
+    PMC->CKGR_PLLAR = CKGR_PLLAR_MULA (MCU_PLLA_MUL - 1) 
+        | CKGR_PLLAR_DIVA (MCU_PLLA_DIV) 
         | CKGR_PLLAR_PLLACOUNT (MCU_PLL_COUNT) | CKGR_PLLAR_ONE;
 
+    #ifdef MCU_PLLB_MUL
+    /* Configure and start PLLB.  The PLLB start delay is MCU_PLLB_COUNT
+       SLCK cycles.  */
+    PMC->CKGR_PLLBR = CKGR_PLLBR_MULB (MCU_PLLB_MUL - 1) 
+        | CKGR_PLLBR_DIVB (MCU_PLLB_DIV) 
+        | CKGR_PLLBR_PLLBCOUNT (MCU_PLL_COUNT);
+    #endif
+    
     /* Wait for PLLA to start up.  */
     while (! (PMC->PMC_SR & PMC_SR_LOCKA))
         continue;
 
+    #ifdef MCU_PLLB_MUL    
+    /* Wait for PLLB to start up.  */
+    while (! (PMC->PMC_SR & PMC_SR_LOCKB))
+        continue;
+    #endif
+    
     /* Switch to PLLA_CLCK for MCK.  */
     PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_CSS_Msk)) 
         | PMC_MCKR_CSS_PLLA_CLK;
@@ -318,9 +340,9 @@ mcu_reset (void)
 void
 mcu_select_slowclock (void)
 {
-    /* Switch main clock (MCK) from PLLCLK to SLCK.  Note the prescale
+    /* Switch main clock (MCK) from PLLACLK to SLCK.  Note the prescale
        (PRES) and clock source (CSS) fields cannot be changed at the
-       same time.  We first switch from the PLLCLK to SLCK then set
+       same time.  We first switch from the PLLACLK to SLCK then set
        the prescaler to divide by 64. */
     PMC->PMC_MCKR = (PMC->PMC_MCKR & PMC_MCKR_PRES_Msk)
         | PMC_MCKR_CSS_SLOW_CLK;
@@ -335,7 +357,7 @@ mcu_select_slowclock (void)
     while (!(PMC->PMC_SR & PMC_SR_MCKRDY))
         continue;
 
-    /* Disable PLL.  */
+    /* Disable PLLA.  */
     PMC->CKGR_PLLAR = CKGR_PLLAR_ONE | CKGR_PLLAR_MULA (0);
 
     ///* Disable main oscillator.  */

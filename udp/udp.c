@@ -35,52 +35,43 @@
    USB uses differential signalling except for bus reset and end of
    packet signals where D+ and D- are both low.
 
-   In the following, host refers to a USB downstream port.
+   When no device is connected, the USB D+ and D- signals are tied to
+   GND by 15 K pull-down resistors integrated in the hub downstream
+   ports.   The USB device is in the not powered state.
 
-   Sequence of operation:
+   When a device is connected to a hub downstream port, VBUS goes to
+   5V and the device is in the powered state.  If there is a
+   UDP_VBUS_PIO defined an interrupt can be used to detect the change.
+   Otherwise it needs to be polled.
 
-   1. When the device is not connected, the USB D+ and D- signals are
-   tied to GND by 15 K pull-down resistors integrated in the host.
-   The USB device is in the not powered state.
+   The device then connects a 1.5 K pull-up resistor on D+ (this might
+   be switched using a MOSFET or connected to VBUS.  The SAM4S UDP
+   controller does this internally.).  The USB bus line goes into IDLE
+   state, D+ is pulled up by the device 1.5 K resistor to 3.3 V and D-
+   is pulled down by the 15 K resistor of the host.  The USB device is
+   in the attached state.
 
-   2. When the device is connected to a host, VBUS goes to 5V and the
-   device is in the powered state.
+   The device then waits for an end of bus reset from the host (both
+   D+ and D- pulled low for at least 10 ms) and then enters the
+   default state.  If the device supports high speed it sends a chirp
+   K and the host responds with a sequnce of alternating chirp K and
+   chirp J (KJKJKJ).
 
-   2a. If USB_VBUS_PIO is defined, an interrupt can be used to detect
-   the change.  The device then connects a 1.5 K pull-up resistor on
-   D+ (see udp_signal).  The device is now in the attached state.
+   In the default state the control endpoint (0) is enabled and the
+   device waits to be enumerated by the host; the host sends a number
+   of setup requests on the control endpoint and the device responds
+   sending data back on the control endpoint.
 
-   2b. If USB_VBUS_PIO is not defined, the 1.5 K resistor on D+ can be
-   permanently pulled high.  When the device is plugged in, the host
-   will detect that D+ is high.
+   The first host request is for the device descriptor?
 
-   3. The device then waits for an end of bus reset from the host
-   (both D+ and D- pulled low for at least 10 ms).  If the device
-   supports high speed it sends a chirp K and the host responds with a
-   sequence of alternating chirp K and chirp J (KJKJKJ).  The end of
-   bus reset triggers an interrupt handled by udb_interrupt_handler.
-   This switches the device state to the default state and calls
-   udp_bus_reset_handler.
-
-   4. The control endpoint (0) is enabled and the device waits to be
-   enumerated by the host.
-
-   5. The host sends a number of setup requests on the control
-   endpoint and the device responds sending data back on the control
-   endpoint.
-
-   5.1 The first host request is for the device descriptor?
-
-   5.2 The host then sets the address to use and the the device enters the
+   The host then sets the address to use and the the device enters the
    address state.
 
-   6. Once a valid set configuration standard request has been
-   received and acknowledged, the device enables endpoints
-   corresponding to the current configuration.  The device then enters
-   the configured state.  If configuration 0 is selected then we need
-   to go back to the address state.
-
-
+   Once a valid set configuration standard request has been received
+   and acknowledged, the device enables endpoints corresponding to the
+   current configuration.  The device then enters the configured
+   state.  If configuration 0 is selected then we need to go ack to
+   the address state.
 
    Note, if there is a setup request the device does not know (for
    example, a request for a device qualifier descriptor for a non
@@ -135,7 +126,7 @@
    write to the control EP.  This operation must be completed before
    we can set the address state.  We can poll the TXCOMP interrupt
    that indicates that the host has received the data payload.  But we
-   don't really want to poll within the interrupt handler.  One
+   don't really want to poll during the interrupt handler.  One
    solution is to register a callback function that is invoked when
    the TXCOMP interrupt occurs.  The only functions that need to be
    called are udp_address_set and udp_configuration_set.  Another
@@ -271,6 +262,11 @@
 
 #ifndef TRACE_UDP_DEBUG
 #define TRACE_UDP_DEBUG(...)
+#endif
+
+
+#ifndef F_PLLA
+#define F_PLLA F_PLL
 #endif
 
 
@@ -1366,7 +1362,7 @@ udp_halt_p (udp_t udp, udp_ep_t endpoint)
 
 /**
  * Sets or unsets the device address
- * This is a called from the request handler (see usb.c).
+ *
  */ 
 void
 udp_address_set (void *arg, udp_transfer_t *ptransfer __unused__)
@@ -1560,8 +1556,13 @@ udp_enable (udp_t udp)
     // Set the PLL USB divider
     PMC->PMC_PLLR |= AT91C_CKGR_USBDIV_1;
 #else
-    /* Note, this clears USBS to select PLLA.  */
-    PMC->PMC_USB = PMC_USB_USBDIV ((int)(F_PLL / 48e6 + 0.5) - 1);
+    #ifdef MCU_PLLB_MUL
+    /* Set USBS to select PLLB.  */    
+    PMC->PMC_USB = PMC_USB_USBDIV ((int)(F_PLLB / 48e6 + 0.5) - 1) | 1;
+    #else
+    /* Clear USBS to select PLLA.  */
+    PMC->PMC_USB = PMC_USB_USBDIV ((int)(F_PLLA / 48e6 + 0.5) - 1);
+    #endif
 #endif
 
     // Enable the 48MHz USB clock UDPCK and System Peripheral USB clock
