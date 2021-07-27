@@ -13,11 +13,19 @@ extern "C" {
 
 #include "config.h"
 
+#ifdef MCU_PLLB_MUL
+#ifndef F_PLLB
+#define F_PLLB (F_XTAL / MCU_PLLB_DIV * MCU_PLLB_MUL)
+#endif
+#endif
 
+    
 #ifndef MCU_FLASH_READ_CYCLES 
 #define MCU_FLASH_READ_CYCLES 3
 #endif
 
+    
+__attribute__((optimize(2)))
 static __always_inline__ void
 mcu_delay_loop (unsigned int loops)
 {
