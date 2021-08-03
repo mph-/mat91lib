@@ -94,7 +94,7 @@ mcu_flash_init (void)
     /* Set number of MCK cycles per microsecond for the Flash
        microsecond cycle number (FMCN) field of the Flash mode
        register (FMR).  */
-    BITS_INSERT (EEFC->MC_FMR, MCU_FLASH_WAIT_STATES, 16, 23);
+    BITS_INSERT (REG_EFC0_FMR, MCU_FLASH_WAIT_STATES, 16, 23);
 }
 
 
