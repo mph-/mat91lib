@@ -35,8 +35,16 @@
 #endif
 
 
-#if MCU_PLLA_MUL > 80
-#error MCU_PLLA_MUL must be less than 80
+#if MCU_PLLA_MUL > 62
+// See errata in datasheet
+#error MCU_PLLA_MUL must be 62 or smaller
+#endif
+
+#ifdef MCU_PLLB_MUL
+#if MCU_PLLB_MUL > 62
+// See errata in datasheet
+#error MCU_PLLB_MUL must be 62 or smaller
+#endif
 #endif
 
 
@@ -188,7 +196,7 @@ mcu_clock_init (void)
     PMC->CKGR_PLLAR = CKGR_PLLAR_ONE | CKGR_PLLAR_MULA (0);
 
     /* Configure and start PLLA.  The PLLA start delay is MCU_PLL_COUNT
-       SLCK cycles.  Note, PLLA (but not PLBB) needs the mysterious
+       SLCK cycles.  Note, PLLA (but not PLLB) needs the mysterious
        bit CKGR_PLLAR_ONE set.  */
     PMC->CKGR_PLLAR = CKGR_PLLAR_MULA (MCU_PLLA_MUL - 1) 
         | CKGR_PLLAR_DIVA (MCU_PLLA_DIV) 
