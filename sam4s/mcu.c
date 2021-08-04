@@ -15,8 +15,19 @@
 #define MCU_FLASH_READ_CYCLES (int(((F_CPU / 1e6) + 20) / 21))
 #endif
 
-#define MCU_FLASH_WAIT_STATES (MCU_FLASH_READ_CYCLES - 1)
+#define MCU_FLASH_WAIT_STATES ((MCU_FLASH_READ_CYCLES) - 1)
 
+/* This must be a in range 0--6.  The default is 1 giving a prescale
+   value of 2.  */
+#ifndef MCU_MCK_PRESCALER_VALUE
+#define MCU_MCK_PRESCALER_VALUE 1
+#endif
+
+#if MCU_MCK_PRESCALER_VALUE > 6
+#error MCU_MCK_PRESCLAER_VALUE must be 6 or smaller
+#endif
+
+#define MCU_MCK_PRESCALE (1 << (MCU_MCK_PRESCALER_VALUE))
 
 #ifdef CPU_PLL_DIV
 #define MCU_PLL_DIV CPU_PLL_DIV
@@ -34,19 +45,17 @@
 #define MCU_PLLA_DIV MCU_PLL_DIV
 #endif
 
-
 #if MCU_PLLA_MUL > 62
-// See errata in datasheet
+/* See errata in datasheet.  */
 #error MCU_PLLA_MUL must be 62 or smaller
 #endif
 
 #ifdef MCU_PLLB_MUL
 #if MCU_PLLB_MUL > 62
-// See errata in datasheet
+/* See errata in datasheet.  */
 #error MCU_PLLB_MUL must be 62 or smaller
 #endif
 #endif
-
 
 #define F_PLLA_IN  (F_XTAL / MCU_PLLA_DIV)
 #define F_PLLA_OUT  (F_PLLA_IN * MCU_PLLA_MUL)
@@ -56,7 +65,6 @@
    multiplier.  */
 #define F_PLLA_IN_MIN    3000000
 #define F_PLLA_IN_MAX   32000000
-
 
 /* The PLLA output frequency needs to be between 80 and 240 MHz.   */
 #define F_PLLA_OUT_MIN  80000000
@@ -88,8 +96,9 @@
 #define MCU_USB_LOG2_DIV 0
 
 /* The PLLA frequency is given by (F_XTAL * MCU_PLLA_MUL) / MCU_PLLA_DIV.
-   This is then divided by the prescaler (assumed 2) for MCK.  */
 
+   The MCK frequency is given by (F_XTAL * MCU_PLLA_MUL) / MCU_PLLA_DIV / MCU_MCK_PRESCALE.
+*/
 
 
 /* The AT91 Flash is single plane so it is not possible
@@ -113,13 +122,13 @@ mcu_xtal_mainck_start (void)
         CKGR_MOR_KEY (0x37) | CKGR_MOR_MOSCXTEN |
         CKGR_MOR_MOSCXTST (MCU_MAINCK_COUNT);
     
-    /* Wait for the xtal oscillator to stabilize.  */
+    /* Wait for the XTAL oscillator to stabilize.  */
     while (! (PMC->PMC_SR & PMC_SR_MOSCXTS))
         continue;
     
     PMC->CKGR_MOR |= CKGR_MOR_KEY (0x37) | CKGR_MOR_MOSCSEL;
 
-    /* Could check if xtal oscillator fails to start; say if xtal
+    /* Could check if XTAL oscillator fails to start; say if XTAL
        not connected.  */
 }
 
@@ -147,14 +156,21 @@ mcu_clock_init (void)
        oscillator is disabled after reset and slow clock is
        selected. 
 
-       There are four clock sources: SLCK (the 32 kHz internal RC
-       oscillator or 32 kHz external crystal slow clock), MAINCK (the
-       external 3-20 MHz crystal or internal 4/8/12 MHz internal fast
-       RC oscillator main clock), PLLACK, and PLLBCK.  The two PLL
-       clocks are the outputs of the the phase locked loop driven by
-       MAINCK).  One of these four clock sources can be fed to a
-       prescaler (with divisors 2^0 ... 2^6) to drive MCK (master
-       clock).
+       There are four clock sources: 
+       1. SLCK (the 32 kHz internal RC oscillator or
+          32 kHz external crystal slow clock), 
+
+       2. MAINCK (the external 3-20 MHz crystal or internal 4/8/12 MHz
+       internal fast RC oscillator main clock),
+
+       3. PLLACK,
+
+       4. PLLBCK.
+
+       The PLLs are driven by MAINCK.
+
+       One of these four clock sources can be fed to a prescaler (with
+       divisors 2^0 ... 2^6) to drive MCK (master clock).   
        
        The main oscillator (external crystal) can range from 3--20 MHz.
        The PLLA frequency can range from 80--240 MHz.
@@ -175,7 +191,7 @@ mcu_clock_init (void)
     if ((PMC->PMC_MCKR & PMC_MCKR_CSS_Msk) == PMC_MCKR_CSS_PLLA_CLK)
         mcu_reset ();
 
-    /* Start xtal oscillator and select as MAINCK.  */
+    /* Start XTAL oscillator and select as MAINCK.  */
     mcu_xtal_mainck_start ();
     
     /* Select MAINCK for MCK (this should already be selected).  */
@@ -184,8 +200,8 @@ mcu_clock_init (void)
     if (!mcu_mck_ready_wait ())
         return 0;
 
-    /* Set prescaler to 2.  */
-    PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_PRES_Msk)) | PMC_MCKR_PRES_CLK_2;
+    /* Set prescaler.  */
+    PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_PRES_Msk)) | MCU_MCK_PRESCALER_VALUE;
     if (!mcu_mck_ready_wait ())
         return 0;
 
@@ -343,7 +359,7 @@ mcu_select_slowclock (void)
     /* Disable PLLA.  */
     PMC->CKGR_PLLAR = CKGR_PLLAR_ONE | CKGR_PLLAR_MULA (0);
 
-    ///* Disable main oscillator.  */
+    /* Disable main oscillator.  */
     PMC->CKGR_MOR = CKGR_MOR_KEY (0x37);
 }
 
