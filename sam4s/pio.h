@@ -167,6 +167,13 @@ typedef enum pio_config_enum
 #define TIOA2_PIO PA26_PIO
 #define TIOA2_PERIPH PIO_PERIPH_B
 
+#define TIOB0_PIO PA1_PIO
+#define TIOB0_PERIPH PIO_PERIPH_B
+#define TIOB1_PIO PA16_PIO
+#define TIOB1_PERIPH PIO_PERIPH_B
+#define TIOB2_PIO PA27_PIO
+#define TIOB2_PERIPH PIO_PERIPH_B    
+
 /* TWI  */
 #define TWD0_PIO PA3_PIO
 #define TWD0_PERIPH PIO_PERIPH_A
