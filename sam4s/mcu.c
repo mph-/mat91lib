@@ -108,7 +108,7 @@ mcu_flash_wait_states_set (uint8_t wait_states)
     /* Set number of MCK cycles per microsecond for the Flash
        microsecond cycle number (FMCN) field of the Flash mode
        register (FMR).  */
-    BITS_INSERT (REG_EFC0_FMR, wait_states, 16, 23);
+     EFC0->EEFC_FMR = EEFC_FMR_FWS (wait_states);
 }
 
 
@@ -116,7 +116,7 @@ mcu_flash_wait_states_set (uint8_t wait_states)
 static void
 mcu_flash_init (void)
 {
-    mcu_flash_wait_states_set (MCU_FLASH_WAIT_STATES);
+   mcu_flash_wait_states_set (MCU_FLASH_WAIT_STATES);
 }
 
 
@@ -206,7 +206,8 @@ mcu_clock_init (void)
         return 0;
 
     /* Set prescaler.  */
-    PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_PRES_Msk)) | MCU_MCK_PRESCALER_VALUE;
+    PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_PRES_Msk)) | (MCU_MCK_PRESCALER_VALUE << 4);
+    
     if (!mcu_mck_ready_wait ())
         return 0;
 
