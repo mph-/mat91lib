@@ -20,8 +20,9 @@ extern "C" {
 #endif
 
     
-#ifndef MCU_FLASH_READ_CYCLES 
-#define MCU_FLASH_READ_CYCLES 3
+#ifndef MCU_FLASH_READ_CYCLES
+/* 6 cycles for 96 MHz, 7 cycles for 120 MHz.  */    
+#define MCU_FLASH_READ_CYCLES ((((int)((F_CPU) / 1e6)) + 20) / 21)    
 #endif
 
     

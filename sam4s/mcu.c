@@ -10,14 +10,9 @@
 #include "irq.h"
 
 
-#ifndef MCU_FLASH_READ_CYCLES
-/* 5 wait states for 96 MHz, 6 wait states for 120 MHz.  */
-#define MCU_FLASH_READ_CYCLES (int(((F_CPU / 1e6) + 20) / 21))
-#endif
-
 #define MCU_FLASH_WAIT_STATES ((MCU_FLASH_READ_CYCLES) - 1)
 
-/* This must be a in range 0--6.  The default is 1 giving a prescale
+/* This must be in range 0--6.  The default is 1 giving a prescale
    value of 2.  */
 #ifndef MCU_MCK_PRESCALER_VALUE
 #define MCU_MCK_PRESCALER_VALUE 1
@@ -29,6 +24,8 @@
 
 #define MCU_MCK_PRESCALE (1 << (MCU_MCK_PRESCALER_VALUE))
 
+/* CPU_PLL_DIV and CPU_PLL_MUL are for backward compatibility and
+   shall be deprecated.  */
 #ifdef CPU_PLL_DIV
 #define MCU_PLL_DIV CPU_PLL_DIV
 #endif
@@ -106,12 +103,20 @@
 
 /** Initialise flash memory controller.  */
 static void
-mcu_flash_init (void)
+mcu_flash_wait_states_set (uint8_t wait_states)
 {
     /* Set number of MCK cycles per microsecond for the Flash
        microsecond cycle number (FMCN) field of the Flash mode
        register (FMR).  */
-    BITS_INSERT (REG_EFC0_FMR, MCU_FLASH_WAIT_STATES, 16, 23);
+    BITS_INSERT (REG_EFC0_FMR, wait_states, 16, 23);
+}
+
+
+/** Initialise flash memory controller.  */
+static void
+mcu_flash_init (void)
+{
+    mcu_flash_wait_states_set (MCU_FLASH_WAIT_STATES);
 }
 
 
@@ -302,16 +307,13 @@ mcu_init (void)
     irq_id_t id;
     int i;
 
-    EFC0->EEFC_FMR = EEFC_FMR_FWS (5);
-
+    mcu_flash_init ();
+    
     /* Disable all interrupts to be sure when debugging.  */
     for (i = 0; i < 8; i++)
         NVIC->ICER[i] = ~0;
 
     mcu_reset_enable ();
-
-    /* Reduce the number of wait states for the flash memory.  */
-    mcu_flash_init ();
 
     mcu_watchdog_disable ();
 
