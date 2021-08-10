@@ -646,6 +646,7 @@ tc_config_set (tc_t tc, const tc_cfg_t *cfg)
     {
         tc_period_set (tc, cfg->period);
         tc_delay_set (tc, cfg->delay);
+        tc_aux_delay_set (tc, cfg->aux_delay);        
     }
 
     return TC_OK;

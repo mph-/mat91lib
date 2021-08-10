@@ -105,8 +105,8 @@ typedef struct
     /* If frequency is non-zero then it overrides period and delay.  */
     tc_period_t period;         /* Clocks */
     tc_period_t delay;          /* Clocks */
+    tc_period_t aux_delay;      /* Clocks */    
     tc_frequency_t frequency;   /* Hz */
-    bool aux_enable;
 } tc_cfg_t;
 
 
