@@ -253,8 +253,8 @@ ssc_write_ready_p (ssc_t ssc);
    @return the data read from the buffer
    @param boolean wait for buffer ready, true = wait, false = don't wait
  */
-uint16_t
-ssc_read (ssc_t ssc, void *buffer, uint16_t length);
+uint32_t
+ssc_read (ssc_t ssc, void *buffer, uint32_t length);
 
 
 /** Write to the tx buffer TODO (test)

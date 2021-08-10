@@ -299,11 +299,11 @@ ssc_enable (ssc_t ssc)
 
 
 /* Read data from the rx buffer.  */
-static uint16_t
-ssc_read_8 (ssc_t ssc, void *buffer, uint16_t length)
+static uint32_t
+ssc_read_8 (ssc_t ssc, void *buffer, uint32_t length)
 {
     uint8_t *dst = buffer;
-    int i;
+    uint32_t i;
 
     for (i = 0; i < length; i++)
     {
@@ -316,11 +316,11 @@ ssc_read_8 (ssc_t ssc, void *buffer, uint16_t length)
 
 
 /* Read data from the rx buffer.  */
-static uint16_t
-ssc_read_16 (ssc_t ssc, void *buffer, uint16_t length)
+static uint32_t
+ssc_read_16 (ssc_t ssc, void *buffer, uint32_t length)
 {
     uint16_t *dst = buffer;
-    int i;
+    uint32_t i;
 
     for (i = 0; i < length; i++)
     {
@@ -333,11 +333,11 @@ ssc_read_16 (ssc_t ssc, void *buffer, uint16_t length)
 
 
 /* Read data from the rx buffer.  */
-static uint16_t
-ssc_read_32 (ssc_t ssc, void *buffer, uint16_t length)
+static uint32_t
+ssc_read_32 (ssc_t ssc, void *buffer, uint32_t length)
 {
     uint8_t *dst = buffer;
-    int i;
+    uint32_t i;
 
     for (i = 0; i < length; i++)
     {
@@ -350,8 +350,8 @@ ssc_read_32 (ssc_t ssc, void *buffer, uint16_t length)
 
 
 /* Read data from the rx buffer.  */
-uint16_t
-ssc_read (ssc_t ssc, void *buffer, uint16_t bytes)
+uint32_t
+ssc_read (ssc_t ssc, void *buffer, uint32_t bytes)
 {
     if (ssc->rx->data_length <= 8)
         return ssc_read_8 (ssc, buffer, bytes);
