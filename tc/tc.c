@@ -593,7 +593,8 @@ tc_prescale_set (tc_t tc, tc_prescale_t prescale)
     /* The available prescaler values are 1, 4, 16, 64 for MCK / 2.
        Thus the effective prescaler values are 2, 8, 32, and 128.  On
        the SAM7 TIMER_CLOCK5 is MCK / 1024 but on the SAM4S it is
-       SLCK.  */
+       SLCK.  To reduce the jitter from a start command to a pin
+       transition, choose a smaller prescale value.  */
     if (prescale > 32 && prescale <= 128)
     {
         tc->base->TC_CMR |= TC_CMR_TCCLKS_TIMER_CLOCK4;
