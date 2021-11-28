@@ -336,7 +336,7 @@ ssc_read_16 (ssc_t ssc, void *buffer, uint32_t length)
 static uint32_t
 ssc_read_32 (ssc_t ssc, void *buffer, uint32_t length)
 {
-    uint8_t *dst = buffer;
+    uint32_t *dst = buffer;
     uint32_t i;
 
     for (i = 0; i < length; i++)
