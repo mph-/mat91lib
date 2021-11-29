@@ -500,3 +500,10 @@ ssc_shutdown (ssc_t ssc)
     pio_config_set (TK_PIO, PIO_OUTPUT_LOW);
     pio_config_set (TF_PIO, PIO_OUTPUT_LOW);
 }
+
+
+void 
+ssc_reset (ssc_t ssc)
+{
+    SSC->SSC_CR |= BIT(15);
+}
