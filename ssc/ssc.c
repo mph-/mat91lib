@@ -362,7 +362,7 @@ ssc_read (ssc_t ssc, void *buffer, uint32_t bytes)
 
 
 uint32_t
-ssc_read_32_unpack_int16_sum (ssc_t ssc, int32_t *buffer1, int32_t *buffer2, uint32_t length)
+ssc_read_32_unpack_int16_sum (ssc_t ssc, int32_t *buffer, uint32_t length)
 {
     uint32_t i;
 
@@ -374,15 +374,53 @@ ssc_read_32_unpack_int16_sum (ssc_t ssc, int32_t *buffer1, int32_t *buffer2, uin
             continue;
         
         val = SSC->SSC_RHR;
-        buffer1[i] += val >> 16;
-        buffer2[i] += (val << 16) >> 16;
+        *buffer++ += val >> 16;
+        *buffer++ += (val << 16) >> 16;
     }
     return length;
 }
 
 
 uint32_t
-ssc_read_flush (ssc_t ssc, uint32_t length)
+ssc_read_16_add (ssc_t ssc, int32_t *buffer, uint32_t length)
+{
+    uint32_t i;
+
+    for (i = 0; i < length; i++)
+    {
+        int16_t val;
+
+        while (!ssc_read_ready_p (ssc))
+            continue;
+
+        val = SSC->SSC_RHR;        
+        *buffer++ += val;
+    }
+    return length;
+}
+
+
+uint32_t
+ssc_read_16_subtract (ssc_t ssc, int32_t *buffer, uint32_t length)
+{
+    uint32_t i;
+
+    for (i = 0; i < length; i++)
+    {
+        int16_t val;
+
+        while (!ssc_read_ready_p (ssc))
+            continue;
+
+        val = SSC->SSC_RHR;        
+        *buffer++ -= val;
+    }
+    return length;
+}
+
+
+uint32_t
+ssc_read_ignore (ssc_t ssc, uint32_t length)
 {
     uint32_t i;
 

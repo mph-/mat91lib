@@ -261,14 +261,22 @@ ssc_read (ssc_t ssc, void *buffer, uint32_t length);
     @return number of 32-bit values read
  */
 uint32_t
-ssc_read_32_unpack_int16_sum (ssc_t ssc, int32_t *buffer1, int32_t *buffer2, uint32_t length);
+ssc_read_32_unpack_int16_add (ssc_t ssc, int32_t *buffer, uint32_t length);
+
+
+uint32_t
+ssc_read_16_add (ssc_t ssc, int32_t *buffer, uint32_t length);
+
+
+uint32_t
+ssc_read_16_subtract (ssc_t ssc, int32_t *buffer, uint32_t length);
 
 
 /** Read and throw away data.
     @return number of bytes read    
 */
 uint32_t
-ssc_read_flush (ssc_t ssc, uint32_t length);
+ssc_read_ignore (ssc_t ssc, uint32_t length);
 
 
 /** Write to the tx buffer
