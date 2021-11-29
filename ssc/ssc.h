@@ -241,12 +241,26 @@ void
 ssc_disable (ssc_t ssc);
 
 
-bool
-ssc_read_ready_p (ssc_t ssc);
+static __always_inline__ bool
+ssc_read_ready_p (ssc_t ssc)
+{
+    return (SSC_SR_RXRDY & SSC->SSC_SR) != 0;
+}
 
 
-bool
-ssc_write_ready_p (ssc_t ssc);
+static __always_inline__ uint32_t
+ssc_read_value (ssc_t ssc)
+{
+    return SSC->SSC_RHR;
+}
+
+
+static __always_inline__ bool
+ssc_write_ready_p (ssc_t ssc)
+{
+    return (SSC_SR_TXRDY & SSC->SSC_SR) != 0;    
+}
+
 
 
 /** Read the data in the rx buffer

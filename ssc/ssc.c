@@ -210,20 +210,6 @@ ssc_module_ready_p (ssc_t ssc, ssc_module_t tx_rx)
 }
 
 
-bool
-ssc_read_ready_p (ssc_t ssc)
-{
-    return (SSC_SR_RXRDY & SSC->SSC_SR) != 0;
-}
-
-
-bool
-ssc_write_ready_p (ssc_t ssc)
-{
-    return (SSC_SR_TXRDY & SSC->SSC_SR) != 0;    
-}
-
-
 /* Enable an SSC module.  */
 static void
 ssc_module_enable (ssc_t ssc, ssc_module_t tx_rx) 
@@ -309,7 +295,7 @@ ssc_read_8 (ssc_t ssc, void *buffer, uint32_t length)
     {
         while (!ssc_read_ready_p (ssc))
             continue;
-        *dst++ = SSC->SSC_RHR;
+        *dst++ = ssc_read_value (ssc);
     }
     return length;
 }
@@ -326,7 +312,7 @@ ssc_read_16 (ssc_t ssc, void *buffer, uint32_t length)
     {
         while (!ssc_read_ready_p (ssc))
             continue;
-        *dst++ = SSC->SSC_RHR;
+        *dst++ = ssc_read_value (ssc);
     }
     return length << 1;
 }
@@ -343,7 +329,7 @@ ssc_read_32 (ssc_t ssc, void *buffer, uint32_t length)
     {
         while (!ssc_read_ready_p (ssc))
             continue;
-        *dst++ = SSC->SSC_RHR;
+        *dst++ = ssc_read_value (ssc);
     }
     return length << 2;
 }
@@ -373,7 +359,7 @@ ssc_read_32_unpack_int16_sum (ssc_t ssc, int32_t *buffer, uint32_t length)
         while (!ssc_read_ready_p (ssc))
             continue;
         
-        val = SSC->SSC_RHR;
+        val = ssc_read_value (ssc);
         *buffer++ += val >> 16;
         *buffer++ += (val << 16) >> 16;
     }
@@ -393,7 +379,7 @@ ssc_read_16_add (ssc_t ssc, int32_t *buffer, uint32_t length)
         while (!ssc_read_ready_p (ssc))
             continue;
 
-        val = SSC->SSC_RHR;        
+        val = ssc_read_value (ssc);        
         *buffer++ += val;
     }
     return length;
@@ -412,7 +398,7 @@ ssc_read_16_subtract (ssc_t ssc, int32_t *buffer, uint32_t length)
         while (!ssc_read_ready_p (ssc))
             continue;
 
-        val = SSC->SSC_RHR;        
+        val = ssc_read_value (ssc);        
         *buffer++ -= val;
     }
     return length;
@@ -429,7 +415,7 @@ ssc_read_ignore (ssc_t ssc, uint32_t length)
         while (!ssc_read_ready_p (ssc))
             continue;
         
-        SSC->SSC_RHR;
+        ssc_read_value (ssc);
     }
     return length;
 }
