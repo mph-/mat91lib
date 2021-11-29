@@ -256,7 +256,7 @@ static tc_ret_t
 tc_output_set (tc_t tc)
 {
     if ((tc->mode == TC_MODE_ADC) || (tc->mode == TC_MODE_COUNTER)
-        || (tc->mode == TC_MODE_INTERRUPT))
+        || (tc->mode == TC_MODE_INTERRUPT) || (tc->mode == TC_MODE_NONE))
         
         return TC_OK;
 
@@ -292,7 +292,7 @@ static tc_ret_t
 tc_aux_output_set (tc_t tc)
 {
     if ((tc->mode == TC_MODE_ADC) || (tc->mode == TC_MODE_COUNTER)
-        || (tc->mode == TC_MODE_INTERRUPT || (tc->mode == TC_MODE_NONE)))
+        || (tc->mode == TC_MODE_INTERRUPT))
         return TC_OK;
 
     /* Generate a software trigger with the clock stopped to set TIOBx
@@ -455,6 +455,13 @@ tc_mode_set (tc_t tc, tc_mode_t mode)
             | TC_CMR_ACPA_CLEAR | TC_CMR_ACPC_SET
             | TC_CMR_ASWTRG_SET;
         break;
+    
+    case TC_MODE_PULSE_ONESHOT_TOGGLE:
+        /* Set TIOBx to output. Toggle TIOBx when RC matches. 
+        Stop the clock when RC matches. */
+        tc->base->TC_CMR = TC_CMR_BURST_NONE | TC_CMR_WAVE
+            | TC_CMR_CPCSTOP | TC_CMR_WAVSEL_UP_RC
+            | TC_CMR_ACPC_TOGGLE | TC_CMR_ASWTRG_SET;
 
     case TC_MODE_DELAY_ONESHOT:
         /* Don't change TIOAx.  Stop clock when RC matches.  */
@@ -501,7 +508,8 @@ tc_mode_set (tc_t tc, tc_mode_t mode)
             | TC_CMR_ABETRG | TC_CMR_ETRGEDG_NONE;
         tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS | TC_IER_LDRBS;
         break;
-
+    
+    case TC_MODE_NONE:
     case TC_MODE_COUNTER:
         break;
         
@@ -534,41 +542,54 @@ tc_aux_mode_set (tc_t tc, tc_mode_t mode)
     case TC_MODE_CLOCK:
     case TC_MODE_INTERRUPT:
     case TC_MODE_PULSE:
-        /* Set TIOBx when RB matches and clear TIOBx when RC matches.  */
-        tc->base->TC_CMR = TC_CMR_BURST_NONE | TC_CMR_WAVE
-            | TC_CMR_WAVSEL_UP_RC | TC_CMR_BCPB_SET | TC_CMR_ACPC_CLEAR
-            | TC_CMR_ASWTRG_CLEAR;
+        /* Set TIOBx to output. Set high when RB matches and clear 
+        TIOBx when RC matches. */
+        tc->base->TC_CMR |= TC_CMR_BURST_NONE | TC_CMR_WAVE
+            | TC_CMR_WAVSEL_UP_RC | TC_CMR_BCPB_SET | TC_CMR_BCPC_CLEAR
+            | TC_CMR_BSWTRG_CLEAR | TC_CMR_EEVT_XC0;
         break;
 
     case TC_MODE_PULSE_INVERT:
-        /* Clear TIOBx when RB matches and set TIOBx when RC matches.  */
-        tc->base->TC_CMR = TC_CMR_BURST_NONE | TC_CMR_WAVE
-            | TC_CMR_WAVSEL_UP_RC | TC_CMR_BCPB_CLEAR | TC_CMR_ACPC_SET
-            | TC_CMR_ASWTRG_SET;
+        /* Set TIOBx to output. Clear TIOBx when RB matches and set 
+        TIOBx high when RC matches.  */
+        tc->base->TC_CMR |= TC_CMR_BURST_NONE | TC_CMR_WAVE
+            | TC_CMR_WAVSEL_UP_RC | TC_CMR_BCPB_CLEAR | TC_CMR_BCPC_SET
+            | TC_CMR_BSWTRG_SET | TC_CMR_EEVT_XC0;
         break;
 
     case TC_MODE_PULSE_ONESHOT:
-        /* Set TIOBx when RB matches and clear TIOBx when RC matches.
-           Stop clock when RC matches.   */
-        tc->base->TC_CMR = TC_CMR_BURST_NONE | TC_CMR_WAVE
+        /* Set TIOBx to output. Set high when RB matches and clear 
+        TIOBx when RC matches. Stop clock when RC matches.   */
+        tc->base->TC_CMR |= TC_CMR_BURST_NONE | TC_CMR_WAVE
             | TC_CMR_CPCSTOP | TC_CMR_WAVSEL_UP_RC
-            | TC_CMR_BCPB_SET | TC_CMR_ACPC_CLEAR
-            | TC_CMR_ASWTRG_CLEAR;
+            | TC_CMR_BCPB_SET | TC_CMR_BCPC_CLEAR
+            | TC_CMR_BSWTRG_CLEAR | TC_CMR_EEVT_XC0;
         break;
 
     case TC_MODE_PULSE_ONESHOT_INVERT:
-        /* Clear TIOBx when RB matches and set TIOBx when RC matches.
-           Stop clock when RC matches.  */
+        /* Set TIOBx to output. Clear TIOBx when RB matches and set 
+        TIOBx when RC matches. Stop clock when RC matches.  */
         tc->base->TC_CMR = TC_CMR_BURST_NONE | TC_CMR_WAVE
             | TC_CMR_CPCSTOP | TC_CMR_WAVSEL_UP_RC
-            | TC_CMR_BCPB_CLEAR | TC_CMR_ACPC_SET
-            | TC_CMR_ASWTRG_SET;
+            | TC_CMR_BCPB_CLEAR | TC_CMR_BCPC_SET
+            | TC_CMR_BSWTRG_SET | TC_CMR_EEVT_XC0;
+        break;
+    
+    case TC_MODE_PULSE_ONESHOT_TOGGLE:
+        /* Set TIOBx to output. Toggle TIOBx when RB matches. 
+        Stop the clock when RC matches. */
+        tc->base->TC_CMR |= TC_CMR_BURST_NONE | TC_CMR_WAVE
+            | TC_CMR_CPCSTOP | TC_CMR_WAVSEL_UP_RC
+            | TC_CMR_BCPC_TOGGLE | TC_CMR_BSWTRG_NONE
+            | TC_CMR_EEVT_XC0;
         break;
 
     case TC_MODE_DELAY_ONESHOT:
-        /* Don't change TIOBx.  Stop clock when RC matches.  */
-        tc->base->TC_CMR = TC_CMR_BURST_NONE | TC_CMR_WAVE
-            | TC_CMR_CPCSTOP | TC_CMR_WAVSEL_UP_RC;
+        /* Set TIOBx to output. Don't change TIOBx.  Stop clock 
+        when RC matches.  */
+        tc->base->TC_CMR |= TC_CMR_BURST_NONE | TC_CMR_WAVE
+            | TC_CMR_CPCSTOP | TC_CMR_WAVSEL_UP_RC
+            | TC_CMR_EEVT_XC0;
         break;
 
     case TC_MODE_CAPTURE_RISE_RISE:
@@ -627,17 +648,22 @@ tc_config_set (tc_t tc, const tc_cfg_t *cfg)
 {
     tc_ret_t ret;
 
+    if (cfg->aux_delay)
+    {
+        ret = tc_aux_mode_set (tc, cfg->aux_mode);
+        if (ret < 0)
+            return ret;
+    }
+    else
+    {
+        ret = tc_mode_set (tc, cfg->mode);
+        if (ret < 0)
+            return ret;
+    }
+
     if (tc_prescale_set (tc, cfg->prescale) != cfg->prescale
         && cfg->prescale != 0)
         return TC_ERROR_PRESCALE;
-
-    ret = tc_mode_set (tc, cfg->mode);
-    if (ret < 0)
-        return ret;
-
-    ret = tc_aux_mode_set (tc, cfg->aux_mode);
-    if (ret < 0)
-        return ret;    
     
     if (cfg->frequency)
     {

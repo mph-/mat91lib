@@ -44,6 +44,8 @@ typedef enum
     TC_MODE_PULSE_ONESHOT,
     /** Active low single pulse.  */
     TC_MODE_PULSE_ONESHOT_INVERT,
+    /** single toggle pulse */
+    TC_MODE_PULSE_ONESHOT_TOGGLE,
     /** Drive output high after delay.  */
     TC_MODE_DELAY_ONESHOT,
     /** Generate square wave (or close to it).  */
@@ -163,6 +165,9 @@ tc_aux_delay_get (tc_t tc);
 tc_period_t
 tc_aux_delay_set (tc_t tc, tc_period_t delay);    
 
+/** Set the pulse mode */
+tc_ret_t
+tc_aux_mode_set (tc_t tc, tc_mode_t mode);
     
 /** Get the period in clocks.  */
 tc_period_t
