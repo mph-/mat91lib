@@ -213,14 +213,14 @@ ssc_module_ready_p (ssc_t ssc, ssc_module_t tx_rx)
 bool
 ssc_read_ready_p (ssc_t ssc)
 {
-    return ssc_module_ready_p (ssc, SSC_RX);
+    return (SSC_SR_RXDY & SSC->SSC_SR) != 0;
 }
 
 
 bool
 ssc_write_ready_p (ssc_t ssc)
 {
-    return ssc_module_ready_p (ssc, SSC_TX);
+    return (SSC_SR_TXDY & SSC->SSC_SR) != 0;    
 }
 
 
