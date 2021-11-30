@@ -212,23 +212,34 @@ ssc_module_ready_p (ssc_t ssc, ssc_module_t tx_rx)
 void
 ssc_sync(ssc_t ssc)
 {
+    int i;
+
+    #define TIMEOUT 10000
+    
     SSC->SSC_CR |= SSC_CR_RXDIS;    
     pio_config_set (RF_PIO, PIO_INPUT);
 
-    /* TODO: Add timeouts.  */
-
     /* Wait for high transition.  */
-    while (! pio_input_get (RF_PIO))
-        continue;
+    for (i = 0; i < TIMEOUT; i++)
+    {
+        if (pio_input_get (RF_PIO))
+            break;
+    }
 
     /* Wait for low transition.  */
-    while (pio_input_get (RF_PIO))
-        continue;
+    for (i = 0; i < TIMEOUT; i++)
+    {
+        if (! pio_input_get (RF_PIO))
+            break;
+    }
 
     /* Wait for high transition.  */
-    while (! pio_input_get (RF_PIO))
-        continue;
-
+    for (i = 0; i < TIMEOUT; i++)
+    {
+        if (pio_input_get (RF_PIO))
+            break;
+    }
+    
     pio_config_set (RF_PIO, RF_PERIPH);    
     SSC->SSC_CR |= SSC_CR_RXEN;    
 }
