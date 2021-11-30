@@ -330,6 +330,9 @@ void
 ssc_reset (ssc_t ssc);
 
 
+void
+ssc_sync(ssc_t ssc);
+    
 #ifdef __cplusplus
 }
 #endif    

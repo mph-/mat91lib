@@ -96,7 +96,6 @@ ssc_module_config (ssc_t ssc, ssc_module_cfg_t *cfg, ssc_module_t module)
     if (!cfg)
         return 0;
 
-    // initialise the mode register to it's reset value
     if (module == SSC_TX)
     {
         SSC->SSC_TCMR = 0;
@@ -207,6 +206,31 @@ ssc_module_ready_p (ssc_t ssc, ssc_module_t tx_rx)
     }
     
     return (mask & SSC->SSC_SR) != 0;
+}
+
+
+void
+ssc_sync(ssc_t ssc)
+{
+    SSC->SSC_CR |= SSC_CR_RXDIS;    
+    pio_config_set (RF_PIO, PIO_INPUT);
+
+    /* TODO: Add timeouts.  */
+
+    /* Wait for high transition.  */
+    while (! pio_input_get (RF_PIO))
+        continue;
+
+    /* Wait for low transition.  */
+    while (pio_input_get (RF_PIO))
+        continue;
+
+    /* Wait for high transition.  */
+    while (! pio_input_get (RF_PIO))
+        continue;
+
+    pio_config_set (RF_PIO, RF_PERIPH);    
+    SSC->SSC_CR |= SSC_CR_RXEN;    
 }
 
 
