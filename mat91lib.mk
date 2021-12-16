@@ -88,8 +88,12 @@ LDFLAGS += -lstdc++
 endif
 
 
-OBJDIR = objs
-DEPDIR = deps
+ifndef BOARD
+BOARD=
+endif
+
+OBJDIR = objs-$(BOARD)
+DEPDIR = deps-$(BOARD)
 
 # Dirty hack: add _x suffix for C++ files as a workaround for Windows'
 # lack of case discrimination where Adc.o is considered the same as
@@ -197,14 +201,14 @@ else
 $(OBJDIR)/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 # Generate dependencies to see if object file needs recompiling.
-	@printf "$(OBJDIR)/" > deps/$*.d
-	$(CC) -MM $(CFLAGS) $< >> deps/$*.d
+	@printf "$(OBJDIR)/" > $(DEPDIR)/$*.d
+	$(CC) -MM $(CFLAGS) $< >> $(DEPDIR)/$*.d
 
 $(OBJDIR)/%_x.o: %.cpp Makefile
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 # Generate dependencies to see if object file needs recompiling.
-	@printf "$(OBJDIR)/" > deps/$*_x.d
-	$(CXX) -MM $(CXXFLAGS) $< >> deps/$*_x.d
+	@printf "$(OBJDIR)/" > $(DEPDIR)/$*_x.d
+	$(CXX) -MM $(CXXFLAGS) $< >> $(DEPDIR)/$*_x.d
 endif
 
 # Link object files to form output file.
