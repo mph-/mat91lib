@@ -1,7 +1,7 @@
 /** @file   irq.h
     @author M. P. Hayes, UCECE
     @date   04 June 2007
-    @brief 
+    @brief
 */
 #ifndef IRQ_H
 #define IRQ_H
@@ -9,7 +9,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 
 #include "config.h"
 #include "bits.h"
@@ -94,17 +94,32 @@ static inline void irq_config (irq_id_t id, irq_priority_t priority,
 }
 
 
+/* Return global interrupt status.  */
+__inline __attribute__ ((always_inline))
+bool irq_global_status (void)
+{
+    uint32_t status;
+
+    __asm__ volatile ("\tmrs %0, primask" : "=r" (status));
+
+    return status != 0;
+}
+
 
 /* Globally disable interrupts.  */
-__inline __attribute__ ((always_inline)) 
-void irq_global_disable (void)
+__inline __attribute__ ((always_inline))
+bool irq_global_disable (void)
 {
-    __asm__ ("\tcpsie f");
+    bool irq_status;
+
+    irq_status = irq_global_status ();
+    __asm__ ("\tcpsid i");
+    return irq_status;
 }
 
 
 /* Globally enable interrupts.  */
-__inline __attribute__ ((always_inline)) 
+__inline __attribute__ ((always_inline))
 void irq_global_enable (void)
 {
     __asm__ ("\tcpsie i");
@@ -112,6 +127,5 @@ void irq_global_enable (void)
 
 #ifdef __cplusplus
 }
-#endif    
+#endif
 #endif /* IRQ_H  */
-
