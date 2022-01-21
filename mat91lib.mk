@@ -31,6 +31,12 @@ else
 GDB = gdb-multiarch
 endif
 
+BUILD_DIR ?= .
+
+ABS_BUILD_DIR = $(abspath $(BUILD_DIR))
+
+TARGET := $(ABS_BUILD_DIR)/$(TARGET)
+
 TARGET_MAP = $(addsuffix .map, $(basename $(TARGET)))
 
 ifneq (, $(findstring SAM7, $(MCU)))
@@ -92,8 +98,8 @@ ifndef BOARD
 BOARD=
 endif
 
-OBJDIR = objs-$(BOARD)
-DEPDIR = deps-$(BOARD)
+OBJDIR = $(ABS_BUILD_DIR)/objs-$(BOARD)
+DEPDIR = $(ABS_BUILD_DIR)/deps-$(BOARD)
 
 # Dirty hack: add _x suffix for C++ files as a workaround for Windows'
 # lack of case discrimination where Adc.o is considered the same as
@@ -221,9 +227,14 @@ $(TARGET): $(DEPDIR) $(OBJS) $(EXTRA_OBJS)
 
 # Remove non-source files.
 .PHONY: clean
+ifeq ($(ABS_BUILD_DIR), $(abspath .))
 clean: 
 	-$(DEL) *.o *.out *.hex *.bin *.elf *.d *.lst *.map *.sym *.lss *.cfg *.ocd *~
 	-$(DEL) -r $(OBJDIR) $(DEPDIR)
+else
+clean:
+	-$(DEL) -r $(ABS_BUILD_DIR)
+endif
 
 # Program the device.
 .PHONY: program
