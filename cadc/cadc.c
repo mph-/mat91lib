@@ -1,7 +1,7 @@
 /** @file   cadc.c
     @author M. P. Hayes
     @date   12 February 2020
-    @brief  Continuuous analogue to digital converter using DMA
+    @brief  Continuous analogue to digital converter using DMA
 */
 
 
@@ -17,7 +17,7 @@
 
 #ifndef ADC_IRQ_PRIORITY
 #define ADC_IRQ_PRIORITY 4
-#endif    
+#endif
 
 
 struct cadc_dev
@@ -31,7 +31,7 @@ struct cadc_dev
     volatile uint32_t isr_count;
     uint8_t num_buffers;
     uint8_t num_channels;
-    uint8_t last_channel;    
+    uint8_t last_channel;
     bool started;
     pdc_descriptor_t *descriptors;
     volatile adc_sample_t **buffers;
@@ -61,7 +61,7 @@ cadc_isr (void)
 {
     pdc_descriptor_t *descr;
     cadc_t dev = &cadc_dev;
-    
+
     descr = pdc_read_poll (dev->pdc);
 
     // Something is wrong if the descriptor is zero; it means the
@@ -75,7 +75,7 @@ cadc_isr (void)
     if (dev->callback_func)
         dev->callback_func (dev->callback_data, descr->buffer,
                             dev->prev, dev->dma_size);
-    
+
     dev->prev = descr->buffer;
 }
 
@@ -88,7 +88,7 @@ cadc_t cadc_init (const cadc_cfg_t *cfg)
     cadc_t dev = &cadc_dev;
 
     dev->callback_func = 0;
-    
+
     dev->dma_size = cfg->dma_size;
     dev->num_buffers = cfg->num_buffers;
     if (dev->num_buffers < 3)
@@ -110,7 +110,7 @@ cadc_t cadc_init (const cadc_cfg_t *cfg)
     // gets out of whack.
     adc_tag_set (dev->adc, 1);
     adc_config (dev->adc);
-    
+
     channels = cfg->adc.channels;
     dev->num_channels = 0;
     for (i = 0; channels; channels >>= 1, i++)
@@ -126,7 +126,7 @@ cadc_t cadc_init (const cadc_cfg_t *cfg)
         return 0;
 
     dev->descriptors = calloc (dev->num_buffers, sizeof (*dev->descriptors));
-    
+
     for (i = 0; i < dev->num_buffers; i++)
     {
         dev->descriptors[i].buffer = calloc (dev->dma_size, sizeof (uint16_t));
@@ -144,7 +144,7 @@ cadc_t cadc_init (const cadc_cfg_t *cfg)
     tc_start (dev->tc);
 
     ADC->ADC_IER = ADC_ISR_ENDRX;
-    
+
     return dev;
 }
 
@@ -154,23 +154,23 @@ cadc_start (cadc_t dev)
 {
     if (dev->started)
         return;
-    
+
     pdc_config (dev->pdc, 0, dev->descriptors);
 
     // There is a problem with restarting.   It sees like the ADC
     // needs a hardware reset to reset the multiplexer sequencer
     // but something is not configured correctly after the reset.
     // It is best to leave the ADC running.
-    
+
     adc_enable (dev->adc);
-    
+
     // cadc_sync (dev, 0);
-    
+
     pdc_start (dev->pdc);
     dev->count = 0;
     dev->prev = 0;
     dev->started = 1;
-    dev->prev = 0;    
+    dev->prev = 0;
 }
 
 
@@ -198,7 +198,7 @@ void cadc_callback_register (cadc_t dev,
                              void *callback_data)
 {
     dev->callback_func = callback_func;
-    dev->callback_data = callback_data;    
+    dev->callback_data = callback_data;
 }
 
 
