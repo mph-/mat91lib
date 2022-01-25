@@ -66,7 +66,9 @@ typedef struct dac_cfg_struct
     /* This specifies the channel if the channels field is zero.  */
     dac_channel_t channel;
 
-    /* This specifies the channels to convert as a bitmask.  */
+    /* This specifies the channels to convert as a bitmask.  Note,
+       if this is non-zero, then tagging is required in the 4 MSBs of the
+       data to specify the channel.  */
     dac_channels_t channels;
 
     /* Conversion bits.  */
