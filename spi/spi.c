@@ -4,7 +4,7 @@
     @brief  Routines for interfacing to the SPI bus.
 */
 
-#include "config.h"
+#include <errno.h>
 #include "spi.h"
 #include "mcu.h"
 #include "cpu.h"
@@ -36,7 +36,7 @@
    want more?  Well one option is to decode the 4 CS signals to
    provide 15 channels; with four per group.  This requires external
    hardware so is not much use.  The alternative is to bit bash
-   additional output ports. 
+   additional output ports.
 
    With this driver we can share the 4 channels among multiple SPI
    devices.  However, automatic CS driving can only be performed for
@@ -46,7 +46,7 @@
    we want to have other CS signals driven by PIO lines, we need to
    switch the NPCS signals at the start and end of a transfer.
 
-   There are three chip select modes: 
+   There are three chip select modes:
    SPI_CS_MODE_FRAME where the CS is asserted for multiple SPI tranmissions,
    SPI_CS_MODE_TOGGLE where the CS is only asserted for each SPI transmission, and
    SPI_CS_MODE_HIGH where the CS is kept high.
@@ -84,10 +84,10 @@
 
 
 /* Bit masks for the SPI mode settings.  */
-enum 
+enum
 {
     SPI_CPOL_MASK = BIT (0),
-    SPI_NCPHA_MASK = BIT (1), 
+    SPI_NCPHA_MASK = BIT (1),
     SPI_CSAAT_MASK = BIT (3)
 };
 
@@ -287,7 +287,7 @@ spi_channel_mode_set (spi_t spi, spi_mode_t mode)
 
 #if SPI_CONTROLLERS_NUM == 2
 /* AT91SAM7X  */
-static const pinmap_t spi_cs[] = 
+static const pinmap_t spi_cs[] =
 {
     {0, PA21_PIO, PIO_PERIPH_B, 0},
     {1, PA25_PIO, PIO_PERIPH_B, 0},
@@ -300,7 +300,7 @@ static const pinmap_t spi_cs[] =
 
 #else
 /* AT91SAM7S  */
-static const pinmap_t spi_cs[] = 
+static const pinmap_t spi_cs[] =
 {
     {0, PA11_PIO, PIO_PERIPH_A, 0},
     {1, PA9_PIO, PIO_PERIPH_B, 0},
@@ -420,14 +420,14 @@ spi_enable (Spi *pSPI)
 }
 
 
-static void 
+static void
 spi_disable (Spi *pSPI)
 {
     pSPI->SPI_CR = SPI_CR_SPIDIS;
 }
 
 
-static void 
+static void
 spi_setup (Spi *pSPI)
 {
     /* Desire PS = 0 (fixed peripheral select)
@@ -475,7 +475,7 @@ void
 spi_cs_assert (spi_t spi)
 {
     pio_output_low (spi->cs);
-    spi->cs_active = 1; 
+    spi->cs_active = 1;
 }
 
 
@@ -497,10 +497,10 @@ spi_cs_auto_enable (spi_t spi)
 {
     if (spi->cs_config == PIO_OUTPUT_HIGH)
         return 0;
-        
+
     /* The CS will be automatically driven low when the next transfer
        takes place.  */
-    pio_config_set (spi->cs, spi->cs_config);            
+    pio_config_set (spi->cs, spi->cs_config);
     return 1;
 }
 
@@ -524,7 +524,7 @@ spi_config (spi_t spi)
         return;
     spi_config_last = spi;
 
-    spi_channel_select (spi);    
+    spi_channel_select (spi);
     spi_channel_mode_set (spi, spi->mode);
     spi_channel_bits_set (spi, spi->bits);
     spi_channel_clock_divisor_set (spi, spi->clock_divisor);
@@ -558,7 +558,7 @@ spi_wakeup (spi_t spi)
 
     /* Enable SPI peripheral clock.  */
     mcu_pmc_enable (ID_SPI);
-   
+
     spi_reset (SPI0);
     spi_setup (SPI0);
     spi_enable (SPI0);
@@ -580,13 +580,16 @@ spi_wakeup (spi_t spi)
 
 
 /** Initialise SPI for master mode.  */
-spi_t 
+spi_t
 spi_init (const spi_cfg_t *cfg)
 {
     spi_dev_t *spi;
 
     if (spi_devices_num >= SPI_DEVICES_NUM)
+    {
+        errno = EMFILE;
         return 0;
+    }
 
     spi = spi_devices + spi_devices_num;
     spi_devices_num++;
@@ -600,7 +603,7 @@ spi_init (const spi_cfg_t *cfg)
 
     spi_cs_mode_set (spi, cfg->cs_mode);
 
-    spi->cs_config = spi_channel_cs_config_get (spi, spi->cs); 
+    spi->cs_config = spi_channel_cs_config_get (spi, spi->cs);
     spi_cs_auto_disable (spi);
 
     spi_cs_setup_set (spi, 0);
@@ -608,7 +611,7 @@ spi_init (const spi_cfg_t *cfg)
     spi_mode_set (spi, cfg->mode);
     spi_bits_set (spi, cfg->bits ? cfg->bits : 8);
     /* If clock divisor not specified, default to something slow.  */
-    spi_clock_speed_kHz_set (spi, cfg->clock_speed_kHz 
+    spi_clock_speed_kHz_set (spi, cfg->clock_speed_kHz
                              ? cfg->clock_speed_kHz : 100);
 
     spi_wakeup (spi);
@@ -636,11 +639,11 @@ spi_shutdown (spi_t spi)
 
     if (spi_devices_enabled)
         return;
-           
-    spi_disable (SPI0); 
+
+    spi_disable (SPI0);
 
 #if SPI_CONTROLLERS_NUM == 2
-    spi_disable (SPI1); 
+    spi_disable (SPI1);
 
     /* Force lines low to prevent powering devices.  */
     pio_config_set (MISO1_PIO, PIO_OUTPUT_LOW);
@@ -677,7 +680,7 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
     uint8_t *rxdata = rxbuffer;
     uint8_t rx;
     uint8_t tx = 0;
-        
+
     spi_config (spi);
 
     i = 0;
@@ -690,13 +693,13 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
             {
                 if (txdata)
                     tx = *txdata++;
-                
+
                 SPI_XFER (spi->base, tx, rx);
-                
+
                 if (rxdata)
                     *rxdata++ = rx;
             }
-            
+
             spi_cs_auto_disable (spi);
         }
         else
@@ -712,9 +715,9 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
 
                 if (txdata)
                     tx = *txdata++;
-                
+
                 SPI_XFER (spi->base, tx, rx);
-                
+
                 if (rxdata)
                     *rxdata++ = rx;
 
@@ -723,7 +726,7 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
             }
         }
         break;
-        
+
     case SPI_CS_MODE_FRAME:
     case SPI_CS_MODE_HIGH:
         if (len != 0 && spi->cs_mode == SPI_CS_MODE_FRAME)
@@ -733,18 +736,18 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
         {
             if (txdata)
                 tx = *txdata++;
-            
+
             SPI_XFER (spi->base, tx, rx);
 
             if (rxdata)
                 *rxdata++ = rx;
         }
-        
+
         if (terminate && spi->cs_mode == SPI_CS_MODE_FRAME)
             spi_cs_negate (spi);
         break;
     }
-    
+
     return i;
 }
 
@@ -758,9 +761,9 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
     uint16_t *rxdata = rxbuffer;
     uint16_t rx;
     uint16_t tx = 0;
-    
+
     spi_config (spi);
-    
+
     i = 0;
     switch (spi->cs_mode)
     {
@@ -771,13 +774,13 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
             {
                 if (txdata)
                     tx = *txdata++;
-                
+
                 SPI_XFER (spi->base, tx, rx);
-                
+
                 if (rxdata)
                     *rxdata++ = rx;
             }
-            
+
             spi_cs_auto_disable (spi);
         }
         else
@@ -793,9 +796,9 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
 
                 if (txdata)
                     tx = *txdata++;
-                
+
                 SPI_XFER (spi->base, tx, rx);
-                
+
                 if (rxdata)
                     *rxdata++ = rx;
 
@@ -804,7 +807,7 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
             }
         }
         break;
-        
+
     case SPI_CS_MODE_FRAME:
     case SPI_CS_MODE_HIGH:
         if (len != 0 && spi->cs_mode == SPI_CS_MODE_FRAME)
@@ -814,21 +817,21 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
         {
             if (txdata)
                 tx = *txdata++;
-            
+
             SPI_XFER (spi->base, tx, rx);
-            
+
             if (rxdata)
                 *rxdata++ = rx;
         }
-        
+
         if (terminate && spi->cs_mode == SPI_CS_MODE_FRAME)
             spi_cs_negate (spi);
         break;
     }
-    
+
     return i;
 }
-    
+
 
 spi_ret_t
 spi_transfer (spi_t spi, const void *txbuffer, void *rxbuffer,
@@ -849,7 +852,7 @@ spi_transact (spi_t spi, spi_transfer_t *transfer, uint8_t size)
 {
     uint8_t i;
     spi_ret_t bytes;
-    spi_ret_t ret;    
+    spi_ret_t ret;
 
     bytes = 0;
     for (i = 0; i < size; i++)

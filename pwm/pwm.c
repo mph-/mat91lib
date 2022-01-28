@@ -6,6 +6,7 @@
     signals.
 */
 
+#include <errno.h>
 #include "mcu.h"
 #include "pwm.h"
 #include "bits.h"
@@ -30,7 +31,7 @@ static pwm_dev_t pwm_devices[PWM_DEVICES_NUM];
 
 
 /* Define known PWMH pins, grouped by channel.  */
-static const pinmap_t pwm_pins[] = 
+static const pinmap_t pwm_pins[] =
 {
     {0, PA0_PIO, PIO_PERIPH_A, PWM_POLARITY_HIGH},
     {0, PA11_PIO, PIO_PERIPH_B, PWM_POLARITY_HIGH},
@@ -89,8 +90,8 @@ pwm_prescale_set (pwm_t pwm, uint8_t prescale)
 }
 
 
-/** Set waveform period (in CPU clocks).  This will change the 
-    prescaler as required.  This will block if the PWM is running until 
+/** Set waveform period (in CPU clocks).  This will change the
+    prescaler as required.  This will block if the PWM is running until
     the end of a cycle.  */
 pwm_period_t
 pwm_period_set (pwm_t pwm, pwm_period_t period)
@@ -109,7 +110,7 @@ pwm_period_set (pwm_t pwm, pwm_period_t period)
     pwm->period = period;
 
     /* If the period is greater than 16-bits then need to select the
-       appropriate prescaler.  This can be from 1 to 1024 in powers 
+       appropriate prescaler.  This can be from 1 to 1024 in powers
        of 2.  */
     for (prescale = 0; prescale < 11 && period >= 65535u; prescale++)
     {
@@ -132,16 +133,16 @@ pwm_period_set (pwm_t pwm, pwm_period_t period)
         uint8_t status;
 
         /* The PWM is running.  We need to jump through a hoop to
-           update the period register.  This is because the update 
-           register is shared for updating both the period and for 
+           update the period register.  This is because the update
+           register is shared for updating both the period and for
            the duty.  */
 
         /* Read update status.  */
-        status = BITS_EXTRACT (PWM->PWM_ISR1, 0, 3); 
+        status = BITS_EXTRACT (PWM->PWM_ISR1, 0, 3);
 
         /* Set mode to update period.  */
         BITS_INSERT (pwm->base->PWM_CMR, 1, 10, 10);
-        
+
         /* Wait for a new period.  */
         while (!(status & mask))
         {
@@ -178,7 +179,7 @@ pwm_frequency_set (pwm_t pwm, pwm_frequency_t frequency)
 }
 
 
-/** Set waveform duty (in CPU clocks).  This will block if the 
+/** Set waveform duty (in CPU clocks).  This will block if the
     PWM is running until the end of a cycle.  */
 pwm_period_t
 pwm_duty_set (pwm_t pwm, pwm_period_t duty)
@@ -196,16 +197,16 @@ pwm_duty_set (pwm_t pwm, pwm_period_t duty)
         uint8_t status;
 
         /* The PWM is running.  We need to jump through a hoop to
-           update the duty register.  This is because the update 
-           register is shared for updating both the period and for 
+           update the duty register.  This is because the update
+           register is shared for updating both the period and for
            the duty.  */
 
         /* Read update status.  */
-        status = BITS_EXTRACT (PWM->PWM_ISR1, 0, 3); 
+        status = BITS_EXTRACT (PWM->PWM_ISR1, 0, 3);
 
         /* Set mode to update duty.  */
         BITS_INSERT (pwm->base->PWM_CMR, 0, 10, 10);
-        
+
         /* Wait for a new duty.  */
         while (!(status & mask))
         {
@@ -238,12 +239,12 @@ pwm_duty_ppt_set (pwm_t pwm, unsigned int duty_ppt)
 {
     pwm_period_t duty;
     pwm_period_t period;
- 
+
     period = pwm_period_get (pwm) >> pwm->prescale;
     duty = period * duty_ppt / 1000;
 
     duty = pwm_duty_set (pwm, duty << pwm->prescale) >> pwm->prescale;
-    
+
     return duty * 1000 / period;
 }
 
@@ -268,10 +269,10 @@ pwm_config (pwm_t pwm, pwm_period_t period, pwm_period_t duty,
 
     /* Configure wave align.  */
     BITS_INSERT (pwm->base->PWM_CMR, align, 8, 8);
-    
+
     /* Configure polarity.  */
     BITS_INSERT (pwm->base->PWM_CMR, polarity, 9, 9);
-    
+
     return 1;
 }
 
@@ -290,12 +291,15 @@ pwm_init (const pwm_cfg_t *cfg)
     pin = 0;
     for (i = 0; i < PWM_PINS_NUM; i++)
     {
-        pin = &pwm_pins[i]; 
+        pin = &pwm_pins[i];
         if (pin->pio == cfg->pio)
             break;
     }
     if (!pin)
+    {
+        errno = ENODEV;
         return 0;
+    }
 
     /* Allow user to override PWM channel.  */
     pwm = &pwm_devices[pin->channel];
@@ -318,7 +322,7 @@ pwm_init (const pwm_cfg_t *cfg)
     duty = cfg->duty;
     if (cfg->duty_ppt)
         duty = period * cfg->duty_ppt / 1000;
-    
+
     pwm_config (pwm, period, duty, cfg->align, cfg->polarity);
 
     return pwm;
@@ -344,7 +348,7 @@ pwm_channels_start (pwm_channel_mask_t channel_mask)
        achieved by switching the pin from a PIO to a PWM output.  */
     for (i = 0; i < PWM_DEVICES_NUM; i++)
     {
-        pwm_dev_t *pwm;        
+        pwm_dev_t *pwm;
 
         if (! (BIT(i) & channel_mask))
             continue;
@@ -374,7 +378,7 @@ pwm_channels_stop (pwm_channel_mask_t channel_mask)
     /* Switch pins to have desired stop state.  */
     for (i = 0; i < PWM_DEVICES_NUM; i++)
     {
-        pwm_dev_t *pwm;        
+        pwm_dev_t *pwm;
 
         if (! (BIT(i) & channel_mask))
             continue;
