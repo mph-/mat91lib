@@ -227,13 +227,15 @@ $(TARGET): $(DEPDIR) $(OBJS) $(EXTRA_OBJS)
 
 # Remove non-source files.
 .PHONY: clean
+clean:
 ifeq ($(ABS_BUILD_DIR), $(abspath .))
-clean: 
 	-$(DEL) *.o *.out *.hex *.bin *.elf *.d *.lst *.map *.sym *.lss *.cfg *.ocd *~
 	-$(DEL) -r $(OBJDIR) $(DEPDIR)
 else
-clean:
 	-$(DEL) -r $(ABS_BUILD_DIR)
+endif
+ifdef CLEAN_EXTRA_PATHS
+	-$(DEL) -r $(CLEAN_EXTRA_PATHS)
 endif
 
 # Program the device.
