@@ -77,6 +77,7 @@ static inline void irq_trigger (irq_id_t id)
 static inline void irq_vector_set (irq_id_t id, irq_vector_t isr)
 {
     exception_table[id + 16] = isr;
+    asm volatile ("" ::: "memory");
 }
 
 
