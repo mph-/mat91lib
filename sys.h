@@ -53,8 +53,6 @@ typedef struct sys_fs_struct
     const sys_file_ops_t *file_ops;
     /* File system operations.  */
     const sys_fs_ops_t *fs_ops;
-    /* Name of mount point.  */
-    char mountname[8];
     /* The flags could be used for read-only.  */
     int flags;
     /* This is a handle for a file system implementation.  */
@@ -72,7 +70,7 @@ void sys_redirect_stdout (sys_write_t write, void *arg);
 
 void sys_redirect_stderr (sys_write_t write, void *arg);
 
-bool sys_mount (sys_fs_t *fs, const char *mountname, int flags);
+bool sys_mount (sys_fs_t *fs, int flags);
 
 int sys_attach (sys_file_ops_t *file_ops, void *arg);
 

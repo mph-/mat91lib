@@ -463,7 +463,7 @@ _rename (const char *oldpath __UNUSED__, const char *newpath __UNUSED__)
 
 /* Mount a file system for file I/O.  */
 bool
-sys_mount (sys_fs_t *fs, const char *mountname, int flags)
+sys_mount (sys_fs_t *fs, int flags)
 {
     int i;
 
@@ -478,7 +478,6 @@ sys_mount (sys_fs_t *fs, const char *mountname, int flags)
 
     sys_fs[i] = fs;
     sys_fs[i]->flags = flags;
-    strncpy (sys_fs[i]->mountname, mountname, sizeof (sys_fs[i]->mountname));
     return 1;
 }
 
