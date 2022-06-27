@@ -746,6 +746,19 @@ spi_transfer_8 (spi_t spi, const void *txbuffer, void *rxbuffer,
         if (terminate && spi->cs_mode == SPI_CS_MODE_FRAME)
             spi_cs_negate (spi);
         break;
+
+    case SPI_CS_MODE_EXTERNAL:
+        for (i = 0; i < len; i++)
+        {
+            if (txdata)
+                tx = *txdata++;
+
+            SPI_XFER (spi->base, tx, rx);
+
+            if (rxdata)
+                *rxdata++ = rx;
+        }
+        break;
     }
 
     return i;
@@ -827,7 +840,20 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
         if (terminate && spi->cs_mode == SPI_CS_MODE_FRAME)
             spi_cs_negate (spi);
         break;
-    }
+
+
+    case SPI_CS_MODE_EXTERNAL:
+        for (i = 0; i < len; i += 2)
+        {
+            if (txdata)
+                tx = *txdata++;
+
+            SPI_XFER (spi->base, tx, rx);
+
+            if (rxdata)
+                *rxdata++ = rx;
+        }
+        break;
 
     return i;
 }

@@ -28,12 +28,12 @@
     line, for example, channel 3 uses the NPCS3 line.  This signal is
     available on several different GPIO pins and thus needs to
     specified in the configuration structure passed to spi_init.
-    
+
     To support more than four devices on each SPI controller, this
     driver allows a channel to control more than one device.  The
     disadvantage is that this slows SPI transfers for this channel
     since the channel needs to be reconfigured for each transfer and
-    automatic chip select driving cannot be used.  
+    automatic chip select driving cannot be used.
 
     This driver does not use interrupts.  For the fastest SPI
     transfers, DMA can be used (see spi_dma.h).  This requires the use
@@ -86,7 +86,7 @@ enum {SPI_CHANNEL0 = 0, SPI_CHANNEL1, SPI_CHANNEL2, SPI_CHANNEL3,
 
 
 /* SPI mode settings.  */
-typedef enum 
+typedef enum
 {
     /* Clock normally low, read on rising edge.  Mode 0, 0.  */
     SPI_MODE_0 = 0,
@@ -115,7 +115,9 @@ typedef enum
     /* The chip select is active for multiple SPI transfers.  */
     SPI_CS_MODE_FRAME,
     /* The chip select stays high during SPI transfer.  */
-    SPI_CS_MODE_HIGH
+    SPI_CS_MODE_HIGH,
+    /* The chip select is driven externally (say by a timer/counter).  */
+    SPI_CS_MODE_EXTERNAL,
 } spi_cs_mode_t;
 
 
@@ -156,12 +158,12 @@ typedef struct
     spi_size_t size;
 } spi_transfer_t;
 
-    
+
 /* Function prototypes.  */
 
 
 /** Create new SPI device instance.  */
-spi_t 
+spi_t
 spi_init (const spi_cfg_t *cfg);
 
 
@@ -188,17 +190,17 @@ spi_read (spi_t spi, void *buffer, spi_size_t len, bool terminate);
     @param txbuffer Data buffer to write from (or NULL just for reading).
     @param rxbuffer Data buffer to read into (or NULL just for writing).
     @param len Number of bytes to transfer.
-    @param terminate True to negate CS when last byte transferred. 
+    @param terminate True to negate CS when last byte transferred.
     @return Number of bytes transferred.
 */
 spi_ret_t
-spi_transfer (spi_t spi, const void *txbuffer, void *rxbuffer, 
+spi_transfer (spi_t spi, const void *txbuffer, void *rxbuffer,
               spi_size_t len, bool terminate);
 
 
 /** Transfer a sequence of bytes to/from SPI using multiple buffers.
     @param spi SPI channel to use.
-    @param transfer Array of transmit/receive buffers and sizes.  
+    @param transfer Array of transmit/receive buffers and sizes.
     @param size Size of transfer array.
     @return Number of bytes transferred.
  */
@@ -208,22 +210,22 @@ spi_transact (spi_t spi, spi_transfer_t *transfer, uint8_t size);
 
 /** Return non-zero if there is a character ready to be read.  */
 bool
-spi_read_ready_p (spi_t spi); 
+spi_read_ready_p (spi_t spi);
 
 
 /** Return non-zero if a character can be written without blocking.  */
 bool
-spi_write_ready_p (spi_t spi); 
+spi_write_ready_p (spi_t spi);
 
 
 /** Read character from SPI.  This blocks if nothing
     is available to read.  It sends a dummy word 0.  */
 uint8_t
-spi_getc (spi_t spi); 
+spi_getc (spi_t spi);
 
 
 /** Write character to SPI.  Ignore received character.  */
-void 
+void
 spi_putc (spi_t spi, char ch);
 
 
@@ -303,8 +305,8 @@ void
 spi_config (spi_t spi);
 
 
-/** Force assertion of chip select (set low).   This is useful 
-    when sleeping to avoid inadvertely powering the SPI device.  
+/** Force assertion of chip select (set low).   This is useful
+    when sleeping to avoid inadvertely powering the SPI device.
     This should only be done when all SPI transfers have finished.  */
 void
 spi_cs_assert (spi_t spi);
