@@ -60,7 +60,7 @@ dac_sleep (dac_t dac)
 
 /** Set the DAC triggering.  */
 void
-dac_trigger_set (dac_t dac, dac_trigger_t trigger) 
+dac_trigger_set (dac_t dac, dac_trigger_t trigger)
 {
     dac->trigger = trigger;
 
@@ -85,11 +85,11 @@ dac_trigger_set (dac_t dac, dac_trigger_t trigger)
 
 /** Set the clock divider (prescaler).  */
 static void
-dac_clock_divisor_set (dac_t dac, dac_clock_divisor_t clock_divisor) 
+dac_clock_divisor_set (dac_t dac, dac_clock_divisor_t clock_divisor)
 {
-    /* The SAM4S requires 20 clocks per sample. 
+    /* The SAM4S requires 20 clocks per sample.
 
-       DAC_CLOCK = (F_CPU / 2) / clock_divisor.  
+       DAC_CLOCK = (F_CPU / 2) / clock_divisor.
     */
 
     if (clock_divisor >= 256)
@@ -239,7 +239,7 @@ dac_init (const dac_cfg_t *cfg)
             .channel = 0,
             .clock_speed_kHz = 1000
         };
-    
+
     if (dac_devices_num >= DAC_DEVICES_NUM)
         return 0;
 
@@ -248,13 +248,13 @@ dac_init (const dac_cfg_t *cfg)
         /* The clock only needs to be enabled when sampling.  The clock is
            automatically started for the SAM7.  */
         mcu_pmc_enable (ID_DACC);
-        
+
         dac_reset ();
     }
 
     dac = dac_devices + dac_devices_num;
     dac_devices_num++;
-    
+
     dac->MR = 0;
 
     if (!cfg)

@@ -1,7 +1,7 @@
 /** @file   busart0_isr.h
     @author M. P. Hayes, UCECE
     @date   18 June 2007
-    @brief 
+    @brief
 */
 #ifndef BUSART0_ISR_H
 #define BUSART0_ISR_H
@@ -9,7 +9,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 
 #include "irq.h"
 #include "usart0.h"
@@ -32,8 +32,8 @@ extern "C" {
 
 #ifndef USART0_IRQ_PRIORITY
 #define USART0_IRQ_PRIORITY 4
-#endif    
-    
+#endif
+
 
 static busart_dev_t busart0_dev;
 
@@ -63,21 +63,21 @@ busart0_tx_finished_p (void)
 static void
 busart0_isr (void)
 {
-    busart_dev_t *dev = &busart0_dev;    
+    busart_dev_t *dev = &busart0_dev;
     uint32_t status;
 
     status = USART0->US_CSR;
-    
+
     if (USART0_TX_IRQ_ENABLED_P () && ((status & US_CSR_TXRDY) != 0))
     {
         int ret;
-        
-        ret = ring_getc (&dev->tx_ring);        
+
+        ret = ring_getc (&dev->tx_ring);
         if (ret >= 0)
         {
             USART0_TX_FLOW_CONTROL;
             USART0_WRITE (ret);
-        }            
+        }
         else
             USART0_TX_IRQ_DISABLE ();
     }
@@ -105,7 +105,7 @@ busart0_init (uint16_t baud_divisor)
 
     usart0_init (baud_divisor);
 
-    irq_config (ID_USART0, USART0_IRQ_PRIORITY, busart0_isr);    
+    irq_config (ID_USART0, USART0_IRQ_PRIORITY, busart0_isr);
 
     irq_enable (ID_USART0);
 
@@ -115,6 +115,5 @@ busart0_init (uint16_t baud_divisor)
 
 #ifdef __cplusplus
 }
-#endif    
+#endif
 #endif /* BUSART0_ISR_H  */
-
