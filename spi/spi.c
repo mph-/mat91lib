@@ -46,10 +46,11 @@
    we want to have other CS signals driven by PIO lines, we need to
    switch the NPCS signals at the start and end of a transfer.
 
-   There are three chip select modes:
+   There are four chip select modes:
    SPI_CS_MODE_FRAME where the CS is asserted for multiple SPI tranmissions,
    SPI_CS_MODE_TOGGLE where the CS is only asserted for each SPI transmission, and
    SPI_CS_MODE_HIGH where the CS is kept high.
+   SPI_CS_MODE_EXTERNAL where the CS is driven externally, say by a TC peripheral.
 
    Automatic CS driving is only used for SPI_CS_MODE_TOGGLE.  With
    SPI_CS_MODE_FRAME it is necessary to change the CSAAT bit for the
@@ -403,7 +404,8 @@ spi_bits_set (spi_t spi, uint8_t bits)
 
 
 /* This performs a software reset for the specified controller (not an
-   individual channel).  It puts the peripheral in slave mode.  */
+   individual channel).  It puts the controller in slave mode for each
+   channel.  */
 static void
 spi_reset (Spi *pSPI)
 {
@@ -509,7 +511,8 @@ spi_cs_auto_enable (spi_t spi)
 void
 spi_cs_auto_disable (spi_t spi)
 {
-    pio_config_set (spi->cs, PIO_OUTPUT_HIGH);
+    if (spi->cs_mode != SPI_CS_MODE_EXTERNAL)
+        pio_config_set (spi->cs, PIO_OUTPUT_HIGH);
 }
 
 
@@ -666,7 +669,8 @@ spi_shutdown (spi_t spi)
     /* Set all the chip select pins low.  */
     for (i = 0; i < spi_devices_num; i++)
     {
-        pio_config_set (spi_devices[i].cs, PIO_OUTPUT_LOW);
+        if (spi->cs_mode != SPI_CS_MODE_EXTERNAL)
+            pio_config_set (spi_devices[i].cs, PIO_OUTPUT_LOW);
     }
 }
 
