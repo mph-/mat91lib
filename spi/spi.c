@@ -858,6 +858,7 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
                 *rxdata++ = rx;
         }
         break;
+    }
 
     return i;
 }
