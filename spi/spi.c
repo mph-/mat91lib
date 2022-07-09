@@ -845,7 +845,6 @@ spi_transfer_16 (spi_t spi, const void *txbuffer, void *rxbuffer,
             spi_cs_negate (spi);
         break;
 
-
     case SPI_CS_MODE_EXTERNAL:
         for (i = 0; i < len; i += 2)
         {

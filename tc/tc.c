@@ -2,7 +2,7 @@
     @author M. P. Hayes
     @date   30 November 2010
     @brief  Timer counter routines for AT91SAM7 and SAM4S
-    @note   Only TIOAx can be driven at present.  
+    @note   Only TIOAx can be driven at present.
 */
 
 #include "tc.h"
@@ -18,7 +18,7 @@
    3 16 bit registers (RA, RB,and RC).  In waveform mode, RA and RB
    are used to drive TIOA and TIOB, respectively.  RC can be used to
    stop the timer clock to provide a one-shot.
-   
+
    The counter can be clocked with MCK divided by 2, 8, 32, 128, and 1024.
 
    The 100-pin SAM4S MCUs have two timer/counter controllers.  The
@@ -29,11 +29,11 @@
    In Capture Mode, TIOA and TIOB are configured as inputs.  In
    Waveform Mode, TIOA is always configured to be an output and TIOB
    is an output if it is not selected to be the external trigger.
-   However, this driver does not support TIOB.  
+   However, this driver does not support TIOB.
 
    Although the counters are only 16 bit, this driver synthesises 64 bit
    counters using overflow interrupts.   Even with a 48 MHz clock,
-   these 64 bit counters will take 3000 years to overflow!  
+   these 64 bit counters will take 3000 years to overflow!
 */
 
 #define TC_CHANNEL(TC) ((TC) - tc_devices)
@@ -53,7 +53,7 @@
 
 
 /* Define known TC pins (A channel).  */
-static const pinmap_t tc_pins[] = 
+static const pinmap_t tc_pins[] =
 {
     {0, TIOA0_PIO, TIOA0_PERIPH, 0}, /* TIOA0 */
     {1, TIOA1_PIO, TIOA1_PERIPH, 0}, /* TIOA1 */
@@ -67,7 +67,7 @@ static tc_dev_t tc_devices[TC_DEVICES_NUM];
 
 
 /** Interrupt handler.  */
-static void 
+static void
 tc_handler (tc_t tc)
 {
     uint32_t status;
@@ -141,7 +141,7 @@ tc_ret_t
 tc_start (tc_t tc)
 {
     /* The TC_CCR register is write only.  */
-    tc->base->TC_CCR |= TC_CCR_CLKEN | TC_CCR_SWTRG; 
+    tc->base->TC_CCR |= TC_CCR_CLKEN | TC_CCR_SWTRG;
     return TC_OK;
 }
 
@@ -149,7 +149,7 @@ tc_start (tc_t tc)
 tc_ret_t
 tc_stop (tc_t tc)
 {
-    tc->base->TC_CCR |= TC_CCR_CLKDIS; 
+    tc->base->TC_CCR |= TC_CCR_CLKDIS;
     return TC_OK;
 }
 
@@ -191,10 +191,10 @@ tc_counter_get (tc_t tc)
            value.  This case can be detected by reading a small value.
 
            Case 2.  The overflow occured after reading the counter.
-           This case can be detected by reading a large value. 
+           This case can be detected by reading a large value.
 
            Case 3.  Another interrupt handler has hogged the CPU
-           for at least half the counter rollover period.   This 
+           for at least half the counter rollover period.   This
            is avoided by globally disabling interrupts.
         */
         if (counter_value < 32768)
@@ -247,7 +247,7 @@ tc_capture_poll (tc_t tc)
     {
         tc_handler (tc);
     }
-    
+
     return tc->capture_state;
 }
 
@@ -257,12 +257,12 @@ tc_output_set (tc_t tc)
 {
     if ((tc->mode == TC_MODE_ADC) || (tc->mode == TC_MODE_COUNTER)
         || (tc->mode == TC_MODE_INTERRUPT) || (tc->mode == TC_MODE_NONE))
-        
+
         return TC_OK;
 
     /* Generate a software trigger with the clock stopped to set TIOAx
        to desired state.  Note, the clock is stopped.  */
-    tc->base->TC_CCR |= TC_CCR_CLKDIS | TC_CCR_SWTRG; 
+    tc->base->TC_CCR |= TC_CCR_CLKDIS | TC_CCR_SWTRG;
 
     /* Make timer pin TIOAx a timer output.  */
     switch (TC_CHANNEL (tc))
@@ -297,7 +297,7 @@ tc_aux_output_set (tc_t tc)
 
     /* Generate a software trigger with the clock stopped to set TIOBx
        to desired state.  Note, the clock is stopped.  */
-    tc->base->TC_CCR |= TC_CCR_CLKDIS | TC_CCR_SWTRG; 
+    tc->base->TC_CCR |= TC_CCR_CLKDIS | TC_CCR_SWTRG;
 
     /* Make timer pin TIOBx a timer output.  */
     switch (TC_CHANNEL (tc))
@@ -400,7 +400,7 @@ tc_frequency_set (tc_t tc, tc_frequency_t frequency)
     tc_period_t period;
 
     period = TC_PERIOD_DIVISOR (frequency, tc->prescale);
-    
+
     period = tc_period_set (tc, period);
     tc_delay_set (tc, period >> 1);
 
@@ -414,7 +414,7 @@ tc_mode_set (tc_t tc, tc_mode_t mode)
 {
     /* Many timer counters can only generate a pulse with a single
        timer clock period.  This timer counter allows the pulse width
-       to be varied.  It is specified by period - delay. 
+       to be varied.  It is specified by period - delay.
 
        We configure the TC in mode WAVSEL_UP_RC.  Here the counter
        is incremented and is reset when RC matches.  The output is
@@ -455,13 +455,14 @@ tc_mode_set (tc_t tc, tc_mode_t mode)
             | TC_CMR_ACPA_CLEAR | TC_CMR_ACPC_SET
             | TC_CMR_ASWTRG_SET;
         break;
-    
+
     case TC_MODE_PULSE_ONESHOT_TOGGLE:
-        /* Set TIOBx to output. Toggle TIOBx when RC matches. 
+        /* Set TIOBx to output. Toggle TIOBx when RC matches.
         Stop the clock when RC matches. */
         tc->base->TC_CMR = TC_CMR_BURST_NONE | TC_CMR_WAVE
             | TC_CMR_CPCSTOP | TC_CMR_WAVSEL_UP_RC
             | TC_CMR_ACPC_TOGGLE | TC_CMR_ASWTRG_SET;
+        break;
 
     case TC_MODE_DELAY_ONESHOT:
         /* Don't change TIOAx.  Stop clock when RC matches.  */
@@ -475,7 +476,7 @@ tc_mode_set (tc_t tc, tc_mode_t mode)
            reset the counter (this is called external trigger).
            ABETRG = 1 specifies TIOAx for external trigger.  There are
            many possible combinations of reset and capture.  This
-           driver does not support resetting of the counter.  
+           driver does not support resetting of the counter.
 
            The docs say that the external trigger gates the clock but
            it appears that it resets the counter.  Specifying
@@ -508,11 +509,11 @@ tc_mode_set (tc_t tc, tc_mode_t mode)
             | TC_CMR_ABETRG | TC_CMR_ETRGEDG_NONE;
         tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS | TC_IER_LDRBS;
         break;
-    
+
     case TC_MODE_NONE:
     case TC_MODE_COUNTER:
         break;
-        
+
     default:
         return TC_ERROR_MODE;
     }
@@ -522,13 +523,13 @@ tc_mode_set (tc_t tc, tc_mode_t mode)
 }
 
 
-/** Configure TC with specified aux mode.  */
+/** Configure TC with specified auxiliary mode.  */
 tc_ret_t
 tc_aux_mode_set (tc_t tc, tc_mode_t mode)
 {
     /* Many timer counters can only generate a pulse with a single
        timer clock period.  This timer counter allows the pulse width
-       to be varied.  It is specified by period - delay. 
+       to be varied.  It is specified by period - delay.
 
        We configure the TC in mode WAVSEL_UP_RC.  Here the counter
        is incremented and is reset when RC matches.  The output is
@@ -537,12 +538,12 @@ tc_aux_mode_set (tc_t tc, tc_mode_t mode)
     {
     case TC_MODE_NONE:
             return TC_OK;
-        
+
     case TC_MODE_ADC:
     case TC_MODE_CLOCK:
     case TC_MODE_INTERRUPT:
     case TC_MODE_PULSE:
-        /* Set TIOBx to output. Set high when RB matches and clear 
+        /* Set TIOBx to output. Set high when RB matches and clear
         TIOBx when RC matches. */
         tc->base->TC_CMR |= TC_CMR_BURST_NONE | TC_CMR_WAVE
             | TC_CMR_WAVSEL_UP_RC | TC_CMR_BCPB_SET | TC_CMR_BCPC_CLEAR
@@ -550,7 +551,7 @@ tc_aux_mode_set (tc_t tc, tc_mode_t mode)
         break;
 
     case TC_MODE_PULSE_INVERT:
-        /* Set TIOBx to output. Clear TIOBx when RB matches and set 
+        /* Set TIOBx to output. Clear TIOBx when RB matches and set
         TIOBx high when RC matches.  */
         tc->base->TC_CMR |= TC_CMR_BURST_NONE | TC_CMR_WAVE
             | TC_CMR_WAVSEL_UP_RC | TC_CMR_BCPB_CLEAR | TC_CMR_BCPC_SET
@@ -558,7 +559,7 @@ tc_aux_mode_set (tc_t tc, tc_mode_t mode)
         break;
 
     case TC_MODE_PULSE_ONESHOT:
-        /* Set TIOBx to output. Set high when RB matches and clear 
+        /* Set TIOBx to output. Set high when RB matches and clear
         TIOBx when RC matches. Stop clock when RC matches.   */
         tc->base->TC_CMR |= TC_CMR_BURST_NONE | TC_CMR_WAVE
             | TC_CMR_CPCSTOP | TC_CMR_WAVSEL_UP_RC
@@ -567,16 +568,16 @@ tc_aux_mode_set (tc_t tc, tc_mode_t mode)
         break;
 
     case TC_MODE_PULSE_ONESHOT_INVERT:
-        /* Set TIOBx to output. Clear TIOBx when RB matches and set 
+        /* Set TIOBx to output. Clear TIOBx when RB matches and set
         TIOBx when RC matches. Stop clock when RC matches.  */
         tc->base->TC_CMR = TC_CMR_BURST_NONE | TC_CMR_WAVE
             | TC_CMR_CPCSTOP | TC_CMR_WAVSEL_UP_RC
             | TC_CMR_BCPB_CLEAR | TC_CMR_BCPC_SET
             | TC_CMR_BSWTRG_SET | TC_CMR_EEVT_XC0;
         break;
-    
+
     case TC_MODE_PULSE_ONESHOT_TOGGLE:
-        /* Set TIOBx to output. Toggle TIOBx when RB matches. 
+        /* Set TIOBx to output. Toggle TIOBx when RB matches.
         Stop the clock when RC matches. */
         tc->base->TC_CMR |= TC_CMR_BURST_NONE | TC_CMR_WAVE
             | TC_CMR_CPCSTOP | TC_CMR_WAVSEL_UP_RC
@@ -585,7 +586,7 @@ tc_aux_mode_set (tc_t tc, tc_mode_t mode)
         break;
 
     case TC_MODE_DELAY_ONESHOT:
-        /* Set TIOBx to output. Don't change TIOBx.  Stop clock 
+        /* Set TIOBx to output. Don't change TIOBx.  Stop clock
         when RC matches.  */
         tc->base->TC_CMR |= TC_CMR_BURST_NONE | TC_CMR_WAVE
             | TC_CMR_CPCSTOP | TC_CMR_WAVSEL_UP_RC
@@ -598,7 +599,7 @@ tc_aux_mode_set (tc_t tc, tc_mode_t mode)
     case TC_MODE_CAPTURE_FALL_FALL:
     case TC_MODE_COUNTER:
         break;
-        
+
     default:
         return TC_ERROR_MODE;
     }
@@ -638,7 +639,7 @@ tc_prescale_set (tc_t tc, tc_prescale_t prescale)
     }
 
     tc->prescale = prescale;
-    
+
     return prescale;
 }
 
@@ -664,7 +665,7 @@ tc_config_set (tc_t tc, const tc_cfg_t *cfg)
     if (tc_prescale_set (tc, cfg->prescale) != cfg->prescale
         && cfg->prescale != 0)
         return TC_ERROR_PRESCALE;
-    
+
     if (cfg->frequency)
     {
         tc_frequency_set (tc, cfg->frequency);
@@ -673,7 +674,7 @@ tc_config_set (tc_t tc, const tc_cfg_t *cfg)
     {
         tc_period_set (tc, cfg->period);
         tc_delay_set (tc, cfg->delay);
-        tc_aux_delay_set (tc, cfg->aux_delay);        
+        tc_aux_delay_set (tc, cfg->aux_delay);
     }
 
     return TC_OK;
@@ -693,7 +694,7 @@ tc_shutdown (tc_t tc)
 }
 
 
-tc_t 
+tc_t
 tc_init (const tc_cfg_t *cfg)
 {
     tc_t tc;
@@ -703,7 +704,7 @@ tc_init (const tc_cfg_t *cfg)
     pin = 0;
     for (i = 0; i < TC_PINS_NUM; i++)
     {
-        pin = &tc_pins[i]; 
+        pin = &tc_pins[i];
         if (pin->pio == cfg->pio)
             break;
     }
@@ -732,12 +733,12 @@ tc_init (const tc_cfg_t *cfg)
 
     /* Enable TCx peripheral clock.  */
     mcu_pmc_enable (ID_TC0 + pin->channel);
-    
+
     tc_config_set (tc, cfg);
 
     /* Configure output pins if applicable.  */
     tc_output_set (tc);
-    tc_aux_output_set (tc);    
+    tc_aux_output_set (tc);
 
     tc->overflows = 0;
     tc->capture_state = 0;
@@ -773,14 +774,14 @@ tc_clock_sync (tc_t tc, tc_period_t period)
     id = ID_TC0 + TC_CHANNEL (tc);
 
     irq_config (id, 7, tc_clock_sync_handler);
-            
+
     irq_enable (id);
 
     /* Enable interrupt when have compare on A.  */
     tc->base->TC_IER = TC_IER_CPAS;
 
     tc_start (tc);
-    
+
     /* Stop CPU clock until interrupt.  FIXME, should disable other
        interrupts first. */
     mcu_cpu_idle ();
