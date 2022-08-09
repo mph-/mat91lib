@@ -11,16 +11,16 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 
 #include "config.h"
 #include "sys.h"
-    
+
 
 /** ADC channels.  Note, channel 15 on the SAM4S is the temp. sensor.  */
 typedef enum
 {
-    ADC_CHANNEL_0, ADC_CHANNEL_1, ADC_CHANNEL_2, ADC_CHANNEL_3, 
+    ADC_CHANNEL_0, ADC_CHANNEL_1, ADC_CHANNEL_2, ADC_CHANNEL_3,
     ADC_CHANNEL_4, ADC_CHANNEL_5, ADC_CHANNEL_6, ADC_CHANNEL_7,
     ADC_CHANNEL_8, ADC_CHANNEL_9, ADC_CHANNEL_10, ADC_CHANNEL_11,
     ADC_CHANNEL_12, ADC_CHANNEL_13, ADC_CHANNEL_14, ADC_CHANNEL_15,
@@ -28,7 +28,7 @@ typedef enum
 } adc_channel_t;
 
 
-typedef enum 
+typedef enum
 {
     ADC_TRIGGER_SW,
     ADC_TRIGGER_EXT,
@@ -37,7 +37,7 @@ typedef enum
 } adc_trigger_t;
 
 
-typedef enum 
+typedef enum
 {
     ADC_COMPARISON_MODE_LOW,
     ADC_COMPARISON_MODE_HIGH,
@@ -90,7 +90,7 @@ typedef struct adc_cfg_struct
     adc_trigger_t trigger;
 
     /* Clock speed in kHz (maximum).  */
-    adc_clock_speed_t clock_speed_kHz;    
+    adc_clock_speed_t clock_speed_kHz;
 } adc_cfg_t;
 
 
@@ -173,13 +173,13 @@ bool
 adc_comparison_p (adc_t adc);
 
 
-/** Perform a calibration cycle.  */    
+/** Perform a calibration cycle.  */
 void
 adc_calibrate (adc_t adc);
 
-    
+
 /** Initalises the ADC registers for specified configuration.  */
-adc_t 
+adc_t
 adc_init (const adc_cfg_t *cfg);
 
 
@@ -192,10 +192,9 @@ adc_reset (void);
 
 
 int16_t *adc_convert_bipolar (adc_sample_t *src, int16_t *dst, uint16_t samples);
-    
+
 
 #ifdef __cplusplus
 }
-#endif    
 #endif
-
+#endif

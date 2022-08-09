@@ -10,7 +10,7 @@
 
 /* On reset the the PIO pins are configured as inputs with pullups.
    To make a PIO pin an ADC pin requires programming ADC_CHER.
-   
+
    SAM4S: 16 channels 10/12 bit (1 MHz max).
    SAM7: 8 channels, 8/10 bits.
 
@@ -32,16 +32,16 @@
    supported yet.
 
    The minimum impedance (ohms) for the SAM7S driving the ADC is given by:
-   
+
    ZOUT <= (SHTIM - 470) x 10 in 8-bit resolution mode
    ZOUT <= (SHTIM - 589) x 7.69 in 10-bit resolution mode
-   
+
    where SHTIM is the sample/hold time in ns.
 
    The SAM4S can tolerate higher impedance inputs.
 
    The SAM4S requires 20 clocks per sample so for a maximum sample
-   rate of 1 MHz then a clock speed of 20 MHz is required.    
+   rate of 1 MHz then a clock speed of 20 MHz is required.
 
    TODO. Add gain setting.
 */
@@ -114,7 +114,7 @@ adc_sleep (adc_t adc)
 /** Set the ADC triggering.  This does not take affect until
     adc_config called.  */
 void
-adc_trigger_set (adc_t adc, adc_trigger_t trigger) 
+adc_trigger_set (adc_t adc, adc_trigger_t trigger)
 {
     adc->trigger = trigger;
 
@@ -134,18 +134,18 @@ adc_trigger_set (adc_t adc, adc_trigger_t trigger)
         /* Enable trigger.  */
         adc->MR |= ADC_MR_TRGEN_EN;
     }
-    adc_config_dirty = 1;    
+    adc_config_dirty = 1;
 }
 
 
 /** Set the clock divider (prescaler).  This does not take affect
     until adc_config called.  */
 static void
-adc_clock_divisor_set (adc_t adc, adc_clock_divisor_t clock_divisor) 
+adc_clock_divisor_set (adc_t adc, adc_clock_divisor_t clock_divisor)
 {
-    /* The SAM4S requires 20 clocks per sample. 
+    /* The SAM4S requires 20 clocks per sample.
 
-       ADC_CLOCK = (F_CPU / 2) / clock_divisor.  
+       ADC_CLOCK = (F_CPU / 2) / clock_divisor.
     */
 
     if (clock_divisor >= 256)
@@ -153,7 +153,7 @@ adc_clock_divisor_set (adc_t adc, adc_clock_divisor_t clock_divisor)
 
     BITS_INSERT (adc->MR, clock_divisor - 1, 8, 15);
     adc->clock_divisor = clock_divisor;
-    adc_config_dirty = 1;        
+    adc_config_dirty = 1;
 }
 
 
@@ -166,7 +166,7 @@ adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
     uint16_t settle_clocks;
     uint16_t sample_clocks;
     static const uint8_t adc_settle_table[] = {3, 5, 9, 17};
-    static const uint16_t adc_sample_table[] = 
+    static const uint16_t adc_sample_table[] =
     {0, 8, 16, 24, 64, 80, 96, 112, 512, 576, 640, 704, 768, 832, 896, 960};
 
     /* For the SAM7 the max clock speed is 5 MHz for 10 bit and 8 MHz
@@ -191,8 +191,8 @@ adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
        Let's allocate 4.  */
     BITS_INSERT (adc->MR, 3, 24, 27);
 
-    adc_config_dirty = 1;    
-    
+    adc_config_dirty = 1;
+
     return clock_speed / 1000;
 }
 
@@ -203,7 +203,7 @@ bool
 adc_channels_set (adc_t adc, adc_channels_t channels)
 {
     adc->channels = channels;
-    adc_config_dirty = 1;        
+    adc_config_dirty = 1;
     return 1;
 }
 
@@ -231,7 +231,7 @@ adc_bits_set (adc_t adc, uint8_t bits)
 
          case 8:
             adc->MR |= ADC_MR_LOWRES;
-            break;            
+            break;
 #endif
 
         default:
@@ -240,7 +240,7 @@ adc_bits_set (adc_t adc, uint8_t bits)
     }
 
     adc->bits = bits;
-    adc_config_dirty = 1;        
+    adc_config_dirty = 1;
     return bits;
 }
 
@@ -264,9 +264,9 @@ adc_comparison_set (adc_t adc, adc_channel_t channel, bool all_channels,
 
     BITS_INSERT(cwr, low_threshold, 0, 11);
     BITS_INSERT(cwr, low_threshold, 16, 27);
-    adc->CWR = cwr;    
-    adc_config_dirty = 1;    
-    
+    adc->CWR = cwr;
+    adc_config_dirty = 1;
+
     return 1;
 }
 
@@ -277,7 +277,7 @@ void
 adc_tag_set (adc_t adc, bool tag)
 {
     BITS_INSERT (adc->EMR, tag, 24, 24);
-    adc_config_dirty = 1;        
+    adc_config_dirty = 1;
 }
 
 
@@ -287,7 +287,7 @@ adc_channels_select (adc_t adc)
 {
     ADC->ADC_CHDR = ~0;
     ADC->ADC_CHER = adc->channels;
-    adc_config_dirty = 1;        
+    adc_config_dirty = 1;
 }
 
 
@@ -395,7 +395,7 @@ adc_init (const adc_cfg_t *cfg)
             .channel = 0,
             .clock_speed_kHz = 1000
         };
-    
+
     if (adc_devices_num >= ADC_DEVICES_NUM)
         return 0;
 
@@ -404,13 +404,13 @@ adc_init (const adc_cfg_t *cfg)
         /* The clock only needs to be enabled when sampling.  The clock is
            automatically started for the SAM7.  */
         mcu_pmc_enable (ID_ADC);
-        
+
         adc_reset ();
     }
 
     adc = adc_devices + adc_devices_num;
     adc_devices_num++;
-    
+
     adc->MR = 0;
     adc->EMR = 0;
     adc->CWR = 0;
@@ -480,7 +480,7 @@ adc_read (adc_t adc, void *buffer, size_t size)
             /* Should have timeout, especially for external trigger.  */
             while (!adc_ready_p (adc))
                 continue;
-            
+
             data[i] = ADC->ADC_LCDR;
         }
     }
@@ -517,5 +517,3 @@ adc_convert_bipolar (adc_sample_t *src, int16_t *dst, uint16_t samples)
 
     return dst;
 }
-
-
