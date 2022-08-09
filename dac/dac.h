@@ -14,7 +14,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 
 #include "config.h"
 
@@ -25,7 +25,7 @@ typedef enum
 } dac_channel_t;
 
 
-typedef enum 
+typedef enum
 {
     DAC_TRIGGER_SW,
     DAC_TRIGGER_EXT,
@@ -78,25 +78,33 @@ typedef struct dac_cfg_struct
     dac_trigger_t trigger;
 
     /* Clock speed in kHz (maximum).  */
-    dac_clock_speed_t clock_speed_kHz;    
+    dac_clock_speed_t clock_speed_kHz;
 
     /* Number of clocks between refreshes.  */
     uint16_t refresh_clocks;
 } dac_cfg_t;
 
 
+/** Set the DAC triggering.  This does not take affect until
+    dac_config called.  */
 void
 dac_trigger_set (dac_t dac, dac_trigger_t trigger);
 
 
+/** Set clock speed.  This does not take affect until dac_config
+    called.  */
 dac_clock_speed_t
 dac_clock_speed_kHz_set (dac_t dac, dac_clock_speed_t clock_speed_kHz);
 
 
+/** Set number of bits to convert.  This does not take affect until
+    dac_config called.  */
 uint8_t
 dac_bits_set (dac_t dac, uint8_t bits);
 
 
+/** Set the channels to convert.  This does not take affect until
+    dac_config called.  */
 bool
 dac_channels_set (dac_t dac, dac_channels_t channels);
 
@@ -141,7 +149,7 @@ dac_disable (dac_t dac);
 
 
 /** Initalises the DAC registers for specified configuration.  */
-dac_t 
+dac_t
 dac_init (const dac_cfg_t *cfg);
 
 
@@ -151,6 +159,5 @@ dac_shutdown (dac_t dac);
 
 #ifdef __cplusplus
 }
-#endif    
 #endif
-
+#endif

@@ -38,7 +38,7 @@
 
 static uint8_t dac_devices_num = 0;
 static dac_dev_t dac_devices[DAC_DEVICES_NUM];
-static dac_dev_t *dac_config_last = 0;
+static bool dac_config_dirty = 0;
 
 
 /** Reset DAC.  */
@@ -58,7 +58,8 @@ dac_sleep (dac_t dac)
 }
 
 
-/** Set the DAC triggering.  */
+/** Set the DAC triggering.  This does not take affect until
+    dac_config called.  */
 void
 dac_trigger_set (dac_t dac, dac_trigger_t trigger)
 {
@@ -80,6 +81,7 @@ dac_trigger_set (dac_t dac, dac_trigger_t trigger)
         /* Enable trigger.  */
         dac->MR |= DACC_MR_TRGEN_EN;
     }
+    dac_config_dirty = 1;
 }
 
 
@@ -97,6 +99,7 @@ dac_clock_divisor_set (dac_t dac, dac_clock_divisor_t clock_divisor)
 
     BITS_INSERT (dac->MR, clock_divisor - 1, 8, 15);
     dac->clock_divisor = clock_divisor;
+    dac_config_dirty = 1;
 }
 
 
@@ -114,6 +117,7 @@ dac_clock_speed_kHz_set (dac_t dac, dac_clock_speed_t clock_speed_kHz)
        SAM4S.  Let's allocate 512.  TODO, scan through table to find
        appropriate value.  */
     BITS_INSERT (dac->MR, 8, 16, 19);
+    dac_config_dirty = 1;
 
     return clock_speed / 1000;
 }
@@ -129,6 +133,7 @@ dac_refresh_clocks_set (dac_t dac, uint16_t refresh_clocks)
        nearest multiple.   */
     refresh = (refresh_clocks + (1 << 9)) >> 10;
     BITS_INSERT (dac->MR, refresh, 8, 15);
+    dac_config_dirty = 1;
 
     return refresh << 10;
 }
@@ -140,6 +145,7 @@ bool
 dac_channels_set (dac_t dac, dac_channels_t channels)
 {
     dac->channels = channels;
+    dac_config_dirty = 1;
     return 1;
 }
 
@@ -170,9 +176,9 @@ dac_config (dac_t dac)
 {
     dac_channels_select (dac);
 
-    if (dac == dac_config_last)
+    if (! dac_config_dirty)
         return 1;
-    dac_config_last = dac;
+    dac_config_dirty = 0;
 
     /* Set mode register.  */
     DAC->DACC_MR = dac->MR;
