@@ -33,7 +33,6 @@
 #define DAC_STARTUP_TIME DAC_STARTUP_TIME_MIN
 #endif
 
-#define DAC DACC
 
 
 static uint8_t dac_devices_num = 0;
@@ -45,7 +44,7 @@ static bool dac_config_dirty = 0;
 static void
 dac_reset (void)
 {
-    DAC->DACC_CR = DACC_CR_SWRST;
+    DACC->DACC_CR = DACC_CR_SWRST;
 }
 
 
@@ -54,7 +53,7 @@ dac_reset (void)
 void
 dac_sleep (dac_t dac)
 {
-    DAC->DACC_MR |= DACC_MR_SLEEP;
+    DACC->DACC_MR |= DACC_MR_SLEEP;
 }
 
 
@@ -154,8 +153,8 @@ dac_channels_set (dac_t dac, dac_channels_t channels)
 static void
 dac_channels_select (dac_t dac)
 {
-    DAC->DACC_CHDR = ~0;
-    DAC->DACC_CHER = dac->channels;
+    DACC->DACC_CHDR = ~0;
+    DACC->DACC_CHER = dac->channels;
 }
 
 
@@ -174,14 +173,14 @@ dac_bits_set (dac_t dac, uint8_t bits)
 bool
 dac_config (dac_t dac)
 {
-    dac_channels_select (dac);
-
     if (! dac_config_dirty)
         return 1;
     dac_config_dirty = 0;
 
+    dac_channels_select (dac);
+
     /* Set mode register.  */
-    DAC->DACC_MR = dac->MR;
+    DACC->DACC_MR = dac->MR;
     return 1;
 }
 
@@ -279,7 +278,7 @@ dac_init (const dac_cfg_t *cfg)
 bool
 dac_ready_p (dac_t dac)
 {
-    return (DAC->DACC_ISR & DACC_ISR_TXRDY) != 0;
+    return (DACC->DACC_ISR & DACC_ISR_TXRDY) != 0;
 }
 
 
@@ -287,14 +286,14 @@ dac_ready_p (dac_t dac)
 bool
 dac_conversion_finished_p (dac_t dac)
 {
-    return (DAC->DACC_ISR & DACC_ISR_TXRDY) != 0;
+    return (DACC->DACC_ISR & DACC_ISR_TXRDY) != 0;
 }
 
 
 uint32_t
 dac_isr_get (dac_t dac)
 {
-    return DAC->DACC_ISR;
+    return DACC->DACC_ISR;
 }
 
 
@@ -318,7 +317,7 @@ dac_write (dac_t dac, void *buffer, uint16_t size)
         while (!dac_ready_p (dac))
             continue;
 
-        DAC->DACC_CDR = data[i];
+        DAC_WRITE (dac, data[i]);
     }
 
     return samples * sizeof (dac_sample_t);

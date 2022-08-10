@@ -161,6 +161,13 @@ void
 dac_shutdown (dac_t dac);
 
 
+static inline void
+DAC_WRITE (dac_t dac, uint32_t data)
+{
+    DACC->DACC_CDR = data;
+}
+
+
 #ifdef __cplusplus
 }
 #endif
