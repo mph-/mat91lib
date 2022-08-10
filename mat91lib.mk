@@ -57,21 +57,12 @@ include $(MAT91LIB_DIR)/$(FAMILY)/$(FAMILY).mk
 SCRIPTS = $(MAT91LIB_DIR)/$(FAMILY)/scripts
 LDSCRIPTS = $(MAT91LIB_DIR)/$(FAMILY)
 
-# To keep things simple, don't link with g++.  This is only
-# needed if use c++ libraries.
-#LD = $(TOOLCHAIN)-g++
 LD = $(TOOLCHAIN)-gcc
 
-
 CC = $(TOOLCHAIN)-gcc
-CXX = $(TOOLCHAIN)-g++
 OBJCOPY = $(TOOLCHAIN)-objcopy
 SIZE = $(TOOLCHAIN)-size
 DEL = rm -f
-
-# Disable run time type information so virtual members work
-# in the interim.
-CXXFLAGS += -fno-rtti
 
 INCLUDES += -I.
 
@@ -85,15 +76,6 @@ endif
 # Hack.  FIXME
 SRC += syscalls.c
 
-CSRC = $(filter %.c, $(SRC))
-#CCSRC = $(filter %.cc %.cpp, $(SRC))
-CCSRC = $(filter %.cpp, $(SRC))
-
-ifneq ($(CCSRC), )
-LDFLAGS += -lstdc++
-endif
-
-
 ifndef BOARD
 BOARD=
 endif
@@ -101,16 +83,9 @@ endif
 OBJDIR = $(ABS_BUILD_DIR)/objs-$(BOARD)
 DEPDIR = $(ABS_BUILD_DIR)/deps-$(BOARD)
 
-# Dirty hack: add _x suffix for C++ files as a workaround for Windows'
-# lack of case discrimination where Adc.o is considered the same as
-# adc.o.  This could be conditionally applied depending on the OS.  A
-# better fix to create a hierarchical build tree or to prefix the
-# filename with the library name.  An even better approach is to
-# rewrite using cmake.
+OBJ1 = $(SRC:.c=.o)
 
-OBJ1 = $(CCSRC:.cpp=_x.o) $(CSRC:.c=.o)
-
-DEP1 = $(CCSRC:.cpp=_x.d) $(CSRC:.c=.d)
+DEP1 = $(SRC:.c=.d)
 
 # Create list of object and dependency files.  Note, sort removes duplicates.
 OBJS = $(sort $(addprefix $(OBJDIR)/, $(notdir $(sort $(OBJ1)))))
@@ -143,12 +118,6 @@ print-cflags:
 print-src:
 	@echo $(SRC)
 
-print-csrc:
-	@echo $(CSRC)
-
-print-ccsrc:
-	@echo $(CCSRC)
-
 print-vpath:
 	@echo $(VPATH)
 
@@ -176,20 +145,9 @@ ifeq (1, 0)
 # This is slightly faster than strategy 2 since the .d files are only
 # created when a pre-requisite is modified.
 
-# Rule to compile .cpp file to .o file.
-$(OBJDIR)/%_x.o: %.cpp Makefile
-	$(CXX) -c $(CXXFLAGS) $< -o $@
-
 # Rule to compile .c file to .o file.
 $(OBJDIR)/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
-
-# Rule to create .d file from .cpp file.
-$(DEPDIR)/%_x.d: %.cpp
-	@set -e; $(DEL) $@; \
-	$(CC) -MM $(CXXFLAGS) $< > $@.$$$$; \
-	sed 's,\($*\)x_\.o[ :]*,$(OBJDIR)/x_\1.o $@ : ,g' < $@.$$$$ > $@; \
-	$(DEL) $@.$$$$
 
 # Rule to create .d file from .c file.
 $(DEPDIR)/%.d: %.c
@@ -209,12 +167,6 @@ $(OBJDIR)/%.o: %.c Makefile
 # Generate dependencies to see if object file needs recompiling.
 	@printf "$(OBJDIR)/" > $(DEPDIR)/$*.d
 	$(CC) -MM $(CFLAGS) $< >> $(DEPDIR)/$*.d
-
-$(OBJDIR)/%_x.o: %.cpp Makefile
-	$(CXX) -c $(CXXFLAGS) $< -o $@
-# Generate dependencies to see if object file needs recompiling.
-	@printf "$(OBJDIR)/" > $(DEPDIR)/$*_x.d
-	$(CXX) -MM $(CXXFLAGS) $< >> $(DEPDIR)/$*_x.d
 endif
 
 # Link object files to form output file.
