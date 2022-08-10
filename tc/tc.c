@@ -322,6 +322,13 @@ tc_aux_output_set (tc_t tc)
     return TC_OK;
 }
 
+/** Get the duty in clocks.  */
+tc_period_t
+tc_duty_get (tc_t tc)
+{
+    return tc_delay_get (tc);
+}
+
 
 /** Get the delay in clocks.  */
 tc_period_t
@@ -363,6 +370,13 @@ tc_delay_set (tc_t tc, tc_period_t delay)
 }
 
 
+/** Set the duty in clocks.  */
+tc_period_t
+tc_duty_set (tc_t tc, tc_period_t duty)
+{
+    return tc_delay_set (tc, duty);
+}
+
 /** Set the aux delay in clocks.  In clock modes this sets the duty.  */
 tc_period_t
 tc_aux_delay_set (tc_t tc, tc_period_t delay)
@@ -376,6 +390,14 @@ tc_aux_delay_set (tc_t tc, tc_period_t delay)
     tc->base->TC_RB = delay;
 
     return delay;
+}
+
+
+/** Set the aux duty in clocks.  */
+tc_period_t
+tc_aux_duty_set (tc_t tc, tc_period_t duty)
+{
+    return tc_aux_delay_set (tc, duty);
 }
 
 

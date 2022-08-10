@@ -102,15 +102,15 @@ typedef uint16_t tc_prescale_t;
 /** TC configuration structure.  */
 typedef struct
 {
-    pio_t pio;                  /* TIOA */
-    tc_mode_t mode;
-    tc_mode_t aux_mode;
+    pio_t pio;                  /* TIOA.  */
+    tc_mode_t mode;             /* Mode for TIOA.  */
+    tc_mode_t aux_mode;         /* Auxiliary mode for TIOB.  */
     tc_prescale_t prescale;     /* 2, 8, 32, 128.  0 defaults to 2.  */
     /* If frequency is non-zero then it overrides period and delay.  */
-    tc_period_t period;         /* Clocks */
-    tc_period_t delay;          /* Clocks */
-    tc_period_t aux_delay;      /* Clocks */
-    tc_frequency_t frequency;   /* Hz */
+    tc_period_t period;         /* Clocks. */
+    tc_period_t delay;          /* Clocks (this also controls the duty).  */
+    tc_period_t aux_delay;      /* Clocks (this also controls the duty).  */
+    tc_frequency_t frequency;   /* Hz. */
 } tc_cfg_t;
 
 
@@ -153,9 +153,9 @@ tc_period_t
 tc_delay_get (tc_t tc);
 
 
-/** Set the delay in clocks.  */
+/** Get the duty in clocks.  */
 tc_period_t
-tc_delay_set (tc_t tc, tc_period_t delay);
+tc_duty_get (tc_t tc);
 
 
 /** Get the aux delay in clocks.  */
@@ -163,21 +163,44 @@ tc_period_t
 tc_aux_delay_get (tc_t tc);
 
 
-/** Set the aux delay in clocks.  */
+/** Get the aux duty in clocks.  */
 tc_period_t
-tc_aux_delay_set (tc_t tc, tc_period_t delay);
+tc_aux_delay_get (tc_t tc);
 
-/** Set the pulse mode */
-tc_ret_t
-tc_aux_mode_set (tc_t tc, tc_mode_t mode);
 
 /** Get the period in clocks.  */
 tc_period_t
 tc_period_get (tc_t tc);
 
 
+/** Set the delay in clocks.  */
+tc_period_t
+tc_delay_set (tc_t tc, tc_period_t delay);
+
+
+/** Set the duty in clocks.  */
+tc_period_t
+tc_duty_set (tc_t tc, tc_period_t duty);
+
+
+/** Set the aux delay in clocks.  */
+tc_period_t
+tc_aux_delay_set (tc_t tc, tc_period_t delay);
+
+
+/** Set the aux duty in clocks.  */
+tc_period_t
+tc_aux_delay_set (tc_t tc, tc_period_t delay);
+
+
+/** Set the period in clocks.  */
 tc_period_t
 tc_period_set (tc_t tc, tc_period_t period);
+
+
+/** Set the aux mode.  */
+tc_ret_t
+tc_aux_mode_set (tc_t tc, tc_mode_t mode);
 
 
 /** Set the TC output frequency in Hz.  This returns the actual
