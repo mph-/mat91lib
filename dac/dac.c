@@ -291,6 +291,13 @@ dac_conversion_finished_p (dac_t dac)
 }
 
 
+uint32_t
+dac_isr_get (dac_t dac)
+{
+    return DAC->DACC_ISR;
+}
+
+
 /** Blocking write.  This will hang if a trigger is not supplied
     (except for software triggering mode).  */
 int8_t

@@ -148,6 +148,10 @@ void
 dac_disable (dac_t dac);
 
 
+uint32_t
+dac_isr_get (dac_t dac);
+
+
 /** Initalises the DAC registers for specified configuration.  */
 dac_t
 dac_init (const dac_cfg_t *cfg);
