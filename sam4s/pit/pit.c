@@ -3,8 +3,12 @@
 
 /* SysTick is a 24 bit down counter that resets to the preloaded value
    in the SYST_RVR register.
-   
-   We pretend it is an upcounter counter.  */
+
+   We pretend it is an upcounter counter.
+
+   With a 120 MHz clock the longest delay is (1 << 24) / 120e6 = 0.14 s
+   corresponding to a lowest frequency of 7.2 Hz.
+ */
 
 /** The maximum overrun (in ticks).  */
 #define PIT_OVERRUN_TICKS_MAX 4000000
@@ -20,14 +24,14 @@
 void
 pit_start (void)
 {
-    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk; 
+    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk;
 }
 
 
 void
 pit_stop (void)
 {
-    SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk; 
+    SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk;
 }
 
 
@@ -57,9 +61,9 @@ pit_tick_t pit_wait_until (pit_tick_t when)
     {
         pit_tick_t diff;
         pit_tick_t now;
-        
+
         now = pit_get () << 8;
-        
+
         diff = now - when;
 
         if (diff < (PIT_OVERRUN_TICKS_MAX << 8))
