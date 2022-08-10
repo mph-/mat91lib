@@ -55,9 +55,9 @@
 /* Define known TC pins (A channel).  */
 static const pinmap_t tc_pins[] =
 {
-    {0, TIOA0_PIO, TIOA0_PERIPH, 0}, /* TIOA0 */
-    {1, TIOA1_PIO, TIOA1_PERIPH, 0}, /* TIOA1 */
-    {2, TIOA2_PIO, TIOA2_PERIPH, 0}  /* TIOA2 */
+    {TC_CHANNEL_0, TIOA0_PIO, TIOA0_PERIPH, 0}, /* TIOA0 */
+    {TC_CHANNEL_1, TIOA1_PIO, TIOA1_PERIPH, 0}, /* TIOA1 */
+    {TC_CHANNEL_2, TIOA2_PIO, TIOA2_PERIPH, 0}  /* TIOA2 */
 };
 #define TC_PINS_NUM ARRAY_SIZE (tc_pins)
 
