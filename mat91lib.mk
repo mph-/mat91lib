@@ -33,7 +33,6 @@ endif
 
 BUILD_DIR ?= .
 OBJDIR = $(BUILD_DIR)/objs-$(BOARD)
-DEPDIR = $(BUILD_DIR)/deps-$(BOARD)
 
 TARGET := $(BUILD_DIR)/$(TARGET)
 
@@ -81,9 +80,9 @@ BOARD=
 endif
 
 SRC += $(notdir $(MAT91LIB_SRC))
-OBJS += $(addprefix $(OBJDIR)/, $(patsubst %.c,%.o,$(notdir $(SRC))))
-DEPS += $(addprefix $(DEPDIR)/, $(patsubst %.o,%.d,$(notdir $(OBJS))))
 VPATH += $(dir $(MAT91LIB_SRC))
+OBJS += $(addprefix $(OBJDIR)/, $(notdir $(SRC:.c=.o)))
+DEPS += $(OBJS:.o=.d)
 INCLUDES += -I. -I"$(MAT91LIB_DIR)"
 LDLIBS += -lm -lc
 
@@ -123,19 +122,14 @@ print-vpath:
 print-includes:
 	@echo $(INCLUDES)
 
-# Include the dependency files.
--include $(DEPS)
-
 # Rule to compile .c file to .o file.
 $(OBJDIR)/%.o: %.c Makefile
 	@mkdir -p "$(@D)"
 	$(info CC $<)
-	$(Q)$(CC) $(CFLAGS) -o $@ -c $<
+	$(Q)$(CC) $(CFLAGS) -MMD -MP -o $@ -c $<
 
-# Rule to create .d file from .c file.
-$(DEPDIR)/%.d: %.c
-	@mkdir -p "$(@D)"
-	$(Q)$(CC) -MM -MF "$(@)" -MT "$(OBJDIR)/$(<:.c=.o)" $(CFLAGS) $<
+# Include the dependency files.
+-include $(DEPS)
 
 # Link object files to form output file.
 $(TARGET): $(OBJS)
@@ -148,7 +142,7 @@ $(TARGET): $(OBJS)
 clean:
 ifeq ($(abspath $(BUILD_DIR)), $(abspath .))
 	-$(DEL) *.o *.out *.hex *.bin *.elf *.d *.lst *.map *.sym *.lss *.cfg *.ocd *~
-	-$(DEL) -r $(OBJDIR) $(DEPDIR)
+	-$(DEL) -r $(OBJDIR)
 else
 	-$(DEL) -r $(BUILD_DIR)
 endif
