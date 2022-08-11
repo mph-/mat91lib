@@ -167,5 +167,5 @@ bootflash:
 
 # Attach debugger.
 .PHONY: debug
-debug:
-	$(GDB)  -x $(SCRIPTS)/debug.gdb $(TARGET)
+debug: $(TARGET)
+	$(GDB) -x $(SCRIPTS)/debug.gdb $<
