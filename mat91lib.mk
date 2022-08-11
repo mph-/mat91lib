@@ -108,6 +108,12 @@ print-objs:
 print-cflags:
 	@echo $(CFLAGS)
 
+print-ldflags:
+	@echo $(LDFLAGS)
+
+print-ldlibs:
+	@echo $(LDLIBS)
+
 print-src:
 	@echo $(SRC)
 
