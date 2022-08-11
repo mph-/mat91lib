@@ -153,7 +153,7 @@ endif
 # Program the device.
 .PHONY: program
 program: $(TARGET)
-	$(GDB) -batch -x $(SCRIPTS)/program.gdb $^
+	$(GDB) -batch -x $(SCRIPTS)/program.gdb $<
 
 # Reset the device.
 .PHONY: reset
