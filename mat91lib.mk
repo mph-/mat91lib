@@ -32,10 +32,12 @@ GDB = gdb-multiarch
 endif
 
 BUILD_DIR ?= .
+OBJDIR = $(BUILD_DIR)/objs-$(BOARD)
+DEPDIR = $(BUILD_DIR)/deps-$(BOARD)
 
-ABS_BUILD_DIR = $(abspath $(BUILD_DIR))
+TARGET := $(BUILD_DIR)/$(TARGET)
 
-TARGET := $(ABS_BUILD_DIR)/$(TARGET)
+all: $(TARGET)
 
 TARGET_MAP = $(addsuffix .map, $(basename $(TARGET)))
 
@@ -49,13 +51,12 @@ $(error unknown family)
 endif
 endif
 
+MAT91LIB_FAMILY_DIR = $(MAT91LIB_DIR)/$(FAMILY)
 
-all: $(TARGET)
+include $(MAT91LIB_FAMILY_DIR)/$(FAMILY).mk
 
-include $(MAT91LIB_DIR)/$(FAMILY)/$(FAMILY).mk
-
-SCRIPTS = $(MAT91LIB_DIR)/$(FAMILY)/scripts
-LDSCRIPTS = $(MAT91LIB_DIR)/$(FAMILY)
+SCRIPTS = $(MAT91LIB_FAMILY_DIR)/scripts
+LDSCRIPTS = $(MAT91LIB_FAMILY_DIR)
 
 LD = $(TOOLCHAIN)-gcc
 
@@ -64,40 +65,29 @@ OBJCOPY = $(TOOLCHAIN)-objcopy
 SIZE = $(TOOLCHAIN)-size
 DEL = rm -f
 
-INCLUDES += -I.
-
-
 ifeq ($(RUN_MODE), RAM)
 LDFLAGS +=-L$(LDSCRIPTS) -T$(MCU)-RAM.ld
 else
 LDFLAGS +=-L$(LDSCRIPTS) -T$(MCU)-ROM.ld
 endif
 
-# Hack.  FIXME
-SRC += syscalls.c
+MAT91LIB_SRC = \
+	$(MAT91LIB_FAMILY_DIR)/crt0.c \
+	$(MAT91LIB_FAMILY_DIR)/mcu.c \
+	$(MAT91LIB_DIR)/syscalls.c
 
 ifndef BOARD
 BOARD=
 endif
 
-OBJDIR = $(ABS_BUILD_DIR)/objs-$(BOARD)
-DEPDIR = $(ABS_BUILD_DIR)/deps-$(BOARD)
-
-OBJ1 = $(SRC:.c=.o)
-
-DEP1 = $(SRC:.c=.d)
-
-# Create list of object and dependency files.  Note, sort removes duplicates.
-OBJS = $(sort $(addprefix $(OBJDIR)/, $(notdir $(sort $(OBJ1)))))
-DEPS = $(sort $(addprefix $(DEPDIR)/, $(notdir $(sort $(DEP1)))))
-SRC_DIRS = $(sort $(dir $(SRC)))
-
-
-VPATH += $(SRC_DIRS)
+SRC += $(notdir $(MAT91LIB_SRC))
+OBJS += $(addprefix $(OBJDIR)/, $(patsubst %.c,%.o,$(notdir $(SRC))))
+DEPS += $(addprefix $(DEPDIR)/, $(patsubst %.o,%.d,$(notdir $(OBJS))))
+VPATH += $(dir $(MAT91LIB_SRC))
+INCLUDES += -I. -I"$(MAT91LIB_DIR)"
+LDLIBS += -lm -lc
 
 include $(MAT91LIB_DIR)/peripherals.mk
-
-EXTRA_OBJS = $(OBJDIR)/crt0.o $(OBJDIR)/mcu.o
 
 print-drivers:
 	@echo $(DRIVERS)
@@ -107,10 +97,6 @@ print-deps:
 
 print-objs:
 	@echo $(OBJS)
-
-print-src-dirs:
-	@echo $(SRC_DIRS)
-	@echo $(VPATH)
 
 print-cflags:
 	@echo $(CFLAGS)
@@ -124,67 +110,32 @@ print-vpath:
 print-includes:
 	@echo $(INCLUDES)
 
-# Create dirs if they do not exist
-$(OBJDIR):
-	mkdir -p $(OBJDIR)
-
-$(DEPDIR):
-	mkdir -p $(DEPDIR)
-
-$(OBJS): | $(OBJDIR)
-
-$(DEPS): | $(DEPDIR)
-
-ifeq (1, 0)
-# Strategy 1 for automatic dependency generation.  Before the .c files
-# are compiled, dependency files (.d) are created (one for each .c
-# file) using the -MM compiler option.  sed is used to add the .d file
-# as a target (in addition to the .o file) so that .d file is
-# re-created if any of the pre-requisites are modified.  While sed is
-# a standard Unix utility, it is not always available on Windows.
-# This is slightly faster than strategy 2 since the .d files are only
-# created when a pre-requisite is modified.
+# Include the dependency files.
+-include $(DEPS)
 
 # Rule to compile .c file to .o file.
 $(OBJDIR)/%.o: %.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
+	@mkdir -p "$(@D)"
+	$(CC) $(CFLAGS) -o $@ -c $<
 
 # Rule to create .d file from .c file.
 $(DEPDIR)/%.d: %.c
-	@set -e; $(DEL) $@; \
-	$(CC) -MM $(CFLAGS) $< > $@.$$$$; \
-	sed 's,\($*\)\.o[ :]*,$(OBJDIR)/\1.o $@ : ,g' < $@.$$$$ > $@; \
-	$(DEL) $@.$$$$
-else
-# Strategy 2 for automatic dependency generation.  Dependency files
-# are included if they exist.  When a .c file is compiled, a
-# dependency file (.d) is created.  This is slightly slower than
-# strategy 1 since the .d file is regenerated whenever a file is
-# compiled.
-
-$(OBJDIR)/%.o: %.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
-# Generate dependencies to see if object file needs recompiling.
-	@printf "$(OBJDIR)/" > $(DEPDIR)/$*.d
-	$(CC) -MM $(CFLAGS) $< >> $(DEPDIR)/$*.d
-endif
+	@mkdir -p "$(@D)"
+	$(CC) -MM -MF "$(@)" -MT "$(OBJDIR)/$(<:.c=.o)" $(CFLAGS) $<
 
 # Link object files to form output file.
-$(TARGET): $(DEPDIR) $(OBJS) $(EXTRA_OBJS)
-	$(LD) $(OBJS) $(EXTRA_OBJS) $(LDFLAGS) -o $@ -lm -Wl,-Map=$(TARGET_MAP),--cref
+$(TARGET): $(OBJS)
+	$(LD) $(LDFLAGS) -o $@  $^ $(LDLIBS) -Wl,-Map=$(TARGET_MAP),--cref
 	$(SIZE) $@
-
-# Include the dependency files.
--include $(DEPS)
 
 # Remove non-source files.
 .PHONY: clean
 clean:
-ifeq ($(ABS_BUILD_DIR), $(abspath .))
+ifeq ($(abspath $(BUILD_DIR)), $(abspath .))
 	-$(DEL) *.o *.out *.hex *.bin *.elf *.d *.lst *.map *.sym *.lss *.cfg *.ocd *~
 	-$(DEL) -r $(OBJDIR) $(DEPDIR)
 else
-	-$(DEL) -r $(ABS_BUILD_DIR)
+	-$(DEL) -r $(BUILD_DIR)
 endif
 ifdef CLEAN_EXTRA_PATHS
 	-$(DEL) -r $(CLEAN_EXTRA_PATHS)
