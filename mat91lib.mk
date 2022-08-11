@@ -89,6 +89,13 @@ LDLIBS += -lm -lc
 
 include $(MAT91LIB_DIR)/peripherals.mk
 
+Q=@
+ifdef VERBOSE
+ifneq ($(VERBOSE),0)
+Q=
+endif
+endif
+
 print-drivers:
 	@echo $(DRIVERS)
 
@@ -116,16 +123,18 @@ print-includes:
 # Rule to compile .c file to .o file.
 $(OBJDIR)/%.o: %.c Makefile
 	@mkdir -p "$(@D)"
-	$(CC) $(CFLAGS) -o $@ -c $<
+	$(info CC $<)
+	$(Q)$(CC) $(CFLAGS) -o $@ -c $<
 
 # Rule to create .d file from .c file.
 $(DEPDIR)/%.d: %.c
 	@mkdir -p "$(@D)"
-	$(CC) -MM -MF "$(@)" -MT "$(OBJDIR)/$(<:.c=.o)" $(CFLAGS) $<
+	$(Q)$(CC) -MM -MF "$(@)" -MT "$(OBJDIR)/$(<:.c=.o)" $(CFLAGS) $<
 
 # Link object files to form output file.
 $(TARGET): $(OBJS)
-	$(LD) $(LDFLAGS) -o $@  $^ $(LDLIBS) -Wl,-Map=$(TARGET_MAP),--cref
+	$(info LD $@)
+	$(Q)$(LD) $(LDFLAGS) -o $@  $^ $(LDLIBS) -Wl,-Map=$(TARGET_MAP),--cref
 	$(SIZE) $@
 
 # Remove non-source files.
