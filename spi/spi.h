@@ -59,9 +59,9 @@
 extern "C" {
 #endif
 
-typedef uint16_t spi_size_t;
+typedef size_t spi_size_t;
 
-typedef int16_t spi_ret_t;
+typedef ssize_t spi_ret_t;
 
 typedef uint8_t spi_channel_t;
 

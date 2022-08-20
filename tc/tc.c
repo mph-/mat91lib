@@ -374,10 +374,10 @@ tc_delay_set (tc_t tc, tc_period_t delay)
 tc_period_t
 tc_duty_set (tc_t tc, tc_period_t duty)
 {
-    return tc_delay_set (tc, duty);
+    return tc_delay_set (tc, tc->period - duty);
 }
 
-/** Set the aux delay in clocks.  In clock modes this sets the duty.  */
+/** Set the aux delay in clocks.  */
 tc_period_t
 tc_aux_delay_set (tc_t tc, tc_period_t delay)
 {
@@ -397,7 +397,7 @@ tc_aux_delay_set (tc_t tc, tc_period_t delay)
 tc_period_t
 tc_aux_duty_set (tc_t tc, tc_period_t duty)
 {
-    return tc_aux_delay_set (tc, duty);
+    return tc_aux_delay_set (tc, tc->period - duty);
 }
 
 
