@@ -13,7 +13,7 @@ $(error MCU undefined, this needs to be defined in the Makefile)
 endif
 
 ifndef RUN_MODE
-RUN_MODE = ROM	
+RUN_MODE = ROM
 endif
 
 ifndef OPT
@@ -78,7 +78,7 @@ INCLUDES += -I.
 
 ifeq ($(RUN_MODE), RAM)
 LDFLAGS +=-L$(LDSCRIPTS) -T$(MCU)-RAM.ld
-else 
+else
 LDFLAGS +=-L$(LDSCRIPTS) -T$(MCU)-ROM.ld
 endif
 
@@ -108,9 +108,9 @@ DEPDIR = $(ABS_BUILD_DIR)/deps-$(BOARD)
 # filename with the library name.  An even better approach is to
 # rewrite using cmake.
 
-OBJ1 = $(CCSRC:.cpp=_x.o) $(CSRC:.c=.o) 
+OBJ1 = $(CCSRC:.cpp=_x.o) $(CSRC:.c=.o)
 
-DEP1 = $(CCSRC:.cpp=_x.d) $(CSRC:.c=.d) 
+DEP1 = $(CCSRC:.cpp=_x.d) $(CSRC:.c=.d)
 
 # Create list of object and dependency files.  Note, sort removes duplicates.
 OBJS = $(sort $(addprefix $(OBJDIR)/, $(notdir $(sort $(OBJ1)))))
@@ -246,7 +246,7 @@ program: $(TARGET)
 # Reset the device.
 .PHONY: reset
 reset:
-	$(GDB) -batch -x $(SCRIPTS)/reset.gdb
+	$(GDB) -batch -x $(SCRIPTS)/reset.gdb $(TARGET)
 
 # Enable booting from flash.
 .PHONY: bootflash
@@ -257,4 +257,3 @@ bootflash:
 .PHONY: debug
 debug:
 	$(GDB)  -x $(SCRIPTS)/debug.gdb $(TARGET)
-
