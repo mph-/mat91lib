@@ -12,6 +12,10 @@ ifndef MCU
 $(error MCU undefined, this needs to be defined in the Makefile)
 endif
 
+ifndef TARGET
+$(error TARGET undefined)
+endif
+
 ifndef RUN_MODE
 RUN_MODE = ROM
 endif
