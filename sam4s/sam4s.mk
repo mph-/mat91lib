@@ -5,7 +5,7 @@ $(OPT) -mthumb -D__$(MCU)__ -D__SAM4S__ -Wno-unused -Wno-unused-parameter -DARM_
 CXXFLAGS += -mcpu=cortex-m4 -Wall -W -g3 -D$(RUN_MODE) $(sort $(INCLUDES)) \
 $(OPT) -mthumb -D__$(MCU)__ -D__SAM4S__ -Wno-unused -Wno-unused-parameter -DARM_MATH_CM4=true -Wno-missing-field-initializers
 
-LDFLAGS += -mthumb -mcpu=cortex-m4 -lm -lc
+LDFLAGS += -mthumb -mcpu=cortex-m4
 
 INCLUDES += -I$(MAT91LIB_DIR)/$(FAMILY) -I$(MAT91LIB_DIR)/$(FAMILY)/atmel
 
