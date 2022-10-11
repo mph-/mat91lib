@@ -5,7 +5,7 @@ target remote tcp:localhost:3333
 monitor reset init
 
 # Perform the actual reset (reset init does not do this)
-monitor reset
+monitor reset halt
 
 monitor sleep 500
 
