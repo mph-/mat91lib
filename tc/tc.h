@@ -22,6 +22,8 @@ extern "C" {
 
 #define TC_PERIOD_DIVISOR(FREQ, PRESCALE) ((tc_period_t)(0.5 + TC_CLOCK_FREQUENCY (PRESCALE) / (FREQ)))
 
+#define TC_PRESCALE_MIN 2
+#define TC_PRESCALE_MAX 128
 
 typedef enum
 {
