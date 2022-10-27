@@ -3,7 +3,7 @@
     @date   18 February 2008
     @brief  This file contains a collection of stub functions to replace those
     used by the C library newlib.  Primarily, it provides functionality
-    to redirect standard I/O and to interface to a file system. 
+    to redirect standard I/O and to interface to a file system.
     It assumes that all devices are non-blocking.
  */
 
@@ -80,7 +80,7 @@ stdio_write_block (void *stream, const void *buffer, size_t size)
 {
     size_t i;
     const char *src = buffer;
-    
+
     if (!stdio_putc)
     {
         errno = ENODEV;
@@ -100,7 +100,7 @@ stdio_read_block (void *stream, void *buffer, size_t size)
 {
     size_t i;
     char *dst = buffer;
-    
+
     if (!stdio_getc)
     {
         errno = ENODEV;
@@ -169,7 +169,7 @@ sys_fs_find (const char *pathname, sys_fs_t **pfs)
 
     if (*pathname == '/')
         return pathname + 1;
-    
+
     return pathname;
 }
 
@@ -360,18 +360,18 @@ _sbrk (int incr)
     register char *stack_ptr __asm ("sp");
     static char *heap_end;
     char *prev_heap_end;
-    
+
     if (heap_end == 0)
         heap_end = &end;
-    
+
     prev_heap_end = heap_end;
-  
+
     if (heap_end + incr > stack_ptr)
     {
         errno = ENOMEM;
         return (caddr_t) -1;
     }
-    
+
     heap_end += incr;
 
     return (caddr_t) prev_heap_end;
@@ -429,7 +429,7 @@ _gettimeofday (void *tp __UNUSED__, void *tzp __UNUSED__)
 
 
 /* Return a clock that ticks at 100 Hz.  */
-clock_t 
+clock_t
 _times (void *tp __UNUSED__)
 {
     return -1;
@@ -482,8 +482,8 @@ sys_mount (sys_fs_t *fs, int flags)
 }
 
 
-/** Register a device with a devicename, say /dev/usart0,  
-    and record the file_ops and arg (say device handle). 
+/** Register a device with a devicename, say /dev/usart0,
+    and record the file_ops and arg (say device handle).
     The device can then be opened using open.  */
 int
 sys_device_register (const char *devicename, const sys_file_ops_t *file_ops,
@@ -517,7 +517,8 @@ sys_device_register (const char *devicename, const sys_file_ops_t *file_ops,
 }
 
 
-/* Helper read function for device drivers.  */
+/* Helper read function for device drivers.  The timeout is reset for
+   every read without fail.  */
 ssize_t
 sys_read_timeout (void *dev, void *data, size_t size,
                   uint32_t timeout_us, sys_read_t dev_read)
@@ -525,6 +526,7 @@ sys_read_timeout (void *dev, void *data, size_t size,
     uint8_t *buffer = data;
     size_t left;
     size_t count;
+    uint32_t timeout = timeout_us;
 
     count = 0;
     left = size;
@@ -548,6 +550,7 @@ sys_read_timeout (void *dev, void *data, size_t size,
         count += ret;
         left -= ret;
         buffer += ret;
+        timeout = timeout_us;
     }
     return count;
 }
@@ -575,7 +578,7 @@ sys_write_timeout (void *dev, const void *data, size_t size,
             if (errno != EAGAIN)
                 return ret;
             if (timeout_us == 0)
-                return ret;            
+                return ret;
             timeout_us--;
             DELAY_US (1);
             continue;
