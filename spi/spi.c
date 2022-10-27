@@ -48,8 +48,8 @@
 
    There are four chip select modes:
    SPI_CS_MODE_FRAME where the CS is asserted for multiple SPI tranmissions,
-   SPI_CS_MODE_TOGGLE where the CS is only asserted for each SPI transmission, and
-   SPI_CS_MODE_HIGH where the CS is kept high.
+   SPI_CS_MODE_TOGGLE where the CS is only asserted for each SPI transmission,
+   SPI_CS_MODE_HIGH where the CS is kept high,
    SPI_CS_MODE_EXTERNAL where the CS is driven externally, say by a TC peripheral.
 
    Automatic CS driving is only used for SPI_CS_MODE_TOGGLE.  With
@@ -223,11 +223,15 @@ spi_channel_bits_set (spi_t spi, uint8_t bits)
 
 
 /* Spi modes:
-Mode 	CPOL 	CPHA  NCPHA
-0 	0 	0     1       clock normally low    read on rising edge
-1 	0 	1     0       clock normally low    read on falling edge
-2 	1 	0     1       clock normally high   read on falling edge
-3 	1 	1     0       clock normally high   read on rising edge
+
+CPOL defines the clock idle state    (0->L, 1->H)
+CPHA defines the clock sampling edge (0->rising, 1->falling)
+
+Mode 	CPOL 	CPHA  NCPHA   Clock idle state  MISO/MOSI sample
+0 	0 	0     1       low               rising edge
+1 	0 	1     0       low               falling edge
+2 	1 	0     1       high              rising edge
+3 	1 	1     0       high              falling edge
 
 However, page 512 of the AT91SAM7Sx datasheet say "Note that in SPI
 master mode the ATSAM7S512/256/128/64/321/32 does not sample the data
@@ -237,14 +241,7 @@ shows that CPOL=NCPHA=0 or CPOL=NCPHA=1 samples on the rising edge and
 that the data changes sometime after the rising edge (about 2 ns).  To
 be consistent with normal SPI operation, it is probably safe to say
 that the data changes on the falling edge and should be sampled on the
-rising edge.  Therefore, it appears that NCPHA should be treated the
-same as CPHA.  Thus:
-
-Mode 	CPOL 	CPHA  NCPHA
-0 	0 	0     0       clock normally low    read on rising edge
-1 	0 	1     1       clock normally low    read on falling edge
-2 	1 	0     0       clock normally high   read on falling edge
-3 	1 	1     1       clock normally high   read on rising edge
+rising edge.
 */
 
 static void
