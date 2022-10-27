@@ -4,6 +4,8 @@
 # RUN_MODE either ROM or RAM
 # MAT91LIB_DIR path to mat91lib
 # PERIPHERALS list of peripherals to build
+# VERBOSE=1 if want verbose output of the commands being run
+
 
 # Note.  If weird errors occur it is because the makefile fragments are
 # loaded in the wrong order.  mmuclib.mk should be included last.
