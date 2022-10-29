@@ -556,7 +556,8 @@ sys_read_timeout (void *dev, void *data, size_t size,
 }
 
 
-/* Helper write function for device drivers.  */
+/* Helper write function for device drivers.  The timeout is reset for
+   every write without fail.  */
 ssize_t
 sys_write_timeout (void *dev, const void *data, size_t size,
                    uint32_t timeout_us, sys_write_t dev_write)
@@ -564,6 +565,7 @@ sys_write_timeout (void *dev, const void *data, size_t size,
     const uint8_t *buffer = data;
     size_t left;
     size_t count;
+    uint32_t timeout = timeout_us;
 
     count = 0;
     left = size;
@@ -587,6 +589,7 @@ sys_write_timeout (void *dev, const void *data, size_t size,
         count += ret;
         left -= ret;
         buffer += ret;
+        timeout = timeout_us;
     }
     return count;
 }

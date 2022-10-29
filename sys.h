@@ -4,7 +4,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 
 #include "config.h"
 #include "errno.h"
@@ -61,7 +61,7 @@ typedef struct sys_fs_struct
 
 
 
-void sys_redirect (unsigned int fd, sys_read_t read, sys_write_t write, 
+void sys_redirect (unsigned int fd, sys_read_t read, sys_write_t write,
                    void *arg);
 
 void sys_redirect_stdin (sys_read_t read, void *arg);
@@ -75,8 +75,8 @@ bool sys_mount (sys_fs_t *fs, int flags);
 int sys_attach (sys_file_ops_t *file_ops, void *arg);
 
 
-/** Register a device with a devicename, say /dev/usart0,  
-    and record the file_ops and arg (say device handle). 
+/** Register a device with a devicename, say /dev/usart0,
+    and record the file_ops and arg (say device handle).
     The device can then be opened using open.  */
 int
 sys_device_register (const char *devicename, const sys_file_ops_t *file_ops,
@@ -97,6 +97,5 @@ sys_write_timeout (void *dev, const void *data, size_t size,
 
 #ifdef __cplusplus
 }
-#endif    
 #endif
-
+#endif
