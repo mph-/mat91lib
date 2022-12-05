@@ -113,6 +113,7 @@ typedef enum
     SSC_START_CONTINUOUS    = SSC_RCMR_START_CONTINUOUS,
     // Transmit/Receive start
     SSC_START_TRANSMIT      = SSC_RCMR_START_TRANSMIT,
+    SSC_START_RECEIVE       = SSC_TCMR_START_RECEIVE,
     // Start one clock after falling edge of RF
     SSC_START_LOW           = SSC_RCMR_START_RF_LOW,
     // Start one clock after rising edge of RF
