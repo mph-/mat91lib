@@ -1,5 +1,5 @@
 /** @file   pwm.h
-    @author 
+    @author M. P. Hayes
     @date   13 February 2008
     @brief  Pulse Width Modulation routines for AT91SAM processors.
     @note   The API needs a complete re-write.
@@ -11,7 +11,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 
 #include "config.h"
 #include "pio.h"
@@ -70,8 +70,8 @@ pwm_t
 pwm_init (const pwm_cfg_t *cfg);
 
 
-/** Set waveform period (in CPU clocks).  This will change the 
-    prescaler as required.  This will block if the PWM is running until 
+/** Set waveform period (in CPU clocks).  This will change the
+    prescaler as required.  This will block if the PWM is running until
     the end of a cycle.  */
 pwm_period_t
 pwm_period_set (pwm_t pwm, pwm_period_t period);
@@ -133,7 +133,5 @@ pwm_channel_mask (pwm_t pwm);
 
 #ifdef __cplusplus
 }
-#endif    
 #endif
-
-
+#endif

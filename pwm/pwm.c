@@ -4,6 +4,11 @@
     @brief  Pulse Width Modulation routines for AT91SAM7/SAM4S processors.
     This only drives the PWMHx signals; there is no support for the PWMLx
     signals.
+
+    The PWM channels are clocked from MCK with a minimum divisor of 1.
+    The divisor needs to be a power of 2.  It is possible to clock the
+    PWM channels using CLKA or CLKB.  These use integer dividers clocked
+    from MCK (with a power of 2 prescaler).
 */
 
 #include <errno.h>
@@ -117,7 +122,7 @@ pwm_period_set (pwm_t pwm, pwm_period_t period)
         period >>= 1;
     }
 
-    /* TODO: it is possible to configure CLKA and CLKB to have an even
+    /* TODO: it is possible to use CLKA or CLKB to have an even
        lower frequency.  However, these clocks are shared for all
        channels.  */
     if (period > 65535u)
@@ -314,6 +319,9 @@ pwm_init (const pwm_cfg_t *cfg)
     mcu_pmc_enable (ID_PWM);
 
     pwm_stop (pwm);
+
+    /* The PWM_CLK register is set to 0 on reset.  This turns off CLKA
+       and CLKB. */
 
     period = cfg->period;
     if (cfg->frequency)
