@@ -96,12 +96,12 @@ typedef enum
 /* Clock gating.  */
 typedef enum
 {
-    // Receive clock always enabled
+    // Receive/transmit clock always enabled
     SSC_CLOCK_GATE_NONE = 0,
-    // Receive enabled when RF low
-    SSC_CLOCK_GATE_RF_LOW = 1 << 7,
-    // Receive enabled when RF high
-    SSC_CLOCK_GATE_RF_HIGH = 2 << 7
+    // Receive/transmit clock enabled when RF/TF low
+    SSC_CLOCK_GATE_RF_LOW = 1 << 6,
+    // Receive/transmit clock enabled when RF/TF high
+    SSC_CLOCK_GATE_RF_HIGH = 2 << 6
 } ssc_clock_gate_mode_t;
 
 

@@ -28,6 +28,10 @@
    * an event on RF/TF pins
    * the receiver matches the preamble
 
+   Whenever the tx is triggered it will output N * M clocks where N is
+   the number of bits per word and M is the number of words per frame.
+   If the THR is not written to before the TSR has finished shifting,
+   the TSR will clock out zeros.
 */
 
 
@@ -382,11 +386,12 @@ ssc_read_32 (ssc_t ssc, void *buffer, uint32_t length)
 uint32_t
 ssc_read (ssc_t ssc, void *buffer, uint32_t bytes)
 {
-    if (ssc->rx->data_length <= 8)
-        return ssc_read_8 (ssc, buffer, bytes);
-    else if (ssc->rx->data_length <= 16)
+    if (ssc->tx->data_length > 16)
+        return ssc_read_32 (ssc, buffer, (bytes + 3) >> 2);
+    else if (ssc->tx->data_length > 8)
         return ssc_read_16 (ssc, buffer, (bytes + 1) >> 1);
-    return ssc_read_32 (ssc, buffer, (bytes + 3) >> 2);
+    else
+        return ssc_read_8 (ssc, buffer, bytes);
 }
 
 
@@ -519,11 +524,12 @@ ssc_write_32 (ssc_t ssc, void *buffer, uint16_t length)
 uint16_t
 ssc_write (ssc_t ssc, void *buffer, uint16_t bytes)
 {
-    if (ssc->tx->data_length <= 8)
-        return ssc_write_8 (ssc, buffer, bytes);
-    else if (ssc->tx->data_length <= 16)
+    if (ssc->tx->data_length > 16)
+        return ssc_write_32 (ssc, buffer, (bytes + 3) >> 2);
+    else if (ssc->tx->data_length > 8)
         return ssc_write_16 (ssc, buffer, (bytes + 1) >> 1);
-    return ssc_write_32 (ssc, buffer, (bytes + 3) >> 2);
+    else
+        return ssc_write_8 (ssc, buffer, bytes);
 }
 
 
