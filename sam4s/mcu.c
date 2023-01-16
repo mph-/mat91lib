@@ -149,14 +149,16 @@ mcu_fast_rc_mainck_start (void)
 
     /* Select the 12 MHz fast RC oscillator.  There is a choice of 4
        MHz default, 8 MHz and 12 MHz.  The 8 MHz and 12 MHz settings
-       are calibrated. */
+       are calibrated.  Note, cannot combine with enabling of RC
+       oscillator. */
     PMC->CKGR_MOR |= CKGR_MOR_KEY (0x37) | CKGR_MOR_MOSCRCF_12_MHz;
 
     /* Wait for the RC oscillator to stabilize.  */
     while (! (PMC->PMC_SR & PMC_SR_MOSCRCS))
         continue;
 
-    PMC->CKGR_MOR |= CKGR_MOR_KEY (0x37) | CKGR_MOR_MOSCSEL;
+    /* Switch to RC oscillator for MAINCK.  */
+    PMC->CKGR_MOR = CKGR_MOR_KEY (0x37) | (PMC->CKGR_MOR & ~CKGR_MOR_MOSCSEL);
 }
 
 
@@ -212,16 +214,16 @@ mcu_clock_init (void)
        Initially MCK is driven from the 4 MHz internal fast RC oscillator.
     */
 
+#ifdef MCU_12MHZ_RC_OSC
+    /* Start fast RC oscillator and select as MAINCK.  */
+    mcu_fast_rc_mainck_start ();
+#else
     /* Hack to handle JTAG reset when the PLLA is still operating.
        Without this call to mcu_reset, the PLLA is not enabled after
        every second reset.  */
     if ((PMC->PMC_MCKR & PMC_MCKR_CSS_Msk) == PMC_MCKR_CSS_PLLA_CLK)
         mcu_reset ();
 
-#ifdef MCU_12MHZ_RC_OSC
-    /* Start fast RC oscillator and select as MAINCK.  */
-    mcu_fast_rc_mainck_start ();
-#else
     /* Start XTAL oscillator and select as MAINCK.  */
     mcu_xtal_mainck_start ();
 #endif
@@ -238,7 +240,7 @@ mcu_clock_init (void)
     if (!mcu_mck_ready_wait ())
         return 0;
 
-    /* Could disable internal fast RC oscillator here.  */
+    /* Could disable internal fast RC oscillator here if not being used.  */
 
 
     /* Disable PLLA if it is running and reset fields.  */
