@@ -87,8 +87,10 @@
 
 #define MCU_PLL_COUNT 0x3fu
 
-/* TODO: the required number of slow clock cycles divided by 8.  */
-#define MCU_MAINCK_COUNT 100
+/* The required number of slow clock cycles (400 Hz) divided by 8.
+   The xtal oscillator requires 14.5 ms max to start up.  This is approx
+   6 clocks.  */
+#define MCU_MAINCK_COUNT 2
 
 #define MCU_USB_LOG2_DIV 0
 
@@ -123,8 +125,10 @@ mcu_flash_init (void)
 static void
 mcu_xtal_mainck_start (void)
 {
-    /* Enable XTAL oscillator.  */
-    PMC->CKGR_MOR = (PMC->CKGR_MOR & ~CKGR_MOR_MOSCXTBY) |
+    /* Enable XTAL oscillator.  Be careful with read-modify-writes to
+     the CKGR_MOR register since reading of the key field does not
+     return zero.  */
+    PMC->CKGR_MOR = (PMC->CKGR_MOR & ~CKGR_MOR_MOSCXTBY & ~CKGR_MOR_MOSCRCEN) |
         CKGR_MOR_KEY (0x37) | CKGR_MOR_MOSCXTEN |
         CKGR_MOR_MOSCXTST (MCU_MAINCK_COUNT);
 
@@ -132,32 +136,32 @@ mcu_xtal_mainck_start (void)
     while (! (PMC->PMC_SR & PMC_SR_MOSCXTS))
         continue;
 
-    /* Switch to XTAL oscillator for MAINCK.  */
+    /* Select XTAL oscillator for MAINCK.  */
     PMC->CKGR_MOR |= CKGR_MOR_KEY (0x37) | CKGR_MOR_MOSCSEL;
-
-    /* Could check if XTAL oscillator fails to start; say if XTAL
-       not connected.  */
 }
 
 
 static void
 mcu_fast_rc_mainck_start (void)
 {
-    /* Enable fast RC oscillator.  */
-    PMC->CKGR_MOR = (PMC->CKGR_MOR & ~CKGR_MOR_MOSCXTBY) |
-        CKGR_MOR_KEY (0x37) | CKGR_MOR_MOSCRCEN;
+    /* Enable fast RC oscillator.  Be careful with read-modify-writes
+     to the CKGR_MOR register since reading of the key field does not
+     return zero.  */
+    PMC->CKGR_MOR = CKGR_MOR_KEY (0x37) | CKGR_MOR_MOSCRCEN |
+        CKGR_MOR_MOSCXTST (MCU_MAINCK_COUNT);
 
     /* Select the 12 MHz fast RC oscillator.  There is a choice of 4
        MHz default, 8 MHz and 12 MHz.  The 8 MHz and 12 MHz settings
        are calibrated.  Note, cannot combine with enabling of RC
        oscillator. */
-    PMC->CKGR_MOR |= CKGR_MOR_KEY (0x37) | CKGR_MOR_MOSCRCF_12_MHz;
+    PMC->CKGR_MOR = CKGR_MOR_KEY (0x37) | CKGR_MOR_MOSCRCEN |
+        CKGR_MOR_MOSCXTST (MCU_MAINCK_COUNT) | CKGR_MOR_MOSCRCF_12_MHz;
 
     /* Wait for the RC oscillator to stabilize.  */
     while (! (PMC->PMC_SR & PMC_SR_MOSCRCS))
         continue;
 
-    /* Switch to RC oscillator for MAINCK.  */
+    /* Select RC oscillator for MAINCK.  */
     PMC->CKGR_MOR = CKGR_MOR_KEY (0x37) | (PMC->CKGR_MOR & ~CKGR_MOR_MOSCSEL);
 }
 
@@ -218,14 +222,17 @@ mcu_clock_init (void)
     /* Start fast RC oscillator and select as MAINCK.  */
     mcu_fast_rc_mainck_start ();
 #else
+    /* Start XTAL oscillator and select as MAINCK.  */
+    mcu_xtal_mainck_start ();
+
+    /* TODO: check if XTAL oscillator fails to start; say if XTAL not
+       connected and switch to rc oscillator instead.  */
+
     /* Hack to handle JTAG reset when the PLLA is still operating.
        Without this call to mcu_reset, the PLLA is not enabled after
        every second reset.  */
     if ((PMC->PMC_MCKR & PMC_MCKR_CSS_Msk) == PMC_MCKR_CSS_PLLA_CLK)
         mcu_reset ();
-
-    /* Start XTAL oscillator and select as MAINCK.  */
-    mcu_xtal_mainck_start ();
 #endif
 
     /* Select MAINCK for MCK (this should already be selected).  */
@@ -241,7 +248,6 @@ mcu_clock_init (void)
         return 0;
 
     /* Could disable internal fast RC oscillator here if not being used.  */
-
 
     /* Disable PLLA if it is running and reset fields.  */
     PMC->CKGR_PLLAR = CKGR_PLLAR_ONE | CKGR_PLLAR_MULA (0);
