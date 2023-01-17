@@ -100,15 +100,15 @@
 */
 
 
-/* The AT91 Flash is single plane so it is not possible
+/* The AT91 nor flash memory is single plane so it is not possible
    to write to it while executing code out of it.  */
 
 /** Initialise flash memory controller.  */
 static void
 mcu_flash_wait_states_set (uint8_t wait_states)
 {
-    /* Set number of MCK cycles per microsecond for the Flash
-       microsecond cycle number (FMCN) field of the Flash mode
+    /* Set number of MCK cycles per microsecond for the flash
+       microsecond cycle number (FMCN) field of the flash mode
        register (FMR).  */
      EFC0->EEFC_FMR = EEFC_FMR_FWS (wait_states);
 }
@@ -119,6 +119,34 @@ static void
 mcu_flash_init (void)
 {
    mcu_flash_wait_states_set (MCU_FLASH_WAIT_STATES);
+}
+
+
+void
+mcu_unique_id (mcu_unique_id_t id)
+    __attribute__ ((section(".ramtext")));
+
+
+/** Return 128-bit unique ID.  */
+void
+mcu_unique_id (mcu_unique_id_t id)
+{
+    int i;
+    uint32_t *p = (void *)0x400000;
+
+    /* I presume interrupts need to be disabled while this function is
+       being executed.  */
+
+    EFC0->EEFC_FCR = EEFC_FCR_FCMD_STUI | EEFC_FCR_FKEY_PASSWD;
+    while ((EFC0->EEFC_FSR & EEFC_FSR_FRDY))
+        continue;
+
+    for (i = 0; i < 4; i++)
+        *id++ = *p++;
+
+    EFC0->EEFC_FCR = EEFC_FCR_FCMD_SPUI | EEFC_FCR_FKEY_PASSWD;
+    while (! (EFC0->EEFC_FSR & EEFC_FSR_FRDY))
+        continue;
 }
 
 
@@ -325,7 +353,7 @@ mcu_watchdog_disable (void)
 }
 
 
-/** Disable JTAG but allow SWD.  */
+/** Disable JTAG but allow SWD.  This frees up PB5 and PB6 as PIO.  */
 void
 mcu_jtag_disable (void)
 {

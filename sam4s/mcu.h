@@ -9,9 +9,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 
 #include "config.h"
+#include "stdint.h"
+
+typedef uint32_t mcu_unique_id_t[4];
+
 
 #ifdef MCU_PLLB_MUL
 #ifndef F_PLLB
@@ -19,13 +23,13 @@ extern "C" {
 #endif
 #endif
 
-    
+
 #ifndef MCU_FLASH_READ_CYCLES
-/* 6 cycles for 96 MHz, 7 cycles for 120 MHz.  */    
-#define MCU_FLASH_READ_CYCLES ((((int)((F_CPU) / 1e6)) + 20) / 21)    
+/* 6 cycles for 96 MHz, 7 cycles for 120 MHz.  */
+#define MCU_FLASH_READ_CYCLES ((((int)((F_CPU) / 1e6)) + 20) / 21)
 #endif
 
-    
+
 __attribute__((optimize(2)))
 static __always_inline__ void
 mcu_delay_loop (unsigned int loops)
@@ -63,8 +67,8 @@ mcu_reset_disable (void);
 
 void
 mcu_reset_enable (void);
-    
-    
+
+
 void
 mcu_udp_disable (void);
 
@@ -105,13 +109,17 @@ void
 mcu_cpu_idle (void);
 
 
-/** Disable JTAG.  */
+/** Disable JTAG but allow SWD.  This frees up PB5 and PB6 as PIO.  */
 void
 mcu_jtag_disable (void);
-    
+
+
+/** Return 128-bit unique ID.  */
+void
+mcu_unique_id (mcu_unique_id_t id);
+
 
 #ifdef __cplusplus
 }
-#endif    
+#endif
 #endif /* MCU_H  */
-
