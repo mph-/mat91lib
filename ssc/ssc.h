@@ -331,6 +331,13 @@ ssc_reset (ssc_t ssc);
 void
 ssc_sync(ssc_t ssc);
 
+
+void
+ssc_tx_start_mode_set (ssc_t ssc, ssc_start_mode_t start_mode);
+
+void
+ssc_rx_start_mode_set (ssc_t ssc, ssc_start_mode_t start_mode);
+
 #ifdef __cplusplus
 }
 #endif

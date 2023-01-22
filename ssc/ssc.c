@@ -94,6 +94,20 @@ ssc_fs_period_get (ssc_t ssc, ssc_module_t module)
 }
 
 
+void
+ssc_tx_start_mode_set (ssc_t ssc, ssc_start_mode_t start_mode)
+{
+    SSC->SSC_TCMR |= (SSC->SSC_TCMR & ~0XF00) | start_mode;
+}
+
+
+void
+ssc_rx_start_mode_set (ssc_t ssc, ssc_start_mode_t start_mode)
+{
+    SSC->SSC_RCMR |= (SSC->SSC_RCMR & ~0XF00) | start_mode;
+}
+
+
 /* Configure a module.  */
 static uint8_t
 ssc_module_config (ssc_t ssc, ssc_module_cfg_t *cfg, ssc_module_t module)
