@@ -246,6 +246,17 @@ mcu_clock_init (void)
        Initially MCK is driven from the 4 MHz internal fast RC oscillator.
     */
 
+
+    /* Select MAINCK for MCK (this should be selected on hardware
+       reset but not software reset).  */
+    if ((PMC->PMC_MCKR & PMC_MCKR_CSS_Msk) == PMC_MCKR_CSS_PLLA_CLK)
+    {
+        PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_CSS_Msk))
+            | PMC_MCKR_CSS_MAIN_CLK;
+        if (!mcu_mck_ready_wait ())
+            return 0;
+    }
+
 #ifdef MCU_12MHZ_RC_OSC
     /* Start fast RC oscillator and select as MAINCK.  */
     mcu_fast_rc_mainck_start ();
@@ -255,12 +266,6 @@ mcu_clock_init (void)
 
     /* TODO: check if XTAL oscillator fails to start; say if XTAL not
        connected and switch to rc oscillator instead.  */
-
-    /* Hack to handle JTAG reset when the PLLA is still operating.
-       Without this call to mcu_reset, the PLLA is not enabled after
-       every second reset.  */
-    if ((PMC->PMC_MCKR & PMC_MCKR_CSS_Msk) == PMC_MCKR_CSS_PLLA_CLK)
-        mcu_reset ();
 #endif
 
     /* Select MAINCK for MCK (this should already be selected).  */
