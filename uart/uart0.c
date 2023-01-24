@@ -29,10 +29,10 @@ uart0_init (uint16_t baud_divisor)
 
     /* Enable UART0 clock.  */
     mcu_pmc_enable (ID_UART0);
-    
+
     /* Reset and disable receiver and transmitter.  */
-    UART0->UART_CR = UART_CR_RSTRX | UART_CR_RSTTX          
-        | UART_CR_RXDIS | UART_CR_TXDIS;           
+    UART0->UART_CR = UART_CR_RSTRX | UART_CR_RSTTX
+        | UART_CR_RXDIS | UART_CR_TXDIS;
 
     /* Set normal mode, clock = MCK, 8-bit data, no parity, 1 stop
        bit.  Note, the OVER bit is set to 0 so the baud rate
@@ -43,8 +43,8 @@ uart0_init (uint16_t baud_divisor)
     uart0_baud_divisor_set (baud_divisor);
 
     /* Enable receiver and transmitter.  */
-    UART0->UART_CR = UART_CR_RXEN | UART_CR_TXEN; 
-    
+    UART0->UART_CR = UART_CR_RXEN | UART_CR_TXEN;
+
     return 1;
 }
 
@@ -58,10 +58,10 @@ uart0_shutdown (void)
 
     /* Disable UART0 clock.  */
     mcu_pmc_disable (ID_UART0);
-    
+
     /* Reset and disable receiver and transmitter.  */
-    UART0->UART_CR = UART_CR_RSTRX | UART_CR_RSTTX          
-        | UART_CR_RXDIS | UART_CR_TXDIS;           
+    UART0->UART_CR = UART_CR_RSTRX | UART_CR_RSTTX
+        | UART_CR_RXDIS | UART_CR_TXDIS;
 }
 
 
@@ -133,4 +133,3 @@ uart0_puts (const char *str)
     }
     return 1;
 }
-

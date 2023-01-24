@@ -332,6 +332,10 @@ void
 ssc_sync(ssc_t ssc);
 
 
+bool
+ssc_write_finished_p (ssc_t ssc);
+
+
 void
 ssc_tx_start_mode_set (ssc_t ssc, ssc_start_mode_t start_mode);
 

@@ -589,6 +589,14 @@ ssc_shutdown (ssc_t ssc)
 }
 
 
+/* Return non-zero if transmitter finished.  */
+bool
+ssc_write_finished_p (ssc_t ssc)
+{
+    return (SSC_SR_TXEMPTY & SSC->SSC_SR) != 0;
+}
+
+
 void
 ssc_reset (ssc_t ssc)
 {
