@@ -150,13 +150,13 @@ mcu_unique_id (mcu_unique_id_t id)
 }
 
 
-static void
+void
 mcu_xtal_mainck_start (void)
 {
     /* Enable XTAL oscillator.  Be careful with read-modify-writes to
      the CKGR_MOR register since reading of the key field does not
-     return zero.  */
-    PMC->CKGR_MOR = (PMC->CKGR_MOR & ~CKGR_MOR_MOSCXTBY & ~CKGR_MOR_MOSCRCEN) |
+     always return zero.  */
+    PMC->CKGR_MOR = (PMC->CKGR_MOR & ~CKGR_MOR_MOSCXTBY) |
         CKGR_MOR_KEY (0x37) | CKGR_MOR_MOSCXTEN |
         CKGR_MOR_MOSCXTST (MCU_MAINCK_COUNT);
 
@@ -165,7 +165,9 @@ mcu_xtal_mainck_start (void)
         continue;
 
     /* Select XTAL oscillator for MAINCK.  */
-    PMC->CKGR_MOR |= CKGR_MOR_KEY (0x37) | CKGR_MOR_MOSCSEL;
+    PMC->CKGR_MOR = (PMC->CKGR_MOR & ~CKGR_MOR_MOSCXTBY) |
+        CKGR_MOR_KEY (0x37) | CKGR_MOR_MOSCXTEN |
+        CKGR_MOR_MOSCXTST (MCU_MAINCK_COUNT) | CKGR_MOR_MOSCSEL;
 }
 
 
@@ -273,6 +275,8 @@ mcu_clock_init (void)
         | PMC_MCKR_CSS_MAIN_CLK;
     if (!mcu_mck_ready_wait ())
         return 0;
+
+    /* TODO: disable RC oscillator if using XTAL oscillator.  */
 
     /* Set prescaler.  */
     PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_PRES_Msk)) | (MCU_MCK_PRESCALER_VALUE << 4);
