@@ -111,8 +111,11 @@ typedef enum
     // Start continuous transfer; either by writing to TTHR for transmit or
     // enabling receiver for receive
     SSC_START_CONTINUOUS    = SSC_RCMR_START_CONTINUOUS,
-    // Transmit/Receive start
+    // Start when the other device starts
+    SSC_START_OTHER         = SSC_RCMR_START_TRANSMIT,
+    // Start the receiver when the transmit starts
     SSC_START_TRANSMIT      = SSC_RCMR_START_TRANSMIT,
+    // Start the transmitter when the receiver starts
     SSC_START_RECEIVE       = SSC_TCMR_START_RECEIVE,
     // Start one clock after falling edge of RF
     SSC_START_LOW           = SSC_RCMR_START_RF_LOW,

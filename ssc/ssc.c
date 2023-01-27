@@ -24,14 +24,22 @@
    The transmitter and receiver can both be programmed to start their
    operations when a start event occurs.  This can be:
 
-   * THR written or when the rx is enabled
+   * THR written or when the rx is enabled  (continuous mode)
    * an event on RF/TF pins
    * the receiver matches the preamble
 
-   Whenever the tx is triggered it will output N * M clocks where N is
-   the number of bits per word and M is the number of words per frame.
-   If the THR is not written to before the TSR has finished shifting,
-   the TSR will clock out zeros.
+   Whenever the tx has started it will output N bits where N is the
+   number of bits per word.  If the TSR is not loaded by writing to
+   the THR before the start, the TSR will clock out N zeros.  The end
+   of frame occurs when M * N clocks have been output, where M is the
+   number of words per frame.
+
+   Whenever the rx has started, it waits for N bits.  The incoming
+   data is shifted into the RSR.  When N bits have been received, RSR
+   is copied to RHR and the RXRDY flag is set.  If another transfer is
+   received before RHR is read, the OVERRUN flag is set and the RSR is
+   copied to RHR, losing the previous data.
+
 */
 
 
