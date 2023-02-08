@@ -193,6 +193,7 @@ typedef struct
     ssc_fs_edge_t        fs_edge;
     bool                 loop_mode;
     bool                 data_msb_first;
+    /* Tx default value when not transmitting. */
     bool                 td_default;
     ssc_tx_fs_data_enable_t sync_data_enable;
 } ssc_module_cfg_t;

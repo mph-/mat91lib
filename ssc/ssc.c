@@ -105,14 +105,14 @@ ssc_fs_period_get (ssc_t ssc, ssc_module_t module)
 void
 ssc_tx_start_mode_set (ssc_t ssc, ssc_start_mode_t start_mode)
 {
-    SSC->SSC_TCMR |= (SSC->SSC_TCMR & ~0XF00) | start_mode;
+    SSC->SSC_TCMR = (SSC->SSC_TCMR & ~0XF00) | start_mode;
 }
 
 
 void
 ssc_rx_start_mode_set (ssc_t ssc, ssc_start_mode_t start_mode)
 {
-    SSC->SSC_RCMR |= (SSC->SSC_RCMR & ~0XF00) | start_mode;
+    SSC->SSC_RCMR = (SSC->SSC_RCMR & ~0XF00) | start_mode;
 }
 
 
@@ -340,7 +340,11 @@ ssc_enable (ssc_t ssc)
         ssc_module_enable (ssc, SSC_TX);
 
     if (ssc->rx)
+    {
         ssc_module_enable (ssc, SSC_RX);
+        /* The RXRDY pin gets set mysteriously but this does not clear it.  */
+        ssc_read_value (ssc);
+    }
 }
 
 
