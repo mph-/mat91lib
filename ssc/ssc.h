@@ -109,7 +109,8 @@ typedef enum
 typedef enum
 {
     // Start continuous transfer; either by writing to TTHR for transmit or
-    // enabling receiver for receive
+    // enabling receiver for receive.   Note, the rising/falling options
+    // require the clock to be running.
     SSC_START_CONTINUOUS    = SSC_RCMR_START_CONTINUOUS,
     // Start when the other device starts
     SSC_START_OTHER         = SSC_RCMR_START_TRANSMIT,
@@ -117,17 +118,17 @@ typedef enum
     SSC_START_TRANSMIT      = SSC_RCMR_START_TRANSMIT,
     // Start the transmitter when the receiver starts
     SSC_START_RECEIVE       = SSC_TCMR_START_RECEIVE,
-    // Start one clock after falling edge of RF
+    // Start one clock after falling edge of RF/RK
     SSC_START_LOW           = SSC_RCMR_START_RF_LOW,
-    // Start one clock after rising edge of RF
+    // Start one clock after rising edge of RF/RK
     SSC_START_HIGH          = SSC_RCMR_START_RF_HIGH,
-    // Start after falling edge of RF
+    // Start after falling edge of RF/RK
     SSC_START_FALLING       = SSC_RCMR_START_RF_FALLING,
-    // Start after rising edge of RF
+    // Start after rising edge of RF/RK
     SSC_START_RISING        = SSC_RCMR_START_RF_RISING,
-    // Start one clock after next rising or falling edge of RF
+    // Start one clock after next rising or falling edge of RF/RK
     SSC_START_LEVEL_CHANGE  = SSC_RCMR_START_RF_LEVEL,
-    // Start after next rising or falling edge of RF
+    // Start after next rising or falling edge of RF/RK
     SSC_START_ANY_EDGE      = SSC_RCMR_START_RF_EDGE,
     // Start when compare register 0 matches sync data
     SSC_START_COMPARE0      = SSC_RCMR_START_CMP_0
