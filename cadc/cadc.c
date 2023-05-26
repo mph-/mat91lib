@@ -143,7 +143,7 @@ cadc_t cadc_init (const cadc_cfg_t *cfg)
 
     tc_start (dev->tc);
 
-    ADC->ADC_IER = ADC_ISR_ENDRX;
+    ADC->ADC_IER = ADC_IER_ENDRX;
 
     return dev;
 }
