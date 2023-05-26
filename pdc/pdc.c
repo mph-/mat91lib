@@ -119,8 +119,12 @@ pdc_read_next (pdc_t pdc, void *buffer, uint16_t size)
 
 
 /** This polls the PDC and updates the next transfer pointer and count
-    as appropriate from the list of descriptors.  It could be called
-    from an ISR.  */
+    as appropriate from the list of descriptors.  It can be called
+    from an ISR.
+
+    @return a pointer to the descriptor of the recently filled buffer
+    or 0 if DMA has not started or a transfer has not completed.
+ */
 pdc_descriptor_t *
 pdc_read_poll (pdc_t pdc)
 {
@@ -134,7 +138,7 @@ pdc_read_poll (pdc_t pdc)
     /* When a transfer is complete, RNCR -> RCR and 0 -> RNCR.  */
     if (pdc->base->PERIPH_RNCR != 0)
         return 0;
-        
+
     pdc->rx.count++;
 
     pdc->rx.current = current->next;
@@ -144,9 +148,9 @@ pdc_read_poll (pdc_t pdc)
         pdc_read_disable (pdc);
         return current;
     }
-    
+
     if (pdc->rx.current->next)
-        pdc_read_next (pdc, pdc->rx.current->next->buffer, 
+        pdc_read_next (pdc, pdc->rx.current->next->buffer,
                        pdc->rx.current->next->size);
 
     return current;
@@ -169,7 +173,7 @@ pdc_write_poll (pdc_t pdc)
     /* When a transfer is complete, TNCR -> TCR and 0 -> TNCR.  */
     if (pdc->base->PERIPH_TNCR != 0)
         return 0;
-        
+
     pdc->tx.count++;
 
     pdc->tx.current = current->next;
@@ -179,9 +183,9 @@ pdc_write_poll (pdc_t pdc)
         pdc_write_disable (pdc);
         return current;
     }
-    
+
     if (pdc->tx.current->next)
-        pdc_write_next (pdc, pdc->tx.current->next->buffer, 
+        pdc_write_next (pdc, pdc->tx.current->next->buffer,
                         pdc->tx.current->next->size);
 
     return current;
@@ -198,11 +202,11 @@ pdc_write_config (pdc_t pdc, pdc_descriptor_t *tx)
 
     if (!tx)
         return;
-        
+
     pdc->base->PERIPH_TPR = (uint32_t) tx->buffer;
     /* This starts the transfer if channel active.  */
     pdc->base->PERIPH_TCR = tx->size;
-    
+
     if (tx->next)
     {
         pdc->base->PERIPH_TNPR = (uint32_t) tx->next->buffer;
@@ -227,11 +231,11 @@ pdc_read_config (pdc_t pdc, pdc_descriptor_t *rx)
         return;
 
     /* Need to write to RNCR before RCR otherwise RNCR gets set to 0.  */
-    
+
     pdc->base->PERIPH_RPR = (uint32_t) rx->buffer;
     /* This starts the transfer if channel active.  */
     pdc->base->PERIPH_RCR = rx->size;
-    
+
     if (rx->next)
     {
         pdc->base->PERIPH_RNPR = (uint32_t) rx->next->buffer;
