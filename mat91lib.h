@@ -10,15 +10,9 @@
 extern "C" {
 #endif
     
-
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
-
-#ifndef __cplusplus
-enum {false = 0, true = 1};
-typedef uint8_t bool;
-#endif
-
 
 #ifndef BIT
 #define BIT(X) (1U << (X))
