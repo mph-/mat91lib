@@ -377,7 +377,6 @@ mcu_jtag_disable (void)
 void
 mcu_init (void)
 {
-    irq_id_t id;
     int i;
 
     mcu_flash_init ();

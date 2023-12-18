@@ -39,11 +39,11 @@
  *
  */
 
-#ifndef _SAM4S2B_
-#define _SAM4S2B_
+#ifndef _SAM4S4B_
+#define _SAM4S4B_
 
-/** \addtogroup SAM4S2B_definitions SAM4S2B definitions
-  This file defines all structures and symbols for SAM4S2B:
+/** \addtogroup SAM4S4B_definitions SAM4S4B definitions
+  This file defines all structures and symbols for SAM4S4B:
     - registers and bitfields
     - peripheral base address
     - peripheral ID
@@ -67,9 +67,9 @@ typedef volatile       uint32_t RwReg; /**< Read-Write 32-bit register (volatile
 #endif
 
 /* ************************************************************************** */
-/*   CMSIS DEFINITIONS FOR SAM4S2B */
+/*   CMSIS DEFINITIONS FOR SAM4S4B */
 /* ************************************************************************** */
-/** \addtogroup SAM4S2B_cmsis CMSIS Definitions */
+/** \addtogroup SAM4S4B_cmsis CMSIS Definitions */
 /*@{*/
 
 /**< Interrupt Number Definition */
@@ -84,39 +84,39 @@ typedef enum IRQn
   DebugMonitor_IRQn     = -4,  /**< 12 Cortex-M4 Debug Monitor Interrupt     */
   PendSV_IRQn           = -2,  /**< 14 Cortex-M4 Pend SV Interrupt           */
   SysTick_IRQn          = -1,  /**< 15 Cortex-M4 System Tick Interrupt       */
-/******  SAM4S2B specific Interrupt Numbers *********************************/
+/******  SAM4S4B specific Interrupt Numbers *********************************/
 
-  SUPC_IRQn            =  0, /**<  0 SAM4S2B Supply Controller (SUPC) */
-  RSTC_IRQn            =  1, /**<  1 SAM4S2B Reset Controller (RSTC) */
-  RTC_IRQn             =  2, /**<  2 SAM4S2B Real Time Clock (RTC) */
-  RTT_IRQn             =  3, /**<  3 SAM4S2B Real Time Timer (RTT) */
-  WDT_IRQn             =  4, /**<  4 SAM4S2B Watchdog Timer (WDT) */
-  PMC_IRQn             =  5, /**<  5 SAM4S2B Power Management Controller (PMC) */
-  EFC0_IRQn            =  6, /**<  6 SAM4S2B Enhanced Embedded Flash Controller 0 (EFC0) */
-  UART0_IRQn           =  8, /**<  8 SAM4S2B UART 0 (UART0) */
-  UART1_IRQn           =  9, /**<  9 SAM4S2B UART 1 (UART1) */
-  PIOA_IRQn            = 11, /**< 11 SAM4S2B Parallel I/O Controller A (PIOA) */
-  PIOB_IRQn            = 12, /**< 12 SAM4S2B Parallel I/O Controller B (PIOB) */
-  PIOC_IRQn            = 13, /**< 13 SAM4S2B Parallel I/O Controller C (PIOC) */
-  USART0_IRQn          = 14, /**< 14 SAM4S2B USART 0 (USART0) */
-  USART1_IRQn          = 15, /**< 15 SAM4S2B USART 1 (USART1) */
-  HSMCI_IRQn           = 18, /**< 18 SAM4S2B Multimedia Card Interface (HSMCI) */
-  TWI0_IRQn            = 19, /**< 19 SAM4S2B Two Wire Interface 0 (TWI0) */
-  TWI1_IRQn            = 20, /**< 20 SAM4S2B Two Wire Interface 1 (TWI1) */
-  SPI_IRQn             = 21, /**< 21 SAM4S2B Serial Peripheral Interface (SPI) */
-  SSC_IRQn             = 22, /**< 22 SAM4S2B Synchronous Serial Controller (SSC) */
-  TC0_IRQn             = 23, /**< 23 SAM4S2B Timer/Counter 0 (TC0) */
-  TC1_IRQn             = 24, /**< 24 SAM4S2B Timer/Counter 1 (TC1) */
-  TC2_IRQn             = 25, /**< 25 SAM4S2B Timer/Counter 2 (TC2) */
-  TC3_IRQn             = 26, /**< 26 SAM4S2B Timer/Counter 3 (TC3) */
-  TC4_IRQn             = 27, /**< 27 SAM4S2B Timer/Counter 4 (TC4) */
-  TC5_IRQn             = 28, /**< 28 SAM4S2B Timer/Counter 5 (TC5) */
-  ADC_IRQn             = 29, /**< 29 SAM4S2B Analog To Digital Converter (ADC) */
-  DACC_IRQn            = 30, /**< 30 SAM4S2B Digital To Analog Converter (DACC) */
-  PWM_IRQn             = 31, /**< 31 SAM4S2B Pulse Width Modulation (PWM) */
-  CRCCU_IRQn           = 32, /**< 32 SAM4S2B CRC Calculation Unit (CRCCU) */
-  ACC_IRQn             = 33, /**< 33 SAM4S2B Analog Comparator (ACC) */
-  UDP_IRQn             = 34, /**< 34 SAM4S2B USB Device Port (UDP) */
+  SUPC_IRQn            =  0, /**<  0 SAM4S4B Supply Controller (SUPC) */
+  RSTC_IRQn            =  1, /**<  1 SAM4S4B Reset Controller (RSTC) */
+  RTC_IRQn             =  2, /**<  2 SAM4S4B Real Time Clock (RTC) */
+  RTT_IRQn             =  3, /**<  3 SAM4S4B Real Time Timer (RTT) */
+  WDT_IRQn             =  4, /**<  4 SAM4S4B Watchdog Timer (WDT) */
+  PMC_IRQn             =  5, /**<  5 SAM4S4B Power Management Controller (PMC) */
+  EFC0_IRQn            =  6, /**<  6 SAM4S4B Enhanced Embedded Flash Controller 0 (EFC0) */
+  UART0_IRQn           =  8, /**<  8 SAM4S4B UART 0 (UART0) */
+  UART1_IRQn           =  9, /**<  9 SAM4S4B UART 1 (UART1) */
+  PIOA_IRQn            = 11, /**< 11 SAM4S4B Parallel I/O Controller A (PIOA) */
+  PIOB_IRQn            = 12, /**< 12 SAM4S4B Parallel I/O Controller B (PIOB) */
+  PIOC_IRQn            = 13, /**< 13 SAM4S4B Parallel I/O Controller C (PIOC) */
+  USART0_IRQn          = 14, /**< 14 SAM4S4B USART 0 (USART0) */
+  USART1_IRQn          = 15, /**< 15 SAM4S4B USART 1 (USART1) */
+  HSMCI_IRQn           = 18, /**< 18 SAM4S4B Multimedia Card Interface (HSMCI) */
+  TWI0_IRQn            = 19, /**< 19 SAM4S4B Two Wire Interface 0 (TWI0) */
+  TWI1_IRQn            = 20, /**< 20 SAM4S4B Two Wire Interface 1 (TWI1) */
+  SPI_IRQn             = 21, /**< 21 SAM4S4B Serial Peripheral Interface (SPI) */
+  SSC_IRQn             = 22, /**< 22 SAM4S4B Synchronous Serial Controller (SSC) */
+  TC0_IRQn             = 23, /**< 23 SAM4S4B Timer/Counter 0 (TC0) */
+  TC1_IRQn             = 24, /**< 24 SAM4S4B Timer/Counter 1 (TC1) */
+  TC2_IRQn             = 25, /**< 25 SAM4S4B Timer/Counter 2 (TC2) */
+  TC3_IRQn             = 26, /**< 26 SAM4S4B Timer/Counter 3 (TC3) */
+  TC4_IRQn             = 27, /**< 27 SAM4S4B Timer/Counter 4 (TC4) */
+  TC5_IRQn             = 28, /**< 28 SAM4S4B Timer/Counter 5 (TC5) */
+  ADC_IRQn             = 29, /**< 29 SAM4S4B Analog To Digital Converter (ADC) */
+  DACC_IRQn            = 30, /**< 30 SAM4S4B Digital To Analog Converter (DACC) */
+  PWM_IRQn             = 31, /**< 31 SAM4S4B Pulse Width Modulation (PWM) */
+  CRCCU_IRQn           = 32, /**< 32 SAM4S4B CRC Calculation Unit (CRCCU) */
+  ACC_IRQn             = 33, /**< 33 SAM4S4B Analog Comparator (ACC) */
+  UDP_IRQn             = 34, /**< 34 SAM4S4B USB Device Port (UDP) */
 
   PERIPH_COUNT_IRQn    = 35  /**< Number of peripheral IDs */
 } IRQn_Type;
@@ -230,10 +230,10 @@ void WDT_Handler        ( void );
  * \brief Configuration of the Cortex-M4 Processor and Core Peripherals
  */
 
-#define __CM4_REV              0x0000 /**< SAM4S2B core revision number ([15:8] revision number, [7:0] patch number) */
-#define __MPU_PRESENT          1      /**< SAM4S2B does provide a MPU */
-#define __FPU_PRESENT          0      /**< SAM4S2B does not provide a FPU */
-#define __NVIC_PRIO_BITS       4      /**< SAM4S2B uses 4 Bits for the Priority Levels */
+#define __CM4_REV              0x0000 /**< SAM4S4B core revision number ([15:8] revision number, [7:0] patch number) */
+#define __MPU_PRESENT          1      /**< SAM4S4B does provide a MPU */
+#define __FPU_PRESENT          0      /**< SAM4S4B does not provide a FPU */
+#define __NVIC_PRIO_BITS       4      /**< SAM4S4B uses 4 Bits for the Priority Levels */
 #define __Vendor_SysTickConfig 0      /**< Set to 1 if different SysTick Config is used */
 
 /*
@@ -248,9 +248,9 @@ void WDT_Handler        ( void );
 /*@}*/
 
 /* ************************************************************************** */
-/**  SOFTWARE PERIPHERAL API DEFINITION FOR SAM4S2B */
+/**  SOFTWARE PERIPHERAL API DEFINITION FOR SAM4S4B */
 /* ************************************************************************** */
-/** \addtogroup SAM4S2B_api Peripheral Software API */
+/** \addtogroup SAM4S4B_api Peripheral Software API */
 /*@{*/
 
 #include "component/component_acc.h"
@@ -281,9 +281,9 @@ void WDT_Handler        ( void );
 /*@}*/
 
 /* ************************************************************************** */
-/*   REGISTER ACCESS DEFINITIONS FOR SAM4S2B */
+/*   REGISTER ACCESS DEFINITIONS FOR SAM4S4B */
 /* ************************************************************************** */
-/** \addtogroup SAM4S2B_reg Registers Access Definitions */
+/** \addtogroup SAM4S4B_reg Registers Access Definitions */
 /*@{*/
 
 #include "instance/instance_hsmci.h"
@@ -319,9 +319,9 @@ void WDT_Handler        ( void );
 /*@}*/
 
 /* ************************************************************************** */
-/*   PERIPHERAL ID DEFINITIONS FOR SAM4S2B */
+/*   PERIPHERAL ID DEFINITIONS FOR SAM4S4B */
 /* ************************************************************************** */
-/** \addtogroup SAM4S2B_id Peripheral Ids Definitions */
+/** \addtogroup SAM4S4B_id Peripheral Ids Definitions */
 /*@{*/
 
 #define ID_SUPC   ( 0) /**< \brief Supply Controller (SUPC) */
@@ -360,9 +360,9 @@ void WDT_Handler        ( void );
 /*@}*/
 
 /* ************************************************************************** */
-/*   BASE ADDRESS DEFINITIONS FOR SAM4S2B */
+/*   BASE ADDRESS DEFINITIONS FOR SAM4S4B */
 /* ************************************************************************** */
-/** \addtogroup SAM4S2B_base Peripheral Base Address Definitions */
+/** \addtogroup SAM4S4B_base Peripheral Base Address Definitions */
 /*@{*/
 
 #if (defined(__ASSEMBLY__) || defined(__IAR_SYSTEMS_ASM__))
@@ -457,19 +457,19 @@ void WDT_Handler        ( void );
 /*@}*/
 
 /* ************************************************************************** */
-/*   PIO DEFINITIONS FOR SAM4S2B */
+/*   PIO DEFINITIONS FOR SAM4S4B */
 /* ************************************************************************** */
-/** \addtogroup SAM4S2B_pio Peripheral Pio Definitions */
+/** \addtogroup SAM4S4B_pio Peripheral Pio Definitions */
 /*@{*/
 
-#include "pio/pio_sam4s8b.h"
+#include "pio/pio_sam4s4b.h"
 /*@}*/
 
 /* ************************************************************************** */
-/*   MEMORY MAPPING DEFINITIONS FOR SAM4S2B */
+/*   MEMORY MAPPING DEFINITIONS FOR SAM4S4B */
 /* ************************************************************************** */
 
-#define IFLASH0_SIZE             (0x20000u)
+#define IFLASH0_SIZE             (0x40000u)
 #define IFLASH0_PAGE_SIZE        (512u)
 #define IFLASH0_LOCK_REGION_SIZE (8192u)
 #define IFLASH0_NB_OF_PAGES      (1024u)
@@ -486,7 +486,7 @@ void WDT_Handler        ( void );
 #define EBI_CS3_ADDR (0x63000000u) /**< EBI Chip Select 3 base address */
 
 /* ************************************************************************** */
-/*   MISCELLANEOUS DEFINITIONS FOR SAM4S2B */
+/*   MISCELLANEOUS DEFINITIONS FOR SAM4S4B */
 /* ************************************************************************** */
 
 #define CHIP_JTAGID (0x05B3203FUL)
@@ -494,7 +494,7 @@ void WDT_Handler        ( void );
 #define CHIP_EXID (0x0UL)
 
 /* ************************************************************************** */
-/*   ELECTRICAL DEFINITIONS FOR SAM4S2B */
+/*   ELECTRICAL DEFINITIONS FOR SAM4S4B */
 /* ************************************************************************** */
 
 /* Device characteristics */
@@ -524,4 +524,4 @@ void WDT_Handler        ( void );
 
 /*@}*/
 
-#endif /* _SAM4S2B_ */
+#endif /* _SAM4S4B_ */
