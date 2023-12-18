@@ -42,13 +42,13 @@ usart0_init (uint16_t baud_divisor)
     pio_config_set (RTS0_PIO, RTS0_PERIPH);
     pio_config_set (CTS0_PIO, CTS0_PERIPH);
 #endif
-    
+
     /* Enable USART0 clock.  */
     mcu_pmc_enable (ID_USART0);
-    
+
     /* Reset and disable receiver and transmitter.  */
-    USART0->US_CR = US_CR_RSTRX | US_CR_RSTTX          
-        | US_CR_RXDIS | US_CR_TXDIS;           
+    USART0->US_CR = US_CR_RSTRX | US_CR_RSTTX
+        | US_CR_RXDIS | US_CR_TXDIS;
 
     /* Set normal mode, clock = MCK, 8-bit data, no parity, 1 stop
        bit.  Note, the OVER bit is set to 0 so the baud rate
@@ -60,8 +60,8 @@ usart0_init (uint16_t baud_divisor)
     usart0_baud_divisor_set (baud_divisor);
 
     /* Enable receiver and transmitter.  */
-    USART0->US_CR = US_CR_RXEN | US_CR_TXEN; 
-    
+    USART0->US_CR = US_CR_RXEN | US_CR_TXEN;
+
     return 1;
 }
 
@@ -75,10 +75,10 @@ usart0_shutdown (void)
 
     /* Disable USART0 clock.  */
     mcu_pmc_disable (ID_USART0);
-    
+
     /* Reset and disable receiver and transmitter.  */
-    USART0->US_CR = US_CR_RSTRX | US_CR_RSTTX          
-        | US_CR_RXDIS | US_CR_TXDIS;           
+    USART0->US_CR = US_CR_RSTRX | US_CR_RSTTX
+        | US_CR_RXDIS | US_CR_TXDIS;
 }
 
 
@@ -147,4 +147,3 @@ usart0_puts (const char *str)
     }
     return 1;
 }
-

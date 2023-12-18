@@ -6,10 +6,10 @@
    independent interface.
 
    This needs updating to be more general and to provide
-   support for synchronous operation. 
+   support for synchronous operation.
 
    If code memory is at a premium, a USART can be disabled in the
-   target.h file, e.g., using #define USART0_ENABLE 0. 
+   target.h file, e.g., using #define USART0_ENABLE 0.
 
    Both USART0 and USART1 have CTS/RTS flow control pins:
 
@@ -28,7 +28,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 
 #include "sys.h"
 #include "usart0.h"
@@ -49,7 +49,9 @@ typedef struct
        non-multitasked system.  With non-blocking I/O it is necessary
        to check the function returns in case the data was not
        transferred.  In this case the return value is -1 and errno
-       is set to EAGAIN.  */
+       is set to EAGAIN.
+
+       The baud rate is given by MCK / (16 * baud_divisor).  */
     uint32_t read_timeout_us;
     uint32_t write_timeout_us;
 }
@@ -63,7 +65,7 @@ typedef usart_dev_t *usart_t;
 
 
 /* Initialise UART for desired channel, baud rate, etc.  */
-usart_t 
+usart_t
 usart_init (const usart_cfg_t *cfg);
 
 
@@ -102,14 +104,13 @@ int
 usart_putc (usart_t usart, char ch);
 
 
-/** Write string.  In non-blocking mode this is likely to 
+/** Write string.  In non-blocking mode this is likely to
     ignore all but the first character.  */
 int
-usart_puts (usart_t usart, const char *str);    
-    
+usart_puts (usart_t usart, const char *str);
+
 
 #ifdef __cplusplus
 }
-#endif    
 #endif
-
+#endif

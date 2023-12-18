@@ -236,7 +236,6 @@ dac_disable (dac_t dac)
 dac_t
 dac_init (const dac_cfg_t *cfg)
 {
-    dac_sample_t dummy;
     dac_dev_t *dac;
     const dac_cfg_t dac_default_cfg =
         {

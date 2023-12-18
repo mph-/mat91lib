@@ -1,7 +1,7 @@
 /** @file   usart0_defs.h
     @author M. P. Hayes, UCECE
     @date   15 May 2007
-    @brief 
+    @brief
 */
 #ifndef USART0_DEFS_H
 #define USART0_DEFS_H
@@ -9,7 +9,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 
 /* You should be using the functions defined in usart0.h.  These
    macros are not for general use except in dire performance
@@ -48,6 +48,5 @@ do                                      \
 
 #ifdef __cplusplus
 }
-#endif    
+#endif
 #endif /* USART0_DEFS_H  */
-
