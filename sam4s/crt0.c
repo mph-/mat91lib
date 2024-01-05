@@ -1,8 +1,8 @@
 /** @file   crt0.c
     @author M. P. Hayes, UCECE
     @date   10 July 2014
-    @brief  C run time initialisation for the Atmel AT91SAM4S series 
-            of microcontrollers. 
+    @brief  C run time initialisation for the Atmel AT91SAM4S series
+            of microcontrollers.
 */
 
 #include "config.h"
@@ -41,7 +41,7 @@ void _nmi_handler (void)
 
 void _hardfault_handler (void)
 {
-    /* This is due to an error during exception processing. 
+    /* This is due to an error during exception processing.
        The reason can be found in SCB_HFSR.  */
     _unexpected_handler ();
 }
@@ -65,15 +65,16 @@ void _usagefault_handler (void)
 }
 
 
-/* Exception table this needs to be mapped into flash.  This table
-   does not contain the interrupt vectors.  These are allocated dynamically 
-   in the array exception_table.  */
+/* Exception table; this needs to be mapped into flash so the reset
+   handler is found on reset.  This table does not contain the
+   interrupt vectors.  These are allocated dynamically in the array
+   exception_table.  */
 __attribute__ ((section(".vectors")))
 irq_handler_t static_exception_table[] =
 {
     (irq_handler_t) (&__stack_start__),
     _reset_handler,
-    
+
     _nmi_handler,
     _hardfault_handler,
     _memmanage_handler,
@@ -82,25 +83,26 @@ irq_handler_t static_exception_table[] =
 };
 
 
-/* This needs to be carefully aligned.   */
+/* This table is stored in SRAM and needs to be aligned.  It takes
+   over from the static table stored in flash.  */
 __attribute__ ((section(".dynamic_vectors")))
 irq_handler_t exception_table[] =
 {
     (irq_handler_t) (&__stack_start__),
     _reset_handler,
-    
+
     _nmi_handler,
     _hardfault_handler,
     _memmanage_handler,
     _busfault_handler,
     _usagefault_handler,
-    0, 0, 0, 0,        /* Reserved */
+    0, 0, 0, 0,             /* Reserved */
     _unexpected_handler,
     _unexpected_handler,
-    0,                 /* Reserved  */
+    0,                      /* Reserved  */
     _unexpected_handler,
-    _unexpected_handler,
-    
+    _unexpected_handler,    /* Systick */
+
     /* Configurable interrupts  */
     _unexpected_handler,    /* 0  Supply Controller */
     _unexpected_handler,    /* 1  Reset Controller */
@@ -159,12 +161,12 @@ void _reset_handler (void)
        to execute out of RAM for speed.  */
     for (src = &__data_load__, dst = &__data_start__; dst < &__data_end__; )
         *dst++ = *src++;
-    
+
     /* Zero uninitialised global variables in .bss.  */
     for (dst = &__bss_start__; dst < &__bss_end__; )
         *dst++ = 0;
-    
-    /* Remap the exception table into SRAM to allow dynamic allocation. 
+
+    /* Remap the exception table into SRAM to allow dynamic allocation.
        This register is zero on reset.  */
     SCB->VTOR = (uint32_t) &exception_table & SCB_VTOR_TBLOFF_Msk;
 
@@ -173,9 +175,9 @@ void _reset_handler (void)
 
     /* Call constructors and init functions.   */
     __libc_init_array ();
-    
+
     main ();
-    
+
     /* Hang.  */
     while (1)
         continue;

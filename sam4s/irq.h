@@ -16,7 +16,8 @@ extern "C" {
 
 typedef void (* irq_vector_t) (void);
 
-typedef uint32_t irq_id_t;
+/* Exceptions have negative values; interrupts positive values.  */
+typedef int32_t irq_id_t;
 
 typedef uint32_t irq_type_t;
 
@@ -27,7 +28,6 @@ typedef void (*irq_handler_t) (void);
 extern irq_handler_t exception_table[];
 
 
-/* NB, The first interrupt vector is for FIQ.  */
 enum {IRQ_ID_MIN = 0, IRQ_ID_MAX = 31};
 
 
@@ -74,6 +74,7 @@ static inline void irq_trigger (irq_id_t id)
 }
 
 
+/* Set up interrupt (or exception) handler.  */
 static inline void irq_vector_set (irq_id_t id, irq_vector_t isr)
 {
     exception_table[id + 16] = isr;

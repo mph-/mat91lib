@@ -150,6 +150,12 @@ mcu_unique_id (mcu_unique_id_t id)
 }
 
 
+uint32_t mcu_chipid (void)
+{
+    return REG_CHIPID_CIDR;
+}
+
+
 void
 mcu_xtal_mainck_start (void)
 {

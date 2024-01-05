@@ -119,6 +119,10 @@ void
 mcu_unique_id (mcu_unique_id_t id);
 
 
+uint32_t
+mcu_chipid (void);
+
+
 #ifdef __cplusplus
 }
 #endif
