@@ -15,6 +15,11 @@ extern "C" {
 
 typedef uint64_t sysclock_clocks_t;
 
+typedef void (*sysclock_callback_t) (void);
+
+
+sysclock_clocks_t sysclock_clocks (void);
+
 
 uint32_t sysclock_millis (void);
 
@@ -25,7 +30,13 @@ uint32_t sysclock_micros (void);
 void sysclock_millis_delay (uint32_t delay);
 
 
-bool sysclock_millis_elapsed (uint32_t from, uint32_t delay);
+bool sysclock_millis_elapsed (sysclock_clocks_t from, uint32_t delay);
+
+
+bool sysclock_micros_elapsed (sysclock_clocks_t from, uint32_t delay);
+
+
+void sysclock_callback (sysclock_callback_t callback);
 
 
 /** Initialise sysclock.  */

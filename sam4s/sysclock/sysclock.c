@@ -13,13 +13,22 @@
 #define SYSCLOCK_US_CLOCKS ((int)(F_CPU * 1e-6))
 
 
-// This rolls over about every 50 days
-static volatile uint32_t sysclock_millis1;
+typedef struct sysclock_dev_struct
+{
+    // This rolls over about every 50 days
+    volatile uint32_t millis;
+    sysclock_callback_t callback;
+} sysclock_dev_t;
+
+
+static sysclock_dev_t sysclock_dev;
 
 
 static void sysclock_handler (void)
 {
-    sysclock_millis1++;
+    sysclock_dev.millis++;
+    if (sysclock_dev.callback)
+        sysclock_dev.callback ();
 }
 
 
@@ -29,7 +38,7 @@ sysclock_clocks_t sysclock_clocks (void)
     sysclock_clocks_t clocks;
 
     irq_global_disable ();
-    millis1 = sysclock_millis1;
+    millis1 = sysclock_dev.millis;
 
     // Look for pending systick interrupt
     if (SCB->ICSR & SCB_ICSR_PENDSTSET_Msk)
@@ -45,7 +54,7 @@ sysclock_clocks_t sysclock_clocks (void)
 
 uint32_t sysclock_millis (void)
 {
-    return sysclock_millis1;
+    return sysclock_dev.millis;
 }
 
 
@@ -84,15 +93,30 @@ void sysclock_micros_delay (uint32_t delay_us)
 }
 
 
-bool sysclock_millis_elapsed (uint32_t from_clocks, uint32_t delay_ms)
+bool sysclock_millis_elapsed (sysclock_clocks_t from_clocks, uint32_t delay_ms)
 {
-    return sysclock_clocks () > from_clocks + delay_ms * SYSCLOCK_MS_CLOCKS;
+    sysclock_clocks_t to_clocks;
+
+    to_clocks = from_clocks + delay_ms * SYSCLOCK_MS_CLOCKS;
+
+    return sysclock_clocks () > to_clocks;
 }
 
 
-bool sysclock_micros_elapsed (uint32_t from_clocks, uint32_t delay_us)
+bool sysclock_micros_elapsed (sysclock_clocks_t from_clocks, uint32_t delay_us)
 {
-    return sysclock_clocks () > from_clocks + delay_us * SYSCLOCK_US_CLOCKS;
+    sysclock_clocks_t to_clocks;
+
+    to_clocks = from_clocks + delay_us * SYSCLOCK_US_CLOCKS;
+
+    return sysclock_clocks () > to_clocks;
+}
+
+
+void sysclock_callback (sysclock_callback_t callback)
+{
+    // Could register multiple callbacks;
+    sysclock_dev.callback = callback;
 }
 
 
