@@ -13,16 +13,19 @@ extern "C" {
 
 #include "config.h"
 
-typedef uint64_t syslock_clocks_t;
+typedef uint64_t sysclock_clocks_t;
 
 
-uint32_t sysclock_ms_get (void);
+uint32_t sysclock_millis (void);
 
 
-void sysclock_ms_delay (uint32_t delay);
+uint32_t sysclock_micros (void);
 
 
-bool sysclock_ms_elapsed (uint32_t from, uint32_t delay);
+void sysclock_millis_delay (uint32_t delay);
+
+
+bool sysclock_millis_elapsed (uint32_t from, uint32_t delay);
 
 
 /** Initialise sysclock.  */

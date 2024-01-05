@@ -10,7 +10,8 @@
 /* SysTick is a 24 bit down counter that resets to the preloaded value
    in the SYST_RVR register.
 
-   We pretend it is an upcounter.
+   We pretend it is an upcounter.   It is incremented at the
+   system clock rate, F_CPU.
 
    With a 120 MHz clock the longest delay is (1 << 24) / 120e6 = 0.14 s
    corresponding to a lowest frequency of 7.2 Hz.
@@ -44,7 +45,7 @@ systick_period_get (void)
 }
 
 
-systick_tick_t
+systick_clocks_t
 systick_clocks_get (void)
 {
     /* Pretend the counter counts up.  */

@@ -14,7 +14,7 @@ extern "C" {
 #include "config.h"
 
 
-/** Define systick ticks.  */
+/** Define systick clocks.  */
 typedef uint32_t systick_clocks_t;
 
 
@@ -31,7 +31,7 @@ systick_clocks_t systick_period_get (void);
 
 
 /** Initialise systick.  */
-int systick_init (void);
+int systick_init (systick_clocks_t period);
 
 
 #ifdef __cplusplus
