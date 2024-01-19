@@ -1,16 +1,15 @@
 /** @file   sysclock.c
     @author M. P. Hayes, UCECE
     @date   26 December 2023
-    @brief
+    @brief This keeps track of time in terms of CPU clocks and
+    provides delay functions.  It uses an interrupt every millisecond;
+    this can call a heartbeat function.
 */
 
 #include "sysclock.h"
 #include "systick.h"
 #include "cpu.h"
 #include "irq.h"
-
-#define SYSCLOCK_MS_CLOCKS ((int)(F_CPU * 1e-3))
-#define SYSCLOCK_US_CLOCKS ((int)(F_CPU * 1e-6))
 
 
 typedef struct sysclock_dev_struct
@@ -26,6 +25,8 @@ static sysclock_dev_t sysclock_dev;
 
 static void sysclock_handler (void)
 {
+    // This is called every millisecond.
+
     sysclock_dev.millis++;
     if (sysclock_dev.callback)
         sysclock_dev.callback ();

@@ -104,6 +104,9 @@ endif
 print-drivers:
 	@echo $(DRIVERS)
 
+print-peripherals:
+	@echo $(PERIPHERALS)
+
 print-deps:
 	@echo $(DEPS)
 

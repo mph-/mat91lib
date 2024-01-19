@@ -13,6 +13,14 @@ extern "C" {
 
 #include "config.h"
 
+// Number of clocks per millisecond.
+#define SYSCLOCK_MS_CLOCKS ((int)(F_CPU * 1e-3))
+
+// Number of clocks per microsecond.
+#define SYSCLOCK_US_CLOCKS ((int)(F_CPU * 1e-6))
+
+// This rolls over every 4874 years at 120 MHz (32 bits rolls over
+// every 36 s at 120 MHz)
 typedef uint64_t sysclock_clocks_t;
 
 typedef void (*sysclock_callback_t) (void);
