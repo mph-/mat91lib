@@ -1,0 +1,6 @@
+SYSTICK_DIR = $(MAT91LIB_DIR)/$(FAMILY)/systick
+
+VPATH += $(SYSTICK_DIR)
+INCLUDES += -I$(SYSTICK_DIR)
+
+SRC += systick.c

@@ -1,0 +1,8 @@
+PERIPHERALS += systick
+
+SYSCLOCK_DIR = $(MAT91LIB_DIR)/$(FAMILY)/sysclock
+
+VPATH += $(SYSCLOCK_DIR)
+INCLUDES += -I$(SYSCLOCK_DIR)
+
+SRC += sysclock.c
