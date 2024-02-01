@@ -148,6 +148,15 @@ void _reset_handler (void)
     char *src;
     char *dst;
 
+    /* The stack pointer is automatically loaded with the first entry
+       in the vector table on reset.  However, when debugging it is
+       useful to jump to the reset address and have the stack pointer
+       reinitialized.  */
+    register char *p = &__stack_start__;
+    register uint32_t sp __asm__ ("sp") = (uint32_t)p;
+    __asm__ ("" : : "r" (sp));  /* Dummy use  */
+
+
     SCB->VTOR = 0;
 
     /* There's not much frigging around to set things up; the initial
