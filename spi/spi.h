@@ -316,6 +316,10 @@ spi_cs_assert (spi_t spi);
 void
 spi_cs_negate (spi_t spi);
 
+
+bool
+spi_write_finished_p (spi_t spi);
+
 #ifdef __cplusplus
 }
 #endif
