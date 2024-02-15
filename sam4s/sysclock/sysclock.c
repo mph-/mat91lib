@@ -28,6 +28,8 @@ static void sysclock_handler (void)
     // This is called every millisecond.
 
     sysclock_dev.millis++;
+
+    // If this takes more than a millisecond, timing will drift.
     if (sysclock_dev.callback)
         sysclock_dev.callback ();
 }
@@ -125,7 +127,8 @@ int
 sysclock_init (void)
 {
     systick_init (SYSCLOCK_MS_CLOCKS);
-    irq_vector_set (SysTick_IRQn, sysclock_handler);
+    // Set to lowest priority
+    irq_config (SysTick_IRQn, 15, sysclock_handler);
 
     // Enable SysTick interrupt.
     SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;
