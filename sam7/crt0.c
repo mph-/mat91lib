@@ -1,15 +1,15 @@
 /** @file   crt0.c
     @author M. P. Hayes, UCECE
     @date   10 June 2007
-    @brief  C run time initialisation for the Atmel AT91 series 
-            of ARM7 TDMI microprocessors. 
+    @brief  C run time initialisation for the Atmel AT91 series
+            of ARM7 TDMI microprocessors.
 */
 
 #include "config.h"
 #include "cpu.h"
 #include "mcu.h"
 
-/* This requires cpu.h, irq.h, and mcu.h of mat91lib. 
+/* This requires cpu.h, irq.h, and mcu.h of mat91lib.
 
    The user application is run in Supervisor Mode.  This allows full
    privileges.  The top 72 bytes of SRAM are used as the IRQ Mode
@@ -74,17 +74,17 @@ void start (void)
     /* Reset  0x00.  */
     __asm__ ("\tb _reset_handler");
     /* Hang if decoded undefined instruction  0x04.  */
-    __asm__ ("\tb ."); 
+    __asm__ ("\tb .");
     /* Hang if software interrupt 0x08.  */
     __asm__ ("\tb .");
     /* Fetched instruction from invalid address (Prefetch Abort) 0x0c.
        LR - 8 points to the instruction that caused the abort.  SP is
        for abort mode.  */
-    __asm__ ("\tb _prefetch_abort_handler"); 
+    __asm__ ("\tb _prefetch_abort_handler");
     /* Invalid address (or alignment) (Data Abort) 0x10.  LR - 8
        points to the instruction that caused the abort.  SP is for
-       abort mode.  */ 
-    __asm__ ("\tb _data_abort_handler"); 
+       abort mode.  */
+    __asm__ ("\tb _data_abort_handler");
     /* Reserved  0x14.  */
     __asm__ ("\tb .");
     /* IRQ 0x18.  */
@@ -110,10 +110,10 @@ void _fiq_handler (void)
     /* Save r0 in FIQ_Register.  */
     __asm__ ("\tmov r9, r0");
 
-    
+
     __asm__ ("\tldr r0, [r8, %0]" : : "i" (AIC_FVR_OFFSET));
-         
-    
+
+
     /* Switch to Supervisor Mode to allow stack access for C code
        because the FIQ is not yet acknowledged.  */
     cpu_cpsr_c_set_const (CPU_I_BIT | CPU_F_BIT | CPU_MODE_SVC);
@@ -179,7 +179,7 @@ void _irq_handler (void)
       the interrupt.  The current level and the current interrupt
       number is pushed on to the stack.  Finally, the value written in
       the AIC_SVR corresponding to the current interrupt is
-      returned. 
+      returned.
 
       When using a debugger spurious interrupts can be generated.
       This can be avoided using protect mode.  In this mode interrupt
@@ -214,7 +214,7 @@ void _irq_handler (void)
 
     /* Mark the End of Interrupt on the AIC.  */
     {
-        register uint32_t * r14 __asm__ ("r14") 
+        register uint32_t * r14 __asm__ ("r14")
             = (uint32_t *) &AT91C_BASE_AIC->AIC_EOICR;
 
         /* Write anything to AIC_EOICR to indicate interrupt handling
@@ -277,7 +277,7 @@ void _reset_handler (void)
     __asm__ ("" : : "r" (fp));
 #else
     /* This does not work without optimisation since it requires the
-       stack and frame pointer to be set up.  */       
+       stack and frame pointer to be set up.  */
     cpu_sp_set ((uint32_t) p);
 #endif
 
@@ -310,7 +310,7 @@ void _reset_handler (void)
 
 
     /* Select Supervisor Mode and enable interrupts.  */
-    cpu_cpsr_c_set_const (CPU_MODE_SVC);    
+    cpu_cpsr_c_set_const (CPU_MODE_SVC);
 
     /* Set up Supervisor Mode stack.  */
     cpu_sp_set ((uint32_t) (p - IRQ_STACK_SIZE - ABT_STACK_SIZE));
@@ -324,7 +324,7 @@ void _reset_handler (void)
            that need to execute out of RAM for speed.  */
         for (src = &__data_load__, dst = &__data_start__; dst < &__data_end__; )
             *dst++ = *src++;
-        
+
         /* Zero uninitialised global variables in .bss.  */
         for (dst = &__bss_start__; dst < &__bss_end__; )
             *dst++ = 0;
@@ -367,14 +367,14 @@ void _data_abort_handler (void)
        function since the PC is currently pointing into the first
        block of memory.  */
 
-    __asm__ ("\tldr pc, =_data_abort_hang"); 
+    __asm__ ("\tldr pc, =_data_abort_hang");
 }
 
 
 void _data_abort_hang (void)
 {
     /* Hang.  Don't use a while (1) otherwise the debug info will be invalid.  */
-    __asm__ ("\tb ."); 
+    __asm__ ("\tb .");
 }
 
 
@@ -404,12 +404,12 @@ void _prefetch_abort_handler (void)
        function since the PC is currently pointing into the first
        block of memory.  */
 
-    __asm__ ("\tldr pc, =_prefetch_abort_hang"); 
+    __asm__ ("\tldr pc, =_prefetch_abort_hang");
 }
 
 
 void _prefetch_abort_hang (void)
 {
     /* Hang.  Don't use a while (1) otherwise the debug info will be invalid.  */
-    __asm__ ("\tb ."); 
+    __asm__ ("\tb .");
 }

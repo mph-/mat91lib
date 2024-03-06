@@ -1,4 +1,4 @@
-PERIPHERALS += pit
+PERIPHERALS += pit sysclock systick
 
 include $(foreach peripheral, $(PERIPHERALS), $(MAT91LIB_DIR)/$(peripheral)/$(peripheral).mk)
 
@@ -7,4 +7,3 @@ include $(foreach peripheral, $(PERIPHERALS), $(MAT91LIB_DIR)/$(peripheral)/$(pe
 
 VPATH += $(MAT91LIB_DIR)
 INCLUDES += -I$(MAT91LIB_DIR)
-

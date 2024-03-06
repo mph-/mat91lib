@@ -214,7 +214,7 @@ ssc_config_set (ssc_t ssc, const ssc_cfg_t *cfg)
 
 
 /* Check if a buffer (tx or rx) is ready (empty or full respectively).  */
-static bool
+bool
 ssc_module_ready_p (ssc_t ssc, ssc_module_t tx_rx)
 {
     unsigned int mask = 0;

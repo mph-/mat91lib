@@ -63,6 +63,8 @@ extern "C" {
   #include "sam4s8b.h"
 #elif defined __SAM4S2B__
   #include "sam4s2b.h"
+#elif defined __SAM4S4B__
+  #include "sam4s4b.h"
 #elif defined __SAM4S8C__
   #include "sam4s8c.h"
 #elif defined __SAM4S16B__

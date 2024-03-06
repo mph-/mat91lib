@@ -106,6 +106,9 @@ endif
 print-drivers:
 	@echo $(DRIVERS)
 
+print-peripherals:
+	@echo $(PERIPHERALS)
+
 print-deps:
 	@echo $(DEPS)
 
@@ -183,3 +186,10 @@ bootflash:
 .PHONY: debug
 debug: $(TARGET)
 	$(GDB) $(GDB_ARGS) -x $(SCRIPTS)/debug.gdb $<
+
+# Create Intel hex file.
+TARGET_HEX = $(TARGET:.bin=.hex)
+
+.PHONY: hex
+hex: $(TARGET)
+	objcopy -O ihex $(TARGET) $(TARGET_HEX)

@@ -956,3 +956,12 @@ spi_putc (spi_t spi, char ch)
 {
     spi_xferc (spi, ch);
 }
+
+
+
+/* Return non-zero if transmitter finished.  */
+bool
+spi_write_finished_p (spi_t spi)
+{
+    return (SPI_SR_TXEMPTY & SPI->SPI_SR) != 0;
+}
