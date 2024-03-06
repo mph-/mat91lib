@@ -158,7 +158,11 @@ ifdef CLEAN_EXTRA_PATHS
 	-$(DEL) -r $(CLEAN_EXTRA_PATHS)
 endif
 
-GDB_ARGS += -ex 'target extended-remote | openocd -c "gdb_port pipe" -f "$(SCRIPTS)/$(OPENOCD_SCRIPT)"'
+OPENOCD_ARGS = \
+	-c "gdb_port pipe" \
+	-f "$(SCRIPTS)/$(OPENOCD_SCRIPT)" \
+	$(OPENOCD_EXTRA_ARGS)
+GDB_ARGS += -ex 'target extended-remote | openocd $(OPENOCD_ARGS)'
 
 # Program the device.
 .PHONY: program
