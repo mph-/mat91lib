@@ -1,5 +1,3 @@
-PERIPHERALS += pit sysclock systick
-
 include $(foreach peripheral, $(PERIPHERALS), $(MAT91LIB_DIR)/$(peripheral)/$(peripheral).mk)
 
 # Perform second pass for the peripherals that depend on other peripherals
