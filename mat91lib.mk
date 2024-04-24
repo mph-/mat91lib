@@ -184,4 +184,4 @@ TARGET_HEX = $(TARGET:.bin=.hex)
 
 .PHONY: hex
 hex: $(TARGET)
-	objcopy -O ihex $(TARGET) $(TARGET_HEX)
+	$(OBJCOPY) -O ihex $(TARGET) $(TARGET_HEX)
