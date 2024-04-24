@@ -48,9 +48,11 @@ TARGET_MAP = $(addsuffix .map, $(basename $(TARGET)))
 
 ifneq (, $(findstring SAM7, $(MCU)))
 FAMILY = sam7
+OPENOCD_SCRIPT ?= sam7_ft2232.cfg
 else
 ifneq (, $(findstring SAM4S, $(MCU)))
 FAMILY = sam4s
+OPENOCD_SCRIPT ?= sam4s_stlink.cfg
 else
 $(error unknown family)
 endif
@@ -159,25 +161,31 @@ ifdef CLEAN_EXTRA_PATHS
 	-$(DEL) -r $(CLEAN_EXTRA_PATHS)
 endif
 
+OPENOCD_ARGS = \
+	-c "gdb_port pipe" \
+	-f "$(SCRIPTS)/$(OPENOCD_SCRIPT)" \
+	$(OPENOCD_EXTRA_ARGS)
+GDB_ARGS += -ex 'target extended-remote | openocd $(OPENOCD_ARGS)'
+
 # Program the device.
 .PHONY: program
 program: $(TARGET)
-	$(GDB) -batch -x $(SCRIPTS)/program.gdb $<
+	$(GDB) -batch $(GDB_ARGS) -x $(SCRIPTS)/program.gdb $<
 
 # Reset the device.
 .PHONY: reset
 reset:
-	$(GDB) -batch -x $(SCRIPTS)/reset.gdb $(TARGET)
+	$(GDB) -batch $(GDB_ARGS) -x $(SCRIPTS)/reset.gdb $(TARGET)
 
 # Enable booting from flash.
 .PHONY: bootflash
 bootflash:
-	$(GDB) -batch -x $(SCRIPTS)/bootflash.gdb
+	$(GDB) -batch $(GDB_ARGS) -x $(SCRIPTS)/bootflash.gdb
 
 # Attach debugger.
 .PHONY: debug
 debug: $(TARGET)
-	$(GDB) -x $(SCRIPTS)/debug.gdb $<
+	$(GDB) $(GDB_ARGS) -x $(SCRIPTS)/debug.gdb $<
 
 # Create Intel hex file.
 TARGET_HEX = $(TARGET:.bin=.hex)

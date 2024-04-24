@@ -1,6 +1,3 @@
-# OpenOCD port for GDB communications
-target remote tcp:localhost:3333
-
 # Enabling DCC downloads boosted download speed from 26kB/s to 154kB/s
 monitor arm7_9 dcc_downloads enable
 
