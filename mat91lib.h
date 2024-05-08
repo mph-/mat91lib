@@ -42,10 +42,6 @@ extern "C" {
 #define __packed__
 #endif
 
-#ifndef __inline
-#define __inline static inline
-#endif
-
 #if defined (__SAM7__)
 #include "sam7.h"
 #elif defined (__SAM4S__)
