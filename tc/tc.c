@@ -36,6 +36,11 @@
    these 64 bit counters will take 3000 years to overflow!
 */
 
+#ifndef TC_IRQ_PRIORITY
+#define TC_IRQ_PRIORITY 7
+#endif
+
+
 #define TC_CHANNEL(TC) ((TC) - tc_devices)
 
 
@@ -739,17 +744,17 @@ tc_init (const tc_cfg_t *cfg)
     {
     case TC_CHANNEL_0:
         tc->base = TC0_BASE;
-        irq_config (ID_TC0, 7, tc_handler0);
+        irq_config (ID_TC0, TC_IRQ_PRIORITY, tc_handler0);
         break;
 
     case TC_CHANNEL_1:
         tc->base = TC1_BASE;
-        irq_config (ID_TC1, 7, tc_handler1);
+        irq_config (ID_TC1, TC_IRQ_PRIORITY, tc_handler1);
         break;
 
     case TC_CHANNEL_2:
         tc->base = TC2_BASE;
-        irq_config (ID_TC2, 7, tc_handler2);
+        irq_config (ID_TC2, TC_IRQ_PRIORITY, tc_handler2);
         break;
     }
 
@@ -795,7 +800,7 @@ tc_clock_sync (tc_t tc, tc_period_t period)
 
     id = ID_TC0 + TC_CHANNEL (tc);
 
-    irq_config (id, 7, tc_clock_sync_handler);
+    irq_config (id, TC_IRQ_PRIORITY, tc_clock_sync_handler);
 
     irq_enable (id);
 
