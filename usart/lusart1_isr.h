@@ -72,24 +72,6 @@ lusart1_isr (void)
 
     status = USART1->US_CSR;
 
-    if (USART1_TX_IRQ_ENABLED_P () && ((status & US_CSR_TXRDY) != 0))
-    {
-        if (dev->tx_in == dev->tx_out)
-        {
-            char ch;
-
-            ch = dev->tx_buffer[dev->tx_out];
-            dev->tx_out++;
-            if (dev->tx_out >= dev->tx_size)
-                dev->tx_out = 0;
-
-            USART1_TX_FLOW_CONTROL;
-            USART1_WRITE (ch);
-        }
-        else
-            USART1_TX_IRQ_DISABLE ();
-    }
-
     if ((status & US_CSR_RXRDY) != 0)
     {
         char ch;
@@ -106,6 +88,24 @@ lusart1_isr (void)
             if (dev->rx_in >= dev->rx_size)
                 dev->rx_in = 0;
         }
+    }
+
+    if (USART1_TX_IRQ_ENABLED_P () && ((status & US_CSR_TXRDY) != 0))
+    {
+        if (dev->tx_in == dev->tx_out)
+        {
+            char ch;
+
+            ch = dev->tx_buffer[dev->tx_out];
+            dev->tx_out++;
+            if (dev->tx_out >= dev->tx_size)
+                dev->tx_out = 0;
+
+            USART1_TX_FLOW_CONTROL;
+            USART1_WRITE (ch);
+        }
+        else
+            USART1_TX_IRQ_DISABLE ();
     }
 }
 
