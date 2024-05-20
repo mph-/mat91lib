@@ -3,7 +3,7 @@
     @date   2 Jun 2007
     @brief  PIO abstraction for SAM4S microcontroller.
     @note   Macros and inline functions are used to avoid function
-            call overhead and to allow compile-time constant folding. 
+            call overhead and to allow compile-time constant folding.
 */
 #ifndef PIO_H
 #define PIO_H
@@ -11,7 +11,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 
 #include "config.h"
 #include "mcu.h"
@@ -51,7 +51,7 @@ enum {PORT_A, PORT_B, PORT_C};
 
 typedef uint32_t pio_mask_t;
 
-typedef enum pio_config_enum 
+typedef enum pio_config_enum
 {
     PIO_INPUT = 1,          /* Configure as input pin.  */
     PIO_PULLUP,             /* Configure as input pin with pullup.  */
@@ -172,7 +172,7 @@ typedef enum pio_config_enum
 #define TIOB1_PIO PA16_PIO
 #define TIOB1_PERIPH PIO_PERIPH_B
 #define TIOB2_PIO PA27_PIO
-#define TIOB2_PERIPH PIO_PERIPH_B    
+#define TIOB2_PERIPH PIO_PERIPH_B
 
 /* TWI  */
 #define TWD0_PIO PA3_PIO
@@ -249,6 +249,7 @@ pio_config_set (pio_t pio, pio_config_t config)
         PIO_BASE (pio)->PIO_PER = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_OER = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PPDDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_OUTPUT_LOW:
@@ -256,12 +257,14 @@ pio_config_set (pio_t pio, pio_config_t config)
         PIO_BASE (pio)->PIO_PER = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_OER = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PPDDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_INPUT:
         PIO_BASE (pio)->PIO_ODR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PER = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PPDDR = PIO_BITMASK_ (pio);
         pio_init (pio);
         return 1;
 
@@ -269,6 +272,15 @@ pio_config_set (pio_t pio, pio_config_t config)
         PIO_BASE (pio)->PIO_ODR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PER = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PPDDR = PIO_BITMASK_ (pio);
+        pio_init (pio);
+        return 1;
+
+    case PIO_PULLDOWN:
+        PIO_BASE (pio)->PIO_ODR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PER = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PPDER = PIO_BITMASK_ (pio);
         pio_init (pio);
         return 1;
 
@@ -277,6 +289,7 @@ pio_config_set (pio_t pio, pio_config_t config)
         PIO_BASE (pio)->PIO_ABCDSR[1] &= ~PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PDR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PPDDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_PERIPH_B:
@@ -284,6 +297,7 @@ pio_config_set (pio_t pio, pio_config_t config)
         PIO_BASE (pio)->PIO_ABCDSR[1] &= ~PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PDR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PPDDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_PERIPH_C:
@@ -291,6 +305,7 @@ pio_config_set (pio_t pio, pio_config_t config)
         PIO_BASE (pio)->PIO_ABCDSR[0] &= ~PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PDR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PPDDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_PERIPH_A_PULLUP:
@@ -298,6 +313,7 @@ pio_config_set (pio_t pio, pio_config_t config)
         PIO_BASE (pio)->PIO_ABCDSR[1] &= ~PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PDR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PPDDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_PERIPH_B_PULLUP:
@@ -305,6 +321,7 @@ pio_config_set (pio_t pio, pio_config_t config)
         PIO_BASE (pio)->PIO_ABCDSR[1] |= PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PDR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PPDDR = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_PERIPH_C_PULLUP:
@@ -312,6 +329,7 @@ pio_config_set (pio_t pio, pio_config_t config)
         PIO_BASE (pio)->PIO_ABCDSR[0] |= PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PDR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PPDDR = PIO_BITMASK_ (pio);
         return 1;
 
     default:
@@ -331,7 +349,7 @@ pio_output_high (pio_t pio)
 
 /** Set PIO low.
     @param pio  */
-static __always_inline__ __attribute__((optimize (2))) void 
+static __always_inline__ __attribute__((optimize (2))) void
 pio_output_low (pio_t pio)
 {
     PIO_BASE (pio)->PIO_CODR = PIO_BITMASK_ (pio);
@@ -339,7 +357,7 @@ pio_output_low (pio_t pio)
 
 
 /** Set PIO to desired state.
-    @param pio 
+    @param pio
     @param state  */
 static __always_inline__ __attribute__((optimize (2))) void
 pio_output_set (pio_t pio, bool state)
@@ -385,19 +403,19 @@ void
 pio_shutdown (pio_t pio);
 
 
-typedef enum pio_irq_config_enum 
+typedef enum pio_irq_config_enum
 {
-    PIO_IRQ_FALLING_EDGE = 1, 
-    PIO_IRQ_RISING_EDGE, 
-    PIO_IRQ_ANY_EDGE, 
-    PIO_IRQ_LOW_LEVEL, 
+    PIO_IRQ_FALLING_EDGE = 1,
+    PIO_IRQ_RISING_EDGE,
+    PIO_IRQ_ANY_EDGE,
+    PIO_IRQ_LOW_LEVEL,
     PIO_IRQ_HIGH_LEVEL
 } pio_irq_config_t;
 
 
 /** Configure PIO for interrupt
     @param pio  */
-static inline bool 
+static inline bool
 pio_irq_config_set (pio_t pio, pio_irq_config_t config)
 {
 
@@ -478,6 +496,5 @@ pio_irq_clear (pio_t pio)
 
 #ifdef __cplusplus
 }
-#endif    
 #endif
-
+#endif

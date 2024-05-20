@@ -15,6 +15,10 @@
 
    With a 120 MHz clock the longest delay is (1 << 24) / 120e6 = 0.14 s
    corresponding to a lowest frequency of 7.2 Hz.
+
+   The SysRick counter is clocked from the processor clock.  Thus
+   SysTick stops if the processor clock is stopped for low power mode.
+   SysTick also stops when the processor is halted for debugging.
  */
 
 void

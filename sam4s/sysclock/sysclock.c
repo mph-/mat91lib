@@ -12,6 +12,12 @@
 #include "irq.h"
 
 
+// Default to lowest IRQ priority
+#ifndef SYSCLOCK_IRQ_PRIORITY
+#define SYSCLOCK_IRQ_PRIORITY 15
+#endif
+
+
 typedef struct sysclock_dev_struct
 {
     // This rolls over about every 50 days
@@ -40,16 +46,19 @@ sysclock_clocks_t sysclock_clocks (void)
     uint32_t millis1;
     sysclock_clocks_t clocks;
 
-    irq_global_disable ();
+    // Disable SysTick interrupt.
+    SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;
+
     millis1 = sysclock_dev.millis;
 
-    // Look for pending systick interrupt
+    // Look for pending systick interrupt.
     if (SCB->ICSR & SCB_ICSR_PENDSTSET_Msk)
         millis1++;
 
-    irq_global_enable ();
-
     clocks = (sysclock_clocks_t)millis1 * SYSCLOCK_MS_CLOCKS + systick_clocks_get ();
+
+    // Enable SysTick interrupt.
+    SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;
 
     return clocks;
 }
@@ -118,7 +127,7 @@ bool sysclock_micros_elapsed (sysclock_clocks_t from_clocks, uint32_t delay_us)
 
 void sysclock_callback (sysclock_callback_t callback)
 {
-    // Could register multiple callbacks;
+    // Could register multiple callbacks.
     sysclock_dev.callback = callback;
 }
 
@@ -127,8 +136,8 @@ int
 sysclock_init (void)
 {
     systick_init (SYSCLOCK_MS_CLOCKS);
-    // Set to lowest priority
-    irq_config (SysTick_IRQn, 15, sysclock_handler);
+
+    irq_config (SysTick_IRQn, SYSCLOCK_IRQ_PRIORITY, sysclock_handler);
 
     // Enable SysTick interrupt.
     SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;
