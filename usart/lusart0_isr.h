@@ -79,7 +79,7 @@ lusart0_isr (void)
         ch = USART0_READ ();
         if (USART0_ALLOW_NULL || ch)
         {
-            /* What about buffer overflow?  */
+            /* What about buffer overflow?  This will screw up the newline count. */
             dev->rx_buffer[dev->rx_in] = ch;
             if (ch == '\n')
                 dev->rx_nl_in++;

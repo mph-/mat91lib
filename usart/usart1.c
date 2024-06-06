@@ -12,6 +12,7 @@
 /* Temporary hack.  */
 #undef USART1_USE_HANDSHAKING
 
+/* Data is sent LSB first.  */
 
 /* Define in target.h to use hardware flow control.   */
 #ifdef USART1_USE_HANDSHAKING
@@ -42,13 +43,13 @@ usart1_init (uint16_t baud_divisor)
     pio_config_set (RTS1_PIO, RTS1_PERIPH);
     pio_config_set (CTS1_PIO, CTS1_PERIPH);
 #endif
-    
+
     /* Enable USART1 clock.  */
     mcu_pmc_enable (ID_USART1);
-    
+
     /* Reset and disable receiver and transmitter.  */
-    USART1->US_CR = US_CR_RSTRX | US_CR_RSTTX          
-        | US_CR_RXDIS | US_CR_TXDIS;           
+    USART1->US_CR = US_CR_RSTRX | US_CR_RSTTX
+        | US_CR_RXDIS | US_CR_TXDIS;
 
     /* Set normal mode, clock = MCK, 8-bit data, no parity, 1 stop bit.  */
     USART1->US_MR = USART1_MODE
@@ -57,8 +58,8 @@ usart1_init (uint16_t baud_divisor)
     usart1_baud_divisor_set (baud_divisor);
 
     /* Enable receiver and transmitter.  */
-    USART1->US_CR = US_CR_RXEN | US_CR_TXEN; 
-    
+    USART1->US_CR = US_CR_RXEN | US_CR_TXEN;
+
     return 1;
 }
 
@@ -72,10 +73,10 @@ usart1_shutdown (void)
 
     /* Disable USART1 clock.  */
     mcu_pmc_disable (ID_USART1);
-    
+
     /* Reset and disable receiver and transmitter.  */
-    USART1->US_CR = US_CR_RSTRX | US_CR_RSTTX          
-        | US_CR_RXDIS | US_CR_TXDIS;           
+    USART1->US_CR = US_CR_RSTRX | US_CR_RSTTX
+        | US_CR_RXDIS | US_CR_TXDIS;
 }
 
 
@@ -144,4 +145,3 @@ usart1_puts (const char *str)
     }
     return 1;
 }
-

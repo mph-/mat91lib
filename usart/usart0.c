@@ -12,6 +12,7 @@
 /* Temporary hack.  */
 #undef USART0_USE_HANDSHAKING
 
+/* Data is sent LSB first.  */
 
 /* Define in target.h to use hardware flow control.   */
 #ifdef USART0_USE_HANDSHAKING
