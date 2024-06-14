@@ -79,14 +79,27 @@ lusart0_isr (void)
         ch = USART0_READ ();
         if (USART0_ALLOW_NULL || ch)
         {
-            /* What about buffer overflow?  This will screw up the newline count. */
-            dev->rx_buffer[dev->rx_in] = ch;
-            if (ch == '\n')
-                dev->rx_nl_in++;
+            uint16_t rx_in;
 
-            dev->rx_in++;
-            if (dev->rx_in >= dev->rx_size)
-                dev->rx_in = 0;
+            rx_in = dev->rx_in;
+
+            rx_in++;
+            if (rx_in >= dev->rx_size)
+                rx_in = 0;
+
+            if (rx_in != dev->rx_out)
+            {
+                dev->rx_buffer[dev->rx_in] = ch;
+                dev->rx_in = rx_in;
+                if (ch == '\n')
+                    dev->rx_nl_in++;
+            }
+            else
+            {
+                // Drop the received character if it won't fit in
+                // the buffer.
+                dev->rx_overruns++;
+            }
         }
     }
 

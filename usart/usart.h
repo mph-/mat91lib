@@ -61,6 +61,10 @@ typedef struct usart_dev_struct usart_dev_t;
 
 typedef usart_dev_t *usart_t;
 
+
+/* The maximum baud rate is F_CPU / 16 or 7.5 MHz with a 120 MHz CPU
+   clock.  It can be increased to F_CPU / 8 by setting the over
+   bit.  */
 #define USART_BAUD_DIVISOR(BAUD_RATE) USART0_BAUD_DIVISOR(BAUD_RATE)
 
 
