@@ -10,7 +10,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 
 #include "sys.h"
 
@@ -37,10 +37,13 @@ usart0_write_finished_p (void);
 int
 usart0_putc (char ch);
 
+/* Set baud rate.  */
+void
+usart0_baud_divisor_set (uint16_t baud_divisor);
+
 /* Initialise USART0 and set baud rate.  */
 int
 usart0_init (uint16_t baud_divisor);
-
 
 /* Shutdown USART0 in preparation for sleep.  */
 void
@@ -49,6 +52,5 @@ usart0_shutdown (void);
 
 #ifdef __cplusplus
 }
-#endif    
 #endif
-
+#endif

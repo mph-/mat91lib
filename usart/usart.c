@@ -1,15 +1,15 @@
 /** @file   usart.c
     @author M. P. Hayes, UCECE
     @date   21 June 2007
-    @brief  Unbuffered USART implementation. 
+    @brief  Unbuffered USART implementation.
     @note   This driver is a wrapper for USARTx and provides a USART
    independent interface.
 
    This needs updating to be more general and to provide
-   support for synchronous operation. 
+   support for synchronous operation.
 
    If code memory is at a premium, a USART can be disabled in the
-   target.h file, e.g., using #define USART0_ENABLE 0. 
+   target.h file, e.g., using #define USART0_ENABLE 0.
 
    Both USART0 and USART1 have CTS/RTS flow control pins:
 
@@ -43,6 +43,7 @@ struct usart_dev_struct
     bool (*read_ready_p) (void);
     bool (*write_ready_p) (void);
     bool (*write_finished_p) (void);
+    void (*baud_divisor_set) (int);
     uint32_t read_timeout_us;
     uint32_t write_timeout_us;
 };
@@ -54,7 +55,9 @@ struct usart_dev_struct
 
 static usart_dev_t usart0_dev = {usart0_putc, usart0_getc,
                                  usart0_read_ready_p, usart0_write_ready_p,
-                                 usart0_write_finished_p, 0, 0};
+                                 usart0_write_finished_p,
+                                 usart0_baud_divisor_set,
+                                 0, 0};
 #endif
 
 #if USART1_ENABLE
@@ -62,11 +65,13 @@ static usart_dev_t usart0_dev = {usart0_putc, usart0_getc,
 
 static usart_dev_t usart1_dev = {usart1_putc, usart1_getc,
                                  usart1_read_ready_p, usart1_write_ready_p,
-                                 usart1_write_finished_p, 0, 0};
+                                 usart1_write_finished_p,
+                                 usart1_baud_divisor_set,
+                                 0, 0};
 #endif
 
 
-usart_t 
+usart_t
 usart_init (const usart_cfg_t *cfg)
 {
     usart_dev_t *dev = 0;
@@ -129,13 +134,29 @@ usart_write_finished_p (usart_t usart)
 }
 
 
+void
+usart_baud_divisor_set (usart_t usart, int baud_divisor)
+{
+    usart_dev_t *dev = usart;
+
+    return dev->baud_divisor_set (baud_divisor);
+}
+
+
+void
+usart_baud_rate_set (usart_t usart, int baud_rate)
+{
+    usart_baud_divisor_set (usart, USART_BAUD_DIVISOR (baud_rate));
+}
+
+
 /** Read size bytes.  */
 static int16_t
 usart_read_nonblock (usart_t usart, void *data, uint16_t size)
 {
     uint16_t count = 0;
     char *buffer = data;
-    usart_dev_t *dev = usart;    
+    usart_dev_t *dev = usart;
 
     for (count = 0; count < size; count++)
     {
@@ -160,7 +181,7 @@ usart_write_nonblock (usart_t usart, const void *data, uint16_t size)
 {
     uint16_t count = 0;
     const char *buffer = data;
-    usart_dev_t *dev = usart;    
+    usart_dev_t *dev = usart;
 
     for (count = 0; count < size; count++)
     {
@@ -185,7 +206,7 @@ ssize_t
 usart_read (void *usart, void *data, size_t size)
 {
     usart_dev_t *dev = usart;
-    
+
     return sys_read_timeout (usart, data, size, dev->read_timeout_us,
                              (void *)usart_read_nonblock);
 }
@@ -197,7 +218,7 @@ ssize_t
 usart_write (void *usart, const void *data, size_t size)
 {
     usart_dev_t *dev = usart;
-    
+
     return sys_write_timeout (usart, data, size, dev->write_timeout_us,
                               (void *)usart_write_nonblock);
 }
@@ -209,7 +230,7 @@ usart_getc (usart_t usart)
 {
     int ret;
     char ch;
-    
+
     ret = usart_read (usart, &ch, 1);
     if (ret == 1)
         return ch;
@@ -222,7 +243,7 @@ int
 usart_putc (usart_t usart, char ch)
 {
     int ret;
-    
+
     ret = usart_write (usart, &ch, 1);
     if (ret == 1)
         return ch;
@@ -230,7 +251,7 @@ usart_putc (usart_t usart, char ch)
 }
 
 
-/** Write string.  In non-blocking mode this is likely to 
+/** Write string.  In non-blocking mode this is likely to
     ignore all but the first character.  */
 int
 usart_puts (usart_t usart, const char *str)
@@ -238,7 +259,7 @@ usart_puts (usart_t usart, const char *str)
     while (*str)
     {
         int ret;
-        
+
         ret = usart_putc (usart, *str++);
         if (ret < 1)
             return ret;

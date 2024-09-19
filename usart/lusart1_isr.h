@@ -131,6 +131,7 @@ lusart1_init (uint16_t baud_divisor)
     dev->tx_irq_enable = lusart1_tx_irq_enable;
     dev->rx_irq_enable = lusart1_rx_irq_enable;
     dev->tx_finished_p = lusart1_tx_finished_p;
+    dev->baud_divisor_set = usart1_baud_divisor_set;
 
     usart1_init (baud_divisor);
 
