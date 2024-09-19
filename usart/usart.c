@@ -43,7 +43,7 @@ struct usart_dev_struct
     bool (*read_ready_p) (void);
     bool (*write_ready_p) (void);
     bool (*write_finished_p) (void);
-    void (*baud_divisor_set) (int);
+    void (*baud_divisor_set) (uint16_t);
     uint32_t read_timeout_us;
     uint32_t write_timeout_us;
 };
