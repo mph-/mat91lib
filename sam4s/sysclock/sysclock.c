@@ -143,3 +143,10 @@ sysclock_init (void)
     SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;
     return 1;
 }
+
+
+void
+sysclock_disable (void)
+{
+    SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;
+}

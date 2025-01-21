@@ -13,10 +13,12 @@ extern "C" {
 
 #include "config.h"
 
-// Number of clocks per millisecond.
+#define SYSCLOCK_HZ 1000
+
+// Number of CPU clocks per millisecond.
 #define SYSCLOCK_MS_CLOCKS ((int)(F_CPU * 1e-3))
 
-// Number of clocks per microsecond.
+// Number of CPU clocks per microsecond.
 #define SYSCLOCK_US_CLOCKS ((int)(F_CPU * 1e-6))
 
 // This rolls over every 4874 years at 120 MHz (32 bits rolls over
@@ -49,6 +51,8 @@ void sysclock_callback (sysclock_callback_t callback);
 
 /** Initialise sysclock.  */
 int sysclock_init (void);
+
+void sysclock_disable (void);
 
 
 #ifdef __cplusplus
