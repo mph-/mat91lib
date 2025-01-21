@@ -261,7 +261,7 @@ mcu_clock_init (void)
     {
         PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_CSS_Msk))
             | PMC_MCKR_CSS_MAIN_CLK;
-        if (!mcu_mck_ready_wait ())
+        if (! mcu_mck_ready_wait ())
             return 0;
     }
 
@@ -279,7 +279,7 @@ mcu_clock_init (void)
     /* Select MAINCK for MCK (this should already be selected).  */
     PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_CSS_Msk))
         | PMC_MCKR_CSS_MAIN_CLK;
-    if (!mcu_mck_ready_wait ())
+    if (! mcu_mck_ready_wait ())
         return 0;
 
     /* TODO: disable RC oscillator if using XTAL oscillator.  */
@@ -287,7 +287,7 @@ mcu_clock_init (void)
     /* Set prescaler.  */
     PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_PRES_Msk)) | (MCU_MCK_PRESCALER_VALUE << 4);
 
-    if (!mcu_mck_ready_wait ())
+    if (! mcu_mck_ready_wait ())
         return 0;
 
     /* Could disable internal fast RC oscillator here if not being used.  */
@@ -323,7 +323,7 @@ mcu_clock_init (void)
     /* Switch to PLLA_CLCK for MCK.  */
     PMC->PMC_MCKR = (PMC->PMC_MCKR & (~PMC_MCKR_CSS_Msk))
         | PMC_MCKR_CSS_PLLA_CLK;
-    if (!mcu_mck_ready_wait ())
+    if (! mcu_mck_ready_wait ())
         return 0;
 
     return 1;
@@ -416,24 +416,24 @@ mcu_reset (void)
 }
 
 
-void
+int
 mcu_select_slowclock (void)
 {
     /* Switch master clock (MCK) from PLLACLK to SLCK.  Note the prescale
        (PRES) and clock source (CSS) fields cannot be changed at the
        same time.  We first switch from the PLLACLK to SLCK then set
-       the prescaler to divide by 64.  */
-    PMC->PMC_MCKR = (PMC->PMC_MCKR & PMC_MCKR_PRES_Msk)
+       the prescaler to divide by 1.  */
+    PMC->PMC_MCKR = (PMC->PMC_MCKR & ~PMC_MCKR_CSS_Msk)
         | PMC_MCKR_CSS_SLOW_CLK;
 
-    while (!(PMC->PMC_SR & PMC_SR_MCKRDY))
+    while (! (PMC->PMC_SR & PMC_SR_MCKRDY))
         continue;
 
-    /* Set prescaler to divide by 64.  */
-    PMC->PMC_MCKR = (PMC->PMC_MCKR & PMC_MCKR_CSS_Msk)
-        | PMC_MCKR_PRES_CLK_64;
+    /* Set prescaler to divide by 1.  */
+    PMC->PMC_MCKR = (PMC->PMC_MCKR & ~PMC_MCKR_PRES_Msk)
+        | PMC_MCKR_PRES_CLK_1;
 
-    while (!(PMC->PMC_SR & PMC_SR_MCKRDY))
+    while (! (PMC->PMC_SR & PMC_SR_MCKRDY))
         continue;
 
     /* Disable PLLA.  */
@@ -441,6 +441,8 @@ mcu_select_slowclock (void)
 
     /* Disable main oscillator.  */
     PMC->CKGR_MOR = CKGR_MOR_KEY (0x37);
+
+    return 0;
 }
 
 
@@ -460,16 +462,7 @@ mcu_power_mode_normal (void)
 
 void mcu_cpu_idle (void)
 {
-#if 0
-    /* TODO.  */
-
-    /* Turn off CPU clock after current instruction.  It will be
-       re-enabled when an interrupt occurs.  */
-    PMC->PMC_SCDR = PMC_PCK;
-
-    while ((PMC->PMC_SCSR & PMC_PCK) != PMC_PCK)
-        continue;
-#endif
+    cpu_wfi ();
 }
 
 
@@ -545,14 +538,14 @@ mcu_power_mode_low (void)
     PMC->PMC_MCKR = (PMC->PMC_MCKR & AT91C_PMC_PRES)
         | AT91C_PMC_CSS_SLOW_CLK;
 
-    while (!(PMC->PMC_SR & AT91C_PMC_MCKRDY))
+    while (! (PMC->PMC_SR & AT91C_PMC_MCKRDY))
         continue;
 
     /* Set prescaler to divide by 64.  */
     PMC->PMC_MCKR = (PMC->PMC_MCKR & AT91C_PMC_CSS)
         | AT91C_PMC_PRES_CLK_64;
 
-    while (!(PMC->PMC_SR & AT91C_PMC_MCKRDY))
+    while (! (PMC->PMC_SR & AT91C_PMC_MCKRDY))
         continue;
 
     /* Disable PLL.  */

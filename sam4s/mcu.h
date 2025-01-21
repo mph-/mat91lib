@@ -46,7 +46,7 @@ void
 mcu_init (void);
 
 
-void
+int
 mcu_select_slowclock (void);
 
 
