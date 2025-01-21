@@ -271,14 +271,16 @@ pio_config_set (pio_t pio, pio_config_t config)
     case PIO_PULLUP:
         PIO_BASE (pio)->PIO_ODR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PER = PIO_BITMASK_ (pio);
-        PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
+        // Need to disable pulldown first.
         PIO_BASE (pio)->PIO_PPDDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
         pio_init (pio);
         return 1;
 
     case PIO_PULLDOWN:
         PIO_BASE (pio)->PIO_ODR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PER = PIO_BITMASK_ (pio);
+        // Need to disable pullup first.
         PIO_BASE (pio)->PIO_PUDR = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PPDER = PIO_BITMASK_ (pio);
         pio_init (pio);
@@ -312,24 +314,24 @@ pio_config_set (pio_t pio, pio_config_t config)
         PIO_BASE (pio)->PIO_ABCDSR[0] &= ~PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_ABCDSR[1] &= ~PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PDR = PIO_BITMASK_ (pio);
-        PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PPDDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_PERIPH_B_PULLUP:
         PIO_BASE (pio)->PIO_ABCDSR[0] &= ~PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_ABCDSR[1] |= PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PDR = PIO_BITMASK_ (pio);
-        PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PPDDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
         return 1;
 
     case PIO_PERIPH_C_PULLUP:
         PIO_BASE (pio)->PIO_ABCDSR[1] &= ~PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_ABCDSR[0] |= PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PDR = PIO_BITMASK_ (pio);
-        PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
         PIO_BASE (pio)->PIO_PPDDR = PIO_BITMASK_ (pio);
+        PIO_BASE (pio)->PIO_PUER = PIO_BITMASK_ (pio);
         return 1;
 
     default:
