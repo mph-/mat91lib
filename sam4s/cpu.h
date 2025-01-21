@@ -9,7 +9,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 
 #include "config.h"
 #include "bits.h"
@@ -17,8 +17,8 @@ extern "C" {
 
 /** Set the stack pointer of the current mode
     @param stack pointer initial value.  */
-__inline __attribute__ ((always_inline)) 
-void cpu_sp_set (uint32_t val) 
+__inline __attribute__ ((always_inline))
+void cpu_sp_set (uint32_t val)
 {
     register uint32_t sp __asm__ ("sp") = val;
 
@@ -40,8 +40,14 @@ cpu_wfi (void)
     __asm__ ("\twfi");
 }
 
+
+static inline void
+cpu_wfe (void)
+{
+    __asm__ ("\twfe");
+}
+
 #ifdef __cplusplus
 }
-#endif    
+#endif
 #endif /* CPU_H  */
-
