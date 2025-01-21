@@ -45,7 +45,7 @@ void cadc_sync (cadc_t dev, uint8_t channel)
 {
     uint8_t val;
 
-    // FIXME, brutal hack to fix ADC synchronisation.  This blocks
+    // FIXME, brutal hack to fix ADC channel synchronisation.  This blocks
     // and should have a timeout.
     while (1)
     {
@@ -105,10 +105,14 @@ cadc_t cadc_init (const cadc_cfg_t *cfg)
 
     adc_calibrate (dev->adc);
 
-    // Enable tagging of the data.  The four MSBs of each 16-bit sample
-    // specify the channel number.  This is useful for when the ADC MUX
-    // gets out of whack.
-    adc_tag_set (dev->adc, 1);
+    if (cfg->tag)
+    {
+        // Enable tagging of the data.  The four MSBs of each 16-bit sample
+        // specify the channel number.  This is useful for when the ADC MUX
+        // gets out of whack.
+        adc_tag_set (dev->adc, 1);
+    }
+
     adc_config (dev->adc);
 
     channels = cfg->adc.channels;

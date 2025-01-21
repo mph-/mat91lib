@@ -25,6 +25,7 @@ typedef struct
     uint16_t dma_size;
     // Minimum 3.
     uint8_t num_buffers;
+    uint8_t tag;
 } cadc_cfg_t;
 
 
