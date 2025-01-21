@@ -118,7 +118,7 @@ adc_trigger_set (adc_t adc, adc_trigger_t trigger)
 {
     adc->trigger = trigger;
 
-    /* Could also handle FREERUN here where no triggering is
+    /* Could also handle FREERUN here when no triggering is
        required.  */
 
     if (trigger == ADC_TRIGGER_SW)
@@ -151,6 +151,7 @@ adc_clock_divisor_set (adc_t adc, adc_clock_divisor_t clock_divisor)
     if (clock_divisor >= 256)
         clock_divisor = 256;
 
+    /* Set PRESCAL, the prescaler, to set ADC clock.  */
     BITS_INSERT (adc->MR, clock_divisor - 1, 8, 15);
     adc->clock_divisor = clock_divisor;
     adc_config_dirty = 1;
@@ -176,20 +177,30 @@ adc_clock_speed_kHz_set (adc_t adc, adc_clock_speed_t clock_speed_kHz)
     adc_clock_divisor_set (adc, ((F_CPU_UL / 2) + clock_speed - 1) / clock_speed);
     clock_speed = (F_CPU / 2) / adc->clock_divisor;
 
+    /* TRANSFER: This seems to require 4 clocks.  The field must be
+       programmed with a value of 2.  */
+    BITS_INSERT (adc->MR, 28, 29, 2);
+
+    /* TRACKTIM: With 24 MHz clock need 4.5 clocks to switch MUX and
+       hold sample with SHA with 1 kohm input resistance.  Let's
+       allocate 8.  If it less than 15 it has no effect on the
+       sampling rate since the acquistions and conversions are
+       pipelined.  */
+    BITS_INSERT (adc->MR, 8 - 1, 24, 27);
+
+    /* SETTLING: Need 200 ns to settle on SAM4S.  With 24 MHz clock
+       need 4.8 clocks.  This is only needed when switching gain or
+       offset, say when converting a sequence of channels.  Let's
+       allocate 5 clocks.  */
+    BITS_INSERT (adc->MR, 1, 20, 21);
+
     /* STARTUP: With 24 MHz clock need 288 clocks to start up on
        SAM4S.  Let's allocate 512.  TODO, scan through table to find
        appropriate value.  */
     BITS_INSERT (adc->MR, 8, 16, 19);
 
-    /* SETTLING: With 24 MHz clock need 4.8 clocks to settle on SAM4S.
-       This is only needed when switching gain or offset, say when
-       converting a sequence of channels.  Let's play safe and
-       allocate the maximum 17 clocks.  */
-    BITS_INSERT (adc->MR, 3, 20, 21);
-
-    /* TRACKTIM: With 24 MHz clock need 3.4 clocks to sample on SAM4S.
-       Let's allocate 4.  */
-    BITS_INSERT (adc->MR, 3, 24, 27);
+    /* The conversion time seems to be 20 clocks.  With 4 clocks for
+       the transfer time, this implies 24 clocks per conversion.  */
 
     adc_config_dirty = 1;
 
