@@ -57,10 +57,15 @@ typedef enum
     TC_MODE_CAPTURE_RISE_FALL,
     TC_MODE_CAPTURE_FALL_RISE,
     TC_MODE_CAPTURE_FALL_FALL,
+    TC_MODE_RESET_RISE_CAPTURE_RISE_RISE,
     /** Triggering of ADC (this doesn't use the TC pin).  */
     TC_MODE_ADC,
+    /** Triggering of ADC or DAC (this drives the TC pin).  */
+    TC_MODE_ADC_TEST,
     /** Triggering of ADC or DAC (this doesn't use the TC pin).  */
     TC_MODE_TRIGGER = TC_MODE_ADC,
+    /** Triggering of ADC or DAC (this drives the TC pin).  */
+    TC_MODE_TRIGGER_TEST = TC_MODE_ADC_TEST,
     /** Free running counter (this doesn't use the TC pin).  */
     TC_MODE_COUNTER,
     /** Periodic interrupt (this doesn't use the TC pin).  */
@@ -130,22 +135,32 @@ tc_ret_t
 tc_config_set (tc_t tc, const tc_cfg_t *cfg);
 
 
+/** Enable TC clock but do not trigger a start.  Need to use tc_sync.  */
+tc_ret_t
+tc_enable (tc_t tc);
+
+
+/** Enable TC clock and trigger a start.  */
 tc_ret_t
 tc_start (tc_t tc);
 
 
+/** Stop TC clock.  */
 tc_ret_t
 tc_stop (tc_t tc);
 
 
+/** Get TC counter value.  */
 tc_counter_t
 tc_counter_get (tc_t tc);
 
 
+/** Read specified TC capture register (A or B).  */
 tc_counter_t
 tc_capture_get (tc_t tc, tc_capture_t reg);
 
 
+/** Poll to see if the capture registers have been loaded.  */
 tc_capture_mask_t
 tc_capture_poll (tc_t tc);
 

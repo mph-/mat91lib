@@ -143,9 +143,18 @@ void tc_handler2 (void)
 
 
 tc_ret_t
+tc_enable (tc_t tc)
+{
+    /* Enable the counter.  Note, the TC_CCR register is write only.  */
+    tc->base->TC_CCR |= TC_CCR_CLKEN;
+    return TC_OK;
+}
+
+
+tc_ret_t
 tc_start (tc_t tc)
 {
-    /* The TC_CCR register is write only.  */
+    /* Start the counter.  Note, the TC_CCR register is write only.  */
     tc->base->TC_CCR |= TC_CCR_CLKEN | TC_CCR_SWTRG;
     return TC_OK;
 }
@@ -227,11 +236,13 @@ tc_capture_get (tc_t tc, tc_capture_t reg)
     case TC_CAPTURE_A:
         tc->capture_state &= ~BIT (TC_CAPTURE_A);
         ret = tc->captureA;
+        tc->captureA = 0;
         break;
 
     case TC_CAPTURE_B:
         tc->capture_state &= ~BIT (TC_CAPTURE_B);
         ret = tc->captureB;
+        tc->captureB = 0;
         break;
     }
 
@@ -449,6 +460,7 @@ tc_mode_set (tc_t tc, tc_mode_t mode)
     switch (mode)
     {
     case TC_MODE_ADC:
+    case TC_MODE_ADC_TEST:
     case TC_MODE_CLOCK:
     case TC_MODE_INTERRUPT:
     case TC_MODE_PULSE:
@@ -497,43 +509,56 @@ tc_mode_set (tc_t tc, tc_mode_t mode)
             | TC_CMR_CPCSTOP | TC_CMR_WAVSEL_UP_RC;
         break;
 
-        /* In the capture modes, the time clock is not stopped or
+        /* In the capture modes, the timer clock is not stopped or
            disabled when RB loaded.  The capture trigger can only be
            controlled by TIOAx.  Either TIOAx or TIOBx can be used to
            reset the counter (this is called external trigger).
            ABETRG = 1 specifies TIOAx for external trigger.  There are
-           many possible combinations of reset and capture.  This
-           driver does not support resetting of the counter.
+           many possible combinations of reset and capture, not all
+           implemented.
 
            The docs say that the external trigger gates the clock but
            it appears that it resets the counter.  Specifying
-           TC_CMR_ETRGEDG_NONE disables this.  */
+           TC_CMR_ETRGEDG_NONE disables this.
+
+           COVFS generates interrupt if counter overflows since
+           last reading of status register.  */
+
+    case TC_MODE_RESET_RISE_CAPTURE_RISE_RISE:
+        /* TIOBx is an external trigger that resets the counter on
+           rising edge.  TIOAx captures on rising edges.  */
+
+        tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
+            | TC_CMR_LDRA_RISING | TC_CMR_LDRB_RISING
+            | TC_CMR_ETRGEDG_RISING;
+        tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS | TC_IER_LDRBS;
+        break;
 
     case TC_MODE_CAPTURE_RISE_RISE:
         tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
             | TC_CMR_LDRA_RISING | TC_CMR_LDRB_RISING
-            | TC_CMR_ABETRG | TC_CMR_ETRGEDG_NONE;
+            | TC_CMR_ETRGEDG_NONE;
         tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS | TC_IER_LDRBS;
         break;
 
     case TC_MODE_CAPTURE_RISE_FALL:
         tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
             | TC_CMR_LDRA_RISING | TC_CMR_LDRB_FALLING
-            | TC_CMR_ABETRG | TC_CMR_ETRGEDG_NONE;
+            | TC_CMR_ETRGEDG_NONE;
         tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS | TC_IER_LDRBS;
         break;
 
     case TC_MODE_CAPTURE_FALL_RISE:
         tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
             | TC_CMR_LDRA_FALLING | TC_CMR_LDRB_RISING
-            | TC_CMR_ABETRG | TC_CMR_ETRGEDG_NONE;
+            | TC_CMR_ETRGEDG_NONE;
         tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS | TC_IER_LDRBS;
         break;
 
     case TC_MODE_CAPTURE_FALL_FALL:
         tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
             | TC_CMR_LDRA_FALLING | TC_CMR_LDRB_FALLING
-            | TC_CMR_ABETRG | TC_CMR_ETRGEDG_NONE;
+            | TC_CMR_ETRGEDG_NONE;
         tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS | TC_IER_LDRBS;
         break;
 
@@ -567,6 +592,7 @@ tc_aux_mode_set (tc_t tc, tc_mode_t mode)
             return TC_OK;
 
     case TC_MODE_ADC:
+    case TC_MODE_ADC_TEST:
     case TC_MODE_CLOCK:
     case TC_MODE_INTERRUPT:
     case TC_MODE_PULSE:
@@ -770,6 +796,9 @@ tc_init (const tc_cfg_t *cfg)
     tc->overflows = 0;
     tc->capture_state = 0;
 
+    tc->captureA = 0;
+    tc->captureB = 0;
+
     irq_enable (ID_TC0 + TC_CHANNEL (tc));
 
     return tc;
@@ -825,5 +854,6 @@ tc_clock_sync (tc_t tc, tc_period_t period)
 void
 tc_sync (void)
 {
+    /* Start all counters.  */
     TC_BASE->TC_BCR = TC_BCR_SYNC;
 }
