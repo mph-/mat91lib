@@ -9,12 +9,12 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
 
 #include "config.h"
 #include "pio.h"
 
-typedef enum 
+typedef enum
 {
     MCU_SLEEP_MODE_BACKUP,
     MCU_SLEEP_MODE_WAIT,
@@ -22,29 +22,30 @@ typedef enum
 } mcu_sleep_mode_t;
 
 
-typedef struct mcu_sleep_wakeup_cfg_struct
+typedef struct mcu_sleep_wakeup_struct
 {
     pio_t pio;
     bool active_high;
-} mcu_sleep_wakeup_cfg_t;
+} mcu_sleep_wakeup_t;
 
 
 typedef struct mcu_sleep_cfg_struct
 {
+    // Sleep mode
     mcu_sleep_mode_t mode;
-} mcu_sleep_cfg_t;    
-    
+    // Number of slow clock cycles used for debouncing.
+    uint8_t debounce;
+    uint8_t num_wakeups;
+    const mcu_sleep_wakeup_t *wakeups;
+} mcu_sleep_cfg_t;
 
-bool
-mcu_sleep_wakeup_set (const mcu_sleep_wakeup_cfg_t *cfg);    
 
-    
 void
 mcu_sleep (const mcu_sleep_cfg_t *cfg);
 
 
+
 #ifdef __cplusplus
 }
-#endif    
+#endif
 #endif /* MCU_SLEEP_H  */
-

@@ -7,13 +7,15 @@
 
 #include "mcu_sleep.h"
 #include "cpu.h"
+#include "mcu.h"
+#include "delay.h"
 #include "irq.h"
 
 
-bool
-mcu_sleep_wakeup_set (const mcu_sleep_wakeup_cfg_t *cfg)
+static bool
+mcu_sleep_wakeup_set (pio_t pio, bool active_high)
 {
-    static const pio_t wakeup_pins[] = 
+    static const pio_t wakeup_pins[] =
         {
             PA0_PIO,
             PA1_PIO,
@@ -33,23 +35,15 @@ mcu_sleep_wakeup_set (const mcu_sleep_wakeup_cfg_t *cfg)
             PA16_PIO
         };
 
-    if (!cfg)
-        return 0;
-
-    if (cfg->pio)
+    for (unsigned int i = 0; i < ARRAY_SIZE (wakeup_pins); i++)
     {
-        unsigned int i;
-
-        for (i = 0; i < ARRAY_SIZE (wakeup_pins); i++)
+        if (wakeup_pins[i] == pio)
         {
-            if (wakeup_pins[i] == cfg->pio)
-            {
-                /* Set wakeup inputs register.  */
-                SUPC->SUPC_WUIR |= BIT (i);                
-                if (cfg->active_high)
-                    SUPC->SUPC_WUIR |= BIT (i + 16);
-                return 1;
-            }
+            /* Set wakeup inputs register.  */
+            SUPC->SUPC_WUIR |= BIT (i);
+            if (active_high)
+                SUPC->SUPC_WUIR |= BIT (i + 16);
+            return 1;
         }
     }
     return 0;
@@ -59,24 +53,52 @@ mcu_sleep_wakeup_set (const mcu_sleep_wakeup_cfg_t *cfg)
 void
 mcu_sleep (const mcu_sleep_cfg_t *cfg)
 {
+    for (int i = 0; i < cfg->num_wakeups; i++)
+    {
+        // Don't sleep if wakeup pin active.
+        if (pio_input_get (cfg->wakeups[i].pio) ^ ! cfg->wakeups[i].active_high)
+            return;
+
+        mcu_sleep_wakeup_set (cfg->wakeups[i].pio, cfg->wakeups[i].active_high);
+    }
+
+    // Set debounce period in slow clock cycles.
+    BITS_INSERT (SUPC->SUPC_WUMR, cfg->debounce, 13, 15);
+
+    // Note, the SUPC is powered from VDDIO and the contents
+    // of its registers do not seem to be cleared on reset.
+    SUPC->SUPC_WUIR = 0;
+
     switch (cfg->mode)
     {
     case MCU_SLEEP_MODE_BACKUP:
 
-        /* For backup mode, set DEEPSLEEP bit in CPU system control
-           register and set the VROFF bit of SUPC_CR.  The CPU is
-           reset when on wake up.  */
-        SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+        // Select slow clock, disable PLLA, disable main xtal osc
+        mcu_select_slowclock ();
+
+        /* For backup mode, the datasheet says to set DEEPSLEEP bit in
+           CPU system control register and set the VROFF bit of
+           SUPC_CR.
+
+           This uses the alternative method where DEEPSLEEP is not set
+           but WFE is used instead.  */
+
+        // SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
         SUPC->SUPC_CR = SUPC_CR_KEY (0xA5u) | SUPC_CR_VROFF_STOP_VREG;
-        
+        // Dummy read
+        SUPC->SUPC_MR;
+        cpu_wfe ();
+        cpu_wfi ();
+
         /* Exit from backup mode occurs if there is an event on the
            WKUPEN0-15 pins, supply monitor (SM), RTC alarm, or RTT
            alarm.  The supply monitor monitors the voltage on the
-           VDDIO pin if it is enabled.  The MCU is reset.  */
+           VDDIO pin if it is enabled.  The MCU is reset using
+           backup_reset.  */
         break;
 
     case MCU_SLEEP_MODE_WAIT:
-        
+
         /* This mode is for fast wakeup.  The clocks of the core,
            peripherals and memories are stopped but these devices are
            still powered.  */
@@ -89,11 +111,11 @@ mcu_sleep (const mcu_sleep_cfg_t *cfg)
         /* Exit from backup mode occurs if there is an event on the
            WKUPEN0-15 pins, USB wakeup, RTC alarm, or RTT
            alarm.  The supply monitor monitors the voltage on the
-           VDDIO pin if it is enabled.  The MCU is not reset.  */        
+           VDDIO pin if it is enabled.  The MCU is not reset.  */
         break;
 
     case MCU_SLEEP_MODE_SLEEP:
-        
+
         /* This mode is for very fast wakeup.  Only the core clock is
            stopped.  The MCU can be woken from an interrupt.  */
         irq_global_enable ();
@@ -104,4 +126,3 @@ mcu_sleep (const mcu_sleep_cfg_t *cfg)
         return;
     }
 }
-
