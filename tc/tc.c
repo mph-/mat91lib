@@ -98,22 +98,28 @@ tc_handler (tc_t tc)
     {
         counter_value = tc->base->TC_RA;
 
-        if ((counter_value < 32768) && (status & TC_SR_COVFS))
-            tc->captureA = ((overflows + 1) << 16) | counter_value;
-        else
-            tc->captureA = (overflows << 16) | counter_value;
-        tc->capture_state |= BIT (TC_CAPTURE_A);
+        if (! (tc->capture_state & BIT (TC_CAPTURE_A)))
+        {
+            if ((counter_value < 32768) && (status & TC_SR_COVFS))
+                tc->captureA = ((overflows + 1) << 16) | counter_value;
+            else
+                tc->captureA = (overflows << 16) | counter_value;
+            tc->capture_state |= BIT (TC_CAPTURE_A);
+        }
     }
 
     if (status & TC_SR_LDRBS)
     {
         counter_value = tc->base->TC_RB;
 
-        if ((counter_value < 32768) && (status & TC_SR_COVFS))
-            tc->captureB = ((overflows + 1) << 16) | counter_value;
-        else
-            tc->captureB = (overflows << 16) | counter_value;
-        tc->capture_state |= BIT (TC_CAPTURE_B);
+        if (! (tc->capture_state & BIT (TC_CAPTURE_B)))
+        {
+            if ((counter_value < 32768) && (status & TC_SR_COVFS))
+                tc->captureB = ((overflows + 1) << 16) | counter_value;
+            else
+                tc->captureB = (overflows << 16) | counter_value;
+            tc->capture_state |= BIT (TC_CAPTURE_B);
+        }
     }
 
     if (status & TC_SR_COVFS)
