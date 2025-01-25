@@ -155,6 +155,11 @@ tc_counter_t
 tc_counter_get (tc_t tc);
 
 
+/** Get TC capture counts.  */
+uint16_t
+tc_capture_count_get (tc_t tc, tc_capture_t reg);
+
+
 /** Read specified TC capture register (A or B).  */
 tc_counter_t
 tc_capture_get (tc_t tc, tc_capture_t reg);

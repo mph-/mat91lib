@@ -105,6 +105,7 @@ tc_handler (tc_t tc)
             else
                 tc->captureA = (overflows << 16) | counter_value;
             tc->capture_state |= BIT (TC_CAPTURE_A);
+            tc->capture_countA++;
         }
     }
 
@@ -119,6 +120,7 @@ tc_handler (tc_t tc)
             else
                 tc->captureB = (overflows << 16) | counter_value;
             tc->capture_state |= BIT (TC_CAPTURE_B);
+            tc->capture_countB++;
         }
     }
 
@@ -254,6 +256,21 @@ tc_capture_get (tc_t tc, tc_capture_t reg)
 
     irq_global_enable ();
     return ret;
+}
+
+
+uint16_t
+tc_capture_count_get (tc_t tc, tc_capture_t reg)
+{
+    switch (reg)
+    {
+    case TC_CAPTURE_A:
+        return tc->capture_countA;
+
+    case TC_CAPTURE_B:
+        return tc->capture_countB;
+    }
+    return 0;
 }
 
 
@@ -804,6 +821,9 @@ tc_init (const tc_cfg_t *cfg)
 
     tc->captureA = 0;
     tc->captureB = 0;
+
+    tc->capture_countA = 0;
+    tc->capture_countB = 0;
 
     irq_enable (ID_TC0 + TC_CHANNEL (tc));
 
