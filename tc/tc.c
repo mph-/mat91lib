@@ -126,6 +126,9 @@ tc_handler (tc_t tc)
 
     if (status & TC_SR_COVFS)
         tc->overflows = overflows + 1;
+
+    if (status & TC_SR_LOVRS)
+        tc->load_overflows++;
 }
 
 
@@ -564,6 +567,13 @@ tc_mode_set (tc_t tc, tc_mode_t mode)
         tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS | TC_IER_LDRBS;
         break;
 
+    case TC_MODE_CAPTURE_RISE:
+        tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
+            | TC_CMR_LDRA_RISING
+            | TC_CMR_ETRGEDG_NONE;
+        tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS;
+        break;
+
     case TC_MODE_CAPTURE_RISE_FALL:
         tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
             | TC_CMR_LDRA_RISING | TC_CMR_LDRB_FALLING
@@ -583,6 +593,13 @@ tc_mode_set (tc_t tc, tc_mode_t mode)
             | TC_CMR_LDRA_FALLING | TC_CMR_LDRB_FALLING
             | TC_CMR_ETRGEDG_NONE;
         tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS | TC_IER_LDRBS;
+        break;
+
+    case TC_MODE_CAPTURE_FALL:
+        tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
+            | TC_CMR_LDRA_FALLING
+            | TC_CMR_ETRGEDG_NONE;
+        tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS;
         break;
 
     case TC_MODE_NONE:
