@@ -53,6 +53,10 @@ mcu_sleep_wakeup_set (pio_t pio, bool active_high)
 void
 mcu_sleep (const mcu_sleep_cfg_t *cfg)
 {
+    // Note, the SUPC is powered from VDDIO and the contents
+    // of its registers do not seem to be cleared on reset.
+    SUPC->SUPC_WUIR = 0;
+
     for (int i = 0; i < cfg->num_wakeups; i++)
     {
         // Don't sleep if wakeup pin active.
@@ -64,10 +68,6 @@ mcu_sleep (const mcu_sleep_cfg_t *cfg)
 
     // Set debounce period in slow clock cycles.
     BITS_INSERT (SUPC->SUPC_WUMR, cfg->debounce, 13, 15);
-
-    // Note, the SUPC is powered from VDDIO and the contents
-    // of its registers do not seem to be cleared on reset.
-    SUPC->SUPC_WUIR = 0;
 
     switch (cfg->mode)
     {

@@ -52,11 +52,24 @@ typedef enum
     TC_MODE_DELAY_ONESHOT,
     /** Generate square wave (or close to it).  */
     TC_MODE_CLOCK,
-    /** Capture and measure an external signal.  */
+    /** Capture register A on rising input.  */
+    TC_MODE_CAPTURE_RISE,
+    /** Capture register A on falling input.  */
+    TC_MODE_CAPTURE_FALL,
+    /** Capture register A on rising input and capture register B on
+        next rising input.  */
     TC_MODE_CAPTURE_RISE_RISE,
+    /** Capture register A on rising input and capture register B on
+        next falling input.  */
     TC_MODE_CAPTURE_RISE_FALL,
+    /** Capture register A on falling input and capture register B on
+        next rising input.  */
     TC_MODE_CAPTURE_FALL_RISE,
+    /** Capture register A on falling input and capture register B on
+        next falling input.  */
     TC_MODE_CAPTURE_FALL_FALL,
+    /** Reset counter on rising input, capture register A on falling
+        input and capture register B on next falling input.  */
     TC_MODE_RESET_RISE_CAPTURE_RISE_RISE,
     /** Triggering of ADC (this doesn't use the TC pin).  */
     TC_MODE_ADC,
@@ -153,6 +166,11 @@ tc_stop (tc_t tc);
 /** Get TC counter value.  */
 tc_counter_t
 tc_counter_get (tc_t tc);
+
+
+/** Get TC capture counts.  */
+uint16_t
+tc_capture_count_get (tc_t tc, tc_capture_t reg);
 
 
 /** Read specified TC capture register (A or B).  */

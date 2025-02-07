@@ -98,26 +98,37 @@ tc_handler (tc_t tc)
     {
         counter_value = tc->base->TC_RA;
 
-        if ((counter_value < 32768) && (status & TC_SR_COVFS))
-            tc->captureA = ((overflows + 1) << 16) | counter_value;
-        else
-            tc->captureA = (overflows << 16) | counter_value;
-        tc->capture_state |= BIT (TC_CAPTURE_A);
+        if (! (tc->capture_state & BIT (TC_CAPTURE_A)))
+        {
+            if ((counter_value < 32768) && (status & TC_SR_COVFS))
+                tc->captureA = ((overflows + 1) << 16) | counter_value;
+            else
+                tc->captureA = (overflows << 16) | counter_value;
+            tc->capture_state |= BIT (TC_CAPTURE_A);
+            tc->capture_countA++;
+        }
     }
 
     if (status & TC_SR_LDRBS)
     {
         counter_value = tc->base->TC_RB;
 
-        if ((counter_value < 32768) && (status & TC_SR_COVFS))
-            tc->captureB = ((overflows + 1) << 16) | counter_value;
-        else
-            tc->captureB = (overflows << 16) | counter_value;
-        tc->capture_state |= BIT (TC_CAPTURE_B);
+        if (! (tc->capture_state & BIT (TC_CAPTURE_B)))
+        {
+            if ((counter_value < 32768) && (status & TC_SR_COVFS))
+                tc->captureB = ((overflows + 1) << 16) | counter_value;
+            else
+                tc->captureB = (overflows << 16) | counter_value;
+            tc->capture_state |= BIT (TC_CAPTURE_B);
+            tc->capture_countB++;
+        }
     }
 
     if (status & TC_SR_COVFS)
         tc->overflows = overflows + 1;
+
+    if (status & TC_SR_LOVRS)
+        tc->load_overflows++;
 }
 
 
@@ -248,6 +259,21 @@ tc_capture_get (tc_t tc, tc_capture_t reg)
 
     irq_global_enable ();
     return ret;
+}
+
+
+uint16_t
+tc_capture_count_get (tc_t tc, tc_capture_t reg)
+{
+    switch (reg)
+    {
+    case TC_CAPTURE_A:
+        return tc->capture_countA;
+
+    case TC_CAPTURE_B:
+        return tc->capture_countB;
+    }
+    return 0;
 }
 
 
@@ -541,6 +567,13 @@ tc_mode_set (tc_t tc, tc_mode_t mode)
         tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS | TC_IER_LDRBS;
         break;
 
+    case TC_MODE_CAPTURE_RISE:
+        tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
+            | TC_CMR_LDRA_RISING
+            | TC_CMR_ETRGEDG_NONE;
+        tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS;
+        break;
+
     case TC_MODE_CAPTURE_RISE_FALL:
         tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
             | TC_CMR_LDRA_RISING | TC_CMR_LDRB_FALLING
@@ -560,6 +593,13 @@ tc_mode_set (tc_t tc, tc_mode_t mode)
             | TC_CMR_LDRA_FALLING | TC_CMR_LDRB_FALLING
             | TC_CMR_ETRGEDG_NONE;
         tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS | TC_IER_LDRBS;
+        break;
+
+    case TC_MODE_CAPTURE_FALL:
+        tc->base->TC_CMR = TC_CMR_TCCLKS_TIMER_CLOCK1
+            | TC_CMR_LDRA_FALLING
+            | TC_CMR_ETRGEDG_NONE;
+        tc->base->TC_IER = TC_IER_COVFS | TC_IER_LDRAS;
         break;
 
     case TC_MODE_NONE:
@@ -798,6 +838,9 @@ tc_init (const tc_cfg_t *cfg)
 
     tc->captureA = 0;
     tc->captureB = 0;
+
+    tc->capture_countA = 0;
+    tc->capture_countB = 0;
 
     irq_enable (ID_TC0 + TC_CHANNEL (tc));
 
