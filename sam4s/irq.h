@@ -40,37 +40,43 @@ static inline void irq_type_set (irq_id_t id, irq_type_t type)
 static inline void irq_priority_set (irq_id_t id, irq_priority_t priority)
 {
     // The smaller the number the higher the priority.
-    NVIC->IP[id] = priority << 4;
+    if (id >= 0 && id <= 256)
+        NVIC->IP[id] = priority << 4;
 }
 
 
 static inline void irq_clear (irq_id_t id)
 {
-    NVIC->ICPR[id >> 5] = BIT (id & 0x1f);
+    if (id >= 0 && id <= 256)
+        NVIC->ICPR[id >> 5] = BIT (id & 0x1f);
 }
 
 
 static inline void irq_enable (irq_id_t id)
 {
-    NVIC->ISER[id >> 5] = BIT (id & 0x1f);
+    if (id >= 0 && id <= 256)
+        NVIC->ISER[id >> 5] = BIT (id & 0x1f);
 }
 
 
 static inline bool irq_enabled_p (irq_id_t id)
 {
-    return (NVIC->ISER[id >> 5] & BIT (id & 0x1f)) != 0;
+    if (id >= 0 && id <= 256)
+        return (NVIC->ISER[id >> 5] & BIT (id & 0x1f)) != 0;
 }
 
 
 static inline void irq_disable (irq_id_t id)
 {
-    NVIC->ICER[id >> 5] = BIT (id & 0x1f);
+    if (id >= 0 && id <= 256)
+        NVIC->ICER[id >> 5] = BIT (id & 0x1f);
 }
 
 
 static inline void irq_trigger (irq_id_t id)
 {
-    NVIC->ISPR[id >> 5] = BIT (id & 0x1f);
+    if (id >= 0 && id <= 256)
+        NVIC->ISPR[id >> 5] = BIT (id & 0x1f);
 }
 
 
