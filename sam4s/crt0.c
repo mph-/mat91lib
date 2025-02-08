@@ -161,9 +161,8 @@ void _reset_handler (void)
 
     /* There's not much frigging around to set things up; the initial
        stack pointer is loaded from the vector table.  At this point
-       we are running on the slow clock?  We could crank things up
-       before initialising variables etc but this will put constraints
-       on the code to set up the clock, etc.  */
+       we are running on the internal 4 MHz RC oscillator.  We could
+       crank things up before initialising variables, etc..  */
 
     /* Initialise initialised global variables in .data and relocate
        .ramtext function for functions in the ROM model that need
