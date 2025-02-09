@@ -340,6 +340,9 @@ mcu_clock_init (void)
         continue;
     #endif
 
+    if (PMC->PMC_MCKR != 0x11)
+        mcu_mck_ready_wait (13);
+
     /* Switch to PLLA_CLK for MCK.  */
     PMC->PMC_MCKR = (PMC->PMC_MCKR & ~PMC_MCKR_CSS_Msk)
         | PMC_MCKR_CSS_PLLA_CLK;
