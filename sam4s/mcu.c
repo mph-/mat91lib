@@ -13,17 +13,40 @@
 
 #define MCU_FLASH_WAIT_STATES ((MCU_FLASH_READ_CYCLES) - 1)
 
-/* This must be in range 0--6.  The default is 1 giving a prescale
-   value of 2.  */
-#ifndef MCU_MCK_PRESCALER_VALUE
+
+#ifndef MCU_MCK_PRESCALE
+#error MCU_MCK_PRESCALE undefined, also check MCU_PLLA_MUL since this no longer assumes a MCK prescale by 2
+#define MCU_MCK_PRESCALE 2
+#endif
+
+#if MCU_MCK_PRESCALE == 1
+#define MCU_MCK_PRESCALER_VALUE 0
+#endif
+#if MCU_MCK_PRESCALE == 2
 #define MCU_MCK_PRESCALER_VALUE 1
 #endif
-
-#if MCU_MCK_PRESCALER_VALUE > 6
-#error MCU_MCK_PRESCALER_VALUE must be 6 or smaller
+#if MCU_MCK_PRESCALE == 3
+#define MCU_MCK_PRESCALER_VALUE 7
+#endif
+#if MCU_MCK_PRESCALE == 4
+#define MCU_MCK_PRESCALER_VALUE 2
+#endif
+#if MCU_MCK_PRESCALE == 8
+#define MCU_MCK_PRESCALER_VALUE 3
+#endif
+#if MCU_MCK_PRESCALE == 16
+#define MCU_MCK_PRESCALER_VALUE 4
+#endif
+#if MCU_MCK_PRESCALE == 32
+#define MCU_MCK_PRESCALER_VALUE 5
+#endif
+#if MCU_MCK_PRESCALE == 64
+#define MCU_MCK_PRESCALER_VALUE 6
 #endif
 
-#define MCU_MCK_PRESCALE (1 << (MCU_MCK_PRESCALER_VALUE))
+#ifndef MCU_MCK_PRESCALER_VALUE
+#error Invalid MCU_MCK_PRESCALE value, must be 1, 2, 3, 4, 8, 16, 32, or 64
+#endif
 
 /* CPU_PLL_DIV and CPU_PLL_MUL are for backward compatibility and
    shall be deprecated.  */
@@ -95,9 +118,9 @@
 
 #define MCU_USB_LOG2_DIV 0
 
-/* The PLLA frequency is given by (F_XTAL * MCU_PLLA_MUL) / MCU_PLLA_DIV.
+/* The PLLA frequency is given by (F_XTAL * MCU_PLLA_MUL) / MCU_PLLA_DIV / 2.
 
-   The MCK frequency is given by (F_XTAL * MCU_PLLA_MUL) / MCU_PLLA_DIV / MCU_MCK_PRESCALE.
+   The MCK frequency is given by F_PLLA / MCU_MCK_PRESCALE.
 */
 
 
@@ -274,7 +297,8 @@ mcu_clock_init (void)
 
        If the USB clock is derived from PLLA this restricts MCK to be
        a multiple of 48 MHz required for the USB clock.  This
-       restriction can be relaxed using PLLB for the USB.
+       restriction can be relaxed using PLLB for the USB.  The UDP
+       driver determines the correct prescale for the USB.
     */
 
     if (0 && PMC->PMC_MCKR != PMC_MCKR_CSS_MAIN_CLK)
@@ -348,7 +372,7 @@ mcu_clock_init (void)
         | PMC_MCKR_CSS_PLLA_CLK;
     mcu_mck_ready_wait (3);
 
-    if (PMC->PMC_MCKR != 0x12)
+    if (PMC->PMC_MCKR != 0x02)
         mcu_clock_error (12);
 
     return 1;
@@ -491,7 +515,7 @@ mcu_select_slowclock (void)
        the prescale 2 reduces the chances of a problem occuring but
        does not fix it. */
     PMC->PMC_MCKR = (PMC->PMC_MCKR & ~PMC_MCKR_PRES_Msk)
-        | PMC_MCKR_PRES_CLK_2;
+        | PMC_MCKR_PRES_CLK_1;
 
     mcu_mck_ready_wait (5);
 

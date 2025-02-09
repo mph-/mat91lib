@@ -154,23 +154,21 @@ void _reset_handler (void)
     char *src;
     char *dst;
 
-    /* The stack pointer is automatically loaded with the first entry
-       in the vector table on reset.  However, when debugging it is
-       useful to jump to the reset address and have the stack pointer
-       reinitialized.  */
-    register char *p = &__stack_start__;
-    register uint32_t sp __asm__ ("sp") = (uint32_t)p;
-    __asm__ ("" : : "r" (sp));  /* Dummy use  */
+    /* The reset reason can be found in RSTC->RSTC_SR; see
+       mcu_reset_type_get ().
 
+       On reset, the MCU runs on the internal 4 MHz RC oscillator (no
+       wait states are required for reading flash) and the stack
+       pointer is automatically loaded with the first entry in the
+       vector table.
+
+       To reset the MCU in the debugger, call mcu_reset.  Jumping to
+       reset won't reset the peripherals and won't reinitialise the
+       stack pointer.  */
 
     SCB->VTOR = 0;
 
-    /* There's not much frigging around to set things up; the initial
-       stack pointer is loaded from the vector table.  At this point
-       we are running on the internal 4 MHz RC oscillator.  We could
-       crank things up before initialising variables, etc..  */
-
-    /* Initialise initialised global variables in .data and relocate
+    /* Copy initialised global variables in .data and relocate
        .ramtext function for functions in the ROM model that need
        to execute out of RAM for speed.  */
     for (src = &__data_load__, dst = &__data_start__; dst < &__data_end__; )

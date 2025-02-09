@@ -1565,7 +1565,7 @@ udp_enable (udp_t udp)
     #endif
 #endif
 
-    // Enable the 48MHz USB clock UDPCK and System Peripheral USB clock
+    // Enable the 48 MHz USB clock UDPCK and System Peripheral USB clock
     PMC->PMC_SCER |= PMC_SCER_UDP;
     mcu_pmc_enable (ID_UDP);
 
