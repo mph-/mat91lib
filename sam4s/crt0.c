@@ -35,7 +35,8 @@ void _unexpected_handler (void);
 
 void _nmi_handler (void)
 {
-    _unexpected_handler ();
+    while (1)
+        continue;
 }
 
 
@@ -43,25 +44,30 @@ void _hardfault_handler (void)
 {
     /* This is due to an error during exception processing.
        The reason can be found in SCB_HFSR.  */
-    _unexpected_handler ();
+    while (1)
+        continue;
 }
 
 
 void _memmanage_handler (void)
 {
-    _unexpected_handler ();
+    while (1)
+        continue;
 }
 
 
 void _busfault_handler (void)
 {
-    _unexpected_handler ();
+    /* The address causing the problem is stored in SCB->BFAR.  */
+    while (1)
+        continue;
 }
 
 
 void _usagefault_handler (void)
 {
-    _unexpected_handler ();
+    while (1)
+        continue;
 }
 
 

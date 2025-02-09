@@ -25,9 +25,11 @@ typedef uint32_t mcu_unique_id_t[4];
 
 
 #ifndef MCU_FLASH_READ_CYCLES
-/* 5 cycles for 96 MHz, 6 cycles for 120 MHz for 2.7 < VDDIO < 3.6
-   and VDDCORE 1.2 V.   Need extra read cycle for lower VDDIO.  */
-#define MCU_FLASH_READ_CYCLES ((((int)((F_CPU) / 1e6)) + 20) / 21)
+/* 6 cycles for 96 MHz, 7 cycles for 120 MHz for 2.7 < VDDIO < 3.6
+   and VDDCORE 1.2 V.
+
+   Need extra read cycle for lower VDDIO.  */
+#define MCU_FLASH_READ_CYCLES ((int)((((F_CPU) / 1e6) - 3) / 17) + 1)
 #endif
 
 
@@ -84,6 +86,10 @@ mcu_watchdog_reset (void);
 
 void
 mcu_watchdog_enable (void);
+
+
+void
+mcu_flash_wait_states_set (uint8_t wait_states);
 
 
 static inline void

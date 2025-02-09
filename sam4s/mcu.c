@@ -8,6 +8,7 @@
 #include "mcu.h"
 #include "cpu.h"
 #include "irq.h"
+#include "pio.h"
 
 
 #define MCU_FLASH_WAIT_STATES ((MCU_FLASH_READ_CYCLES) - 1)
@@ -103,14 +104,25 @@
 /* The AT91 nor flash memory is single plane so it is not possible
    to write to it while executing code out of it.  */
 
-/** Initialise flash memory controller.  */
 static void
+mcu_flash_fmr_set (uint32_t value)
+    __attribute__ ((section(".ramtext")));
+
+
+static void
+mcu_flash_fmr_set (uint32_t fmr)
+{
+    EFC0->EEFC_FMR = fmr;
+}
+
+
+/** Set number of flash wait states.  */
+void
 mcu_flash_wait_states_set (uint8_t wait_states)
 {
-    /* Set number of MCK cycles per microsecond for the flash
-       microsecond cycle number (FMCN) field of the flash mode
-       register (FMR).  */
-     EFC0->EEFC_FMR = EEFC_FMR_FWS (wait_states);
+    uint32_t fmr = EFC0->EEFC_FMR & (~EEFC_FMR_FWS_Msk);
+
+    mcu_flash_fmr_set (fmr | EEFC_FMR_FWS (wait_states));
 }
 
 
@@ -202,18 +214,31 @@ mcu_fast_rc_mainck_start (void)
 }
 
 
-static bool
-mcu_mck_ready_wait (void)
+static void
+mcu_clock_error (int code)
+{
+    pio_config_set (LED_RED_PIO, PIO_OUTPUT_HIGH);
+
+    while (1);
+}
+
+
+static void
+mcu_mck_ready_wait (int code)
 {
     int timeout;
 
     /* Whenever PMC_MCKR is written then PMC_SR_MCKRDY is cleared; it
-       gets set when the MCK is established.  */
+       gets set when the MCK is established.
 
-    for (timeout = 1000; timeout && ! (PMC->PMC_SR & PMC_SR_MCKRDY); timeout--)
+       This waits far longer than necessary; only about 5 slow clock
+       cycles is required in the worst case.  */
+
+    for (timeout = 2000; timeout && ! (PMC->PMC_SR & PMC_SR_MCKRDY); timeout--)
         continue;
 
-    return timeout != 0;
+    if (timeout == 0)
+        mcu_clock_error (code);
 }
 
 
@@ -225,7 +250,7 @@ mcu_clock_init (void)
        oscillator is disabled after reset and the 4 MHz internal RC
        oscillator is selected.
 
-       There are four clock sources:
+       There are four clock sources for MCK:
        1. SLCK (the 32 kHz internal RC oscillator or
           32 kHz external crystal slow clock),
 
@@ -252,15 +277,16 @@ mcu_clock_init (void)
        restriction can be relaxed using PLLB for the USB.
     */
 
+    if (0 && PMC->PMC_MCKR != PMC_MCKR_CSS_MAIN_CLK)
+        mcu_clock_error (10);
 
-    /* Select MAINCK for MCK (this should be selected on hardware
-       reset but does not seem to on software reset).  */
+    /* Select MAINCK for MCK (this is selected on hardware
+       reset but not if we jump to reset in debugger).  */
     if ((PMC->PMC_MCKR & PMC_MCKR_CSS_Msk) != PMC_MCKR_CSS_MAIN_CLK)
     {
         PMC->PMC_MCKR = (PMC->PMC_MCKR & ~PMC_MCKR_CSS_Msk)
             | PMC_MCKR_CSS_MAIN_CLK;
-        if (! mcu_mck_ready_wait ())
-            return 0;
+        mcu_mck_ready_wait (1);
     }
 
 #ifdef MCU_12MHZ_RC_OSC
@@ -274,19 +300,15 @@ mcu_clock_init (void)
        connected and switch to RC oscillator instead.  */
 #endif
 
-    /* Select MAINCK for MCK (this should already be selected).  */
-    PMC->PMC_MCKR = (PMC->PMC_MCKR & ~PMC_MCKR_CSS_Msk)
-        | PMC_MCKR_CSS_MAIN_CLK;
-    if (! mcu_mck_ready_wait ())
-        return 0;
-
     /* TODO: disable RC oscillator if using XTAL oscillator.  */
 
     /* Set prescaler.  */
     PMC->PMC_MCKR = (PMC->PMC_MCKR & ~PMC_MCKR_PRES_Msk) | (MCU_MCK_PRESCALER_VALUE << 4);
 
-    if (! mcu_mck_ready_wait ())
-        return 0;
+    mcu_mck_ready_wait (2);
+
+    if (PMC->PMC_MCKR != 0x11)
+        mcu_mck_ready_wait (11);
 
     /* Could disable internal fast RC oscillator here if not being used.  */
 
@@ -321,8 +343,10 @@ mcu_clock_init (void)
     /* Switch to PLLA_CLK for MCK.  */
     PMC->PMC_MCKR = (PMC->PMC_MCKR & ~PMC_MCKR_CSS_Msk)
         | PMC_MCKR_CSS_PLLA_CLK;
-    if (! mcu_mck_ready_wait ())
-        return 0;
+    mcu_mck_ready_wait (3);
+
+    if (PMC->PMC_MCKR != 0x12)
+        mcu_clock_error (12);
 
     return 1;
 }
@@ -366,6 +390,27 @@ mcu_watchdog_disable (void)
 }
 
 
+void
+mcu_bus_fault_enable (void)
+{
+    SCB->SHCSR |= SCB_SHCSR_BUSFAULTENA_Msk;
+}
+
+
+void
+mcu_usage_fault_enable (void)
+{
+    SCB->SHCSR |= SCB_SHCSR_USGFAULTENA_Msk;
+}
+
+
+void
+mcu_mem_fault_enable (void)
+{
+    SCB->SHCSR |= SCB_SHCSR_MEMFAULTENA_Msk;
+}
+
+
 /** Disable JTAG but allow SWD.  This frees up PB5 and PB6 as PIO.  */
 void
 mcu_jtag_disable (void)
@@ -392,6 +437,14 @@ mcu_init (void)
     for (i = 0; i < 8; i++)
         NVIC->ICER[i] = ~0;
 
+    /* Enable exceptions so can debug crash, otherwise hardfault
+       handler called for all.  */
+    mcu_bus_fault_enable ();
+
+    mcu_usage_fault_enable ();
+
+    mcu_mem_fault_enable ();
+
     mcu_reset_enable ();
 
     mcu_watchdog_disable ();
@@ -412,8 +465,7 @@ void
 mcu_reset (void)
 {
     /* Reset processor and peripherals.  */
-    RSTC->RSTC_CR = RSTC_CR_PROCRST | RSTC_CR_PERRST
-        | (0xa5 << 24);
+    RSTC->RSTC_CR = RSTC_CR_PROCRST | RSTC_CR_PERRST      | (0xa5 << 24);
 }
 
 
@@ -423,19 +475,22 @@ mcu_select_slowclock (void)
     /* Switch master clock (MCK) from PLLACLK to SLCK.  Note the prescale
        (PRES) and clock source (CSS) fields cannot be changed at the
        same time.  We first switch from the PLLACLK to SLCK then set
-       the prescaler to divide by 2.  */
+       the prescaler.  */
+
     PMC->PMC_MCKR = (PMC->PMC_MCKR & ~PMC_MCKR_CSS_Msk)
         | PMC_MCKR_CSS_SLOW_CLK;
 
-    if (! mcu_mck_ready_wait ())
-        return 0;
+    mcu_mck_ready_wait (4);
 
-    /* Set prescaler to divide by 2.  */
+    /* If we prescale by 1, then for some odd reason, wake for backup
+       sometimes starts with PLLA as MAINCK with prescale = 1.  This
+       clock frequency is too fast and the CPU does not run.  Making
+       the prescale 2 reduces the chances of a problem occuring but
+       does not fix it. */
     PMC->PMC_MCKR = (PMC->PMC_MCKR & ~PMC_MCKR_PRES_Msk)
         | PMC_MCKR_PRES_CLK_2;
 
-    if (! mcu_mck_ready_wait ())
-        return 0;
+    mcu_mck_ready_wait (5);
 
     /* Disable PLLA.  */
     PMC->CKGR_PLLAR = CKGR_PLLAR_ONE | CKGR_PLLAR_MULA (0);
@@ -539,15 +594,13 @@ mcu_power_mode_low (void)
     PMC->PMC_MCKR = (PMC->PMC_MCKR & AT91C_PMC_PRES)
         | AT91C_PMC_CSS_SLOW_CLK;
 
-    if (! mcu_mck_ready_wait ())
-        return 0;
+    mcu_mck_ready_wait (6);
 
     /* Set prescaler to divide by 64.  */
     PMC->PMC_MCKR = (PMC->PMC_MCKR & AT91C_PMC_CSS)
         | AT91C_PMC_PRES_CLK_64;
 
-    if (! mcu_mck_ready_wait ())
-        return 0;
+    mcu_mck_ready_wait (7);
 
     /* Disable PLL.  */
     PMC->PMC_PLLR = 0;
