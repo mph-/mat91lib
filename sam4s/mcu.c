@@ -247,6 +247,16 @@ mcu_fast_rc_mainck_start (void)
 
 
 static void
+mcu_fast_rc_mainck_stop (void)
+{
+    /* Disable fast RC oscillator.  Be careful with read-modify-writes
+       to the CKGR_MOR register since reading of the key field does not
+       return zero.  */
+    PMC->CKGR_MOR = CKGR_MOR_KEY (0x37) | (PMC->CKGR_MOR & ~CKGR_MOR_MOSCRCEN);
+}
+
+
+static void
 mcu_clock_error (int code)
 {
 #ifdef LED_ERROR_PIO
@@ -327,6 +337,9 @@ mcu_clock_init (void)
     */
 
 #if 0
+    /* After programming with OpenOCD, the MCK is still running
+       from PLLACK, however, the number of flash wait states is suitable.  */
+
     if (mcu_mck_css_get () != PMC_MCKR_CSS_MAIN_CLK)
         mcu_clock_error (10);
 
@@ -343,9 +356,9 @@ mcu_clock_init (void)
 
     /* TODO: check if XTAL oscillator fails to start; say if XTAL not
        connected and switch to RC oscillator instead.  */
-#endif
 
-    /* TODO: disable RC oscillator if using XTAL oscillator.  */
+    mcu_fast_rc_mainck_stop ();
+#endif
 
     /* Set prescaler.  */
     if (MCU_MCK_PRESCALER_VALUE)
@@ -354,8 +367,6 @@ mcu_clock_init (void)
 
         mcu_mck_ready_wait (2);
     }
-
-    /* Could disable internal fast RC oscillator here if not being used.  */
 
     /* Disable PLLA if it is running and reset fields.  */
     PMC->CKGR_PLLAR = CKGR_PLLAR_ONE | CKGR_PLLAR_MULA (0);
