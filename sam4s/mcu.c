@@ -538,7 +538,7 @@ mcu_select_slowclock (void)
 
     mcu_mck_ready_wait (4);
 
-    /* If we prescale by 1, then for some odd reason, wake for backup
+    /* If we prescale by 1, then for some odd reason, wake from backup
        sometimes starts with PLLA as MAINCK with prescale = 1.  This
        clock frequency is too fast and the CPU does not run.  Making
        the prescale 2 reduces the chances of a problem occuring but
@@ -555,20 +555,6 @@ mcu_select_slowclock (void)
     PMC->CKGR_MOR = CKGR_MOR_KEY (0x37);
 
     return 0;
-}
-
-
-void
-mcu_power_mode_normal (void)
-{
-#if 0
-    /* TODO.  */
-    /* Switch voltage regulator to normal mode.  */
-    VREG->VREG_MR &= ~AT91C_VREG_PSTDBY;
-
-#endif
-
-    mcu_clock_init ();
 }
 
 
@@ -591,81 +577,4 @@ mcu_watchdog_enable (void)
     /* Enable watchdog with 2s timeout.  */
     WDT->WDT_MR = WDT_MR_WDD(0x200) | WDT_MR_WDRSTEN | WDT_MR_WDDBGHLT;
     mcu_watchdog_reset ();
-}
-
-
-void
-mcu_udp_disable (void)
-{
-#if 0
-    /* TODO.  */
-
-    /* The UDP is enabled by default.  To disable the UDP it is
-       necessary to turn on the UDP clock, disable the UDP, then turn
-       the clock off again.  */
-    PMC->PMC_PCER |= (1 << AT91C_ID_UDP);
-
-    UDP->UDP_TXVC |= AT91C_UDP_TXVDIS;
-
-    PMC->PMC_PCDR |= (1 << AT91C_ID_UDP);
-#endif
-}
-
-
-void
-mcu_udp_enable (void)
-{
-#if 0
-    /* TODO.  */
-    PMC->PMC_PCER |= (1 << AT91C_ID_UDP);
-    UDP->UDP_TXVC &= ~AT91C_UDP_TXVDIS;
-#endif
-}
-
-
-/* Place this function in SRAM to avoid problem when switching from
-   PLLCK to SLCK.  See errata 39.4.4.2.  */
-void
-mcu_power_mode_low (void)
-    __attribute__ ((section(".ramtext")));
-
-
-void
-mcu_power_mode_low (void)
-{
-    /* Deactivating the brownout detector saves 20 uA; this requires
-       programming of the GPNVM bits.  */
-
-    /* Disabling the UDP saves ??? uA.  Connecting the USB port pins
-       to ground also saves about 100 uA.  */
-    mcu_udp_disable ();
-
-#if 0
-    /* TODO.  */
-
-    /* Switch main clock (MCK) from PLLCLK to SLCK.  Note the prescale
-       (PRES) and clock source (CSS) fields cannot be changed at the
-       same time.  We first switch from the PLLCLK to SLCK then set
-       the prescaler to divide by 64. */
-    PMC->PMC_MCKR = (PMC->PMC_MCKR & AT91C_PMC_PRES)
-        | AT91C_PMC_CSS_SLOW_CLK;
-
-    mcu_mck_ready_wait (6);
-
-    /* Set prescaler to divide by 64.  */
-    PMC->PMC_MCKR = (PMC->PMC_MCKR & AT91C_PMC_CSS)
-        | AT91C_PMC_PRES_CLK_64;
-
-    mcu_mck_ready_wait (7);
-
-    /* Disable PLL.  */
-    PMC->PMC_PLLR = 0;
-
-    /* Disable main oscillator.  */
-    PMC->PMC_MOR = 0;
-
-    /* Switch voltage regulator to standby (low-power) mode.
-       This reduces its static current requirement from 100 uA to 25 uA.  */
-    VREG->VREG_MR |= AT91C_VREG_PSTDBY;
-#endif
 }
