@@ -162,9 +162,7 @@ mcu_flash_wait_states_set (uint8_t wait_states)
 static void
 mcu_flash_init (void)
 {
-    // Should not need these wait states when running on MAINCK at
-    // reset.
-    mcu_flash_wait_states_set (MCU_FLASH_WAIT_STATES_MAX);
+    /* No wait states are required when running on MAINCK at reset.  */
 }
 
 
@@ -371,12 +369,6 @@ mcu_clock_init (void)
         | CKGR_PLLAR_DIVA (MCU_PLLA_DIV)
         | CKGR_PLLAR_PLLACOUNT (MCU_PLLA_COUNT) | CKGR_PLLAR_ONE;
 
-    /* Wait for PLLA to start up.  This will fail if the main XTAL
-       oscillator does not have a long enough startup time as
-       specified by MCU_MAINCK_COUNT.  */
-    while (! (PMC->PMC_SR & PMC_SR_LOCKA))
-        continue;
-
 #ifdef MCU_PLLB_MUL
     /* Disable PLLB if it is running and reset fields.  */
     PMC->CKGR_PLLBR = CKGR_PLLBR_MULB (0);
@@ -386,11 +378,21 @@ mcu_clock_init (void)
     PMC->CKGR_PLLBR = CKGR_PLLBR_MULB (MCU_PLLB_MUL - 1)
         | CKGR_PLLBR_DIVB (MCU_PLLB_DIV)
         | CKGR_PLLBR_PLLBCOUNT (MCU_PLLB_COUNT);
+#endif
 
+    /* Wait for PLLA to start up.  This will fail if the main XTAL
+       oscillator does not have a long enough startup time as
+       specified by MCU_MAINCK_COUNT.  */
+    while (! (PMC->PMC_SR & PMC_SR_LOCKA))
+        continue;
+
+#ifdef MCU_PLLB_MUL
     /* Wait for PLLB to start up.  */
     while (! (PMC->PMC_SR & PMC_SR_LOCKB))
         continue;
 #endif
+
+    mcu_flash_wait_states_set (MCU_FLASH_WAIT_STATES);
 
     /* Switch to PLLA_CLK for MCK.  */
     PMC->PMC_MCKR = (PMC->PMC_MCKR & ~PMC_MCKR_CSS_Msk)
@@ -402,8 +404,6 @@ mcu_clock_init (void)
 
     if (mcu_mck_pres_get () != MCU_MCK_PRESCALER_VALUE)
         mcu_clock_error (13);
-
-    mcu_flash_wait_states_set (MCU_FLASH_WAIT_STATES);
 
     return 1;
 }
