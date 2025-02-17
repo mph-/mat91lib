@@ -8,10 +8,13 @@
 #include "mcu.h"
 #include "cpu.h"
 #include "irq.h"
+#include "delay.h"
 #include "pio.h"
 
 
 #define MCU_FLASH_WAIT_STATES ((MCU_FLASH_READ_CYCLES) - 1)
+
+#define MCU_FLASH_WAIT_STATES_MAX 7
 
 
 #ifndef MCU_MCK_PRESCALE
@@ -109,12 +112,18 @@
 #define MCU_OS_DELAY 1.5e-3
 #define MCU_OS_COUNT ((uint16_t) ((MCU_OS_DELAY * F_SLCK + 7)) / 8)
 
-#define MCU_PLL_COUNT 0x3fu
+#ifndef MCU_PLLA_COUNT
+#define MCU_PLLA_COUNT 0x3fu
+#endif
+
+#ifndef MCU_PLLB_COUNT
+#define MCU_PLLB_COUNT 0x3fu
+#endif
 
 /* The required number of slow clock cycles (400 Hz) divided by 8.
    The xtal oscillator requires 14.5 ms max to start up.  This is approx
    6 clocks.  */
-#define MCU_MAINCK_COUNT 2
+#define MCU_MAINCK_COUNT 100
 
 #define MCU_USB_LOG2_DIV 0
 
@@ -153,7 +162,9 @@ mcu_flash_wait_states_set (uint8_t wait_states)
 static void
 mcu_flash_init (void)
 {
-   mcu_flash_wait_states_set (MCU_FLASH_WAIT_STATES);
+    // Should not need these wait states when running on MAINCK at
+    // reset.
+    mcu_flash_wait_states_set (MCU_FLASH_WAIT_STATES_MAX);
 }
 
 
@@ -240,7 +251,9 @@ mcu_fast_rc_mainck_start (void)
 static void
 mcu_clock_error (int code)
 {
-    pio_config_set (LED_RED_PIO, PIO_OUTPUT_HIGH);
+#ifdef LED_ERROR_PIO
+    pio_config_set (LED_ERROR_PIO, PIO_OUTPUT_HIGH);
+#endif
 
     while (1);
 }
@@ -262,6 +275,20 @@ mcu_mck_ready_wait (int code)
 
     if (timeout == 0)
         mcu_clock_error (code);
+}
+
+
+static int
+mcu_mck_css_get (void)
+{
+    return PMC->PMC_MCKR & 0x03;
+}
+
+
+static int
+mcu_mck_pres_get (void)
+{
+    return (PMC->PMC_MCKR >> 4) & 0x07;
 }
 
 
@@ -295,23 +322,19 @@ mcu_clock_init (void)
        Here we assume that an external crystal is used for the MAINCK
        and this is multiplied by PLLA to drive MCK.
 
-       If the USB clock is derived from PLLA this restricts MCK to be
+       If the USB clock is derived from PLLA, MCK needs to be
        a multiple of 48 MHz required for the USB clock.  This
        restriction can be relaxed using PLLB for the USB.  The UDP
        driver determines the correct prescale for the USB.
     */
 
-    if (0 && PMC->PMC_MCKR != PMC_MCKR_CSS_MAIN_CLK)
+#if 0
+    if (mcu_mck_css_get () != PMC_MCKR_CSS_MAIN_CLK)
         mcu_clock_error (10);
 
-    /* Select MAINCK for MCK (this is selected on hardware
-       reset but not if we jump to reset in debugger).  */
-    if ((PMC->PMC_MCKR & PMC_MCKR_CSS_Msk) != PMC_MCKR_CSS_MAIN_CLK)
-    {
-        PMC->PMC_MCKR = (PMC->PMC_MCKR & ~PMC_MCKR_CSS_Msk)
-            | PMC_MCKR_CSS_MAIN_CLK;
-        mcu_mck_ready_wait (1);
-    }
+    if (mcu_mck_pres_get () != 0)
+        mcu_clock_error (11);
+#endif
 
 #ifdef MCU_12MHZ_RC_OSC
     /* Start fast RC oscillator and select as MAINCK.  */
@@ -327,53 +350,60 @@ mcu_clock_init (void)
     /* TODO: disable RC oscillator if using XTAL oscillator.  */
 
     /* Set prescaler.  */
-    PMC->PMC_MCKR = (PMC->PMC_MCKR & ~PMC_MCKR_PRES_Msk) | (MCU_MCK_PRESCALER_VALUE << 4);
+    if (MCU_MCK_PRESCALER_VALUE)
+    {
+        PMC->PMC_MCKR = (PMC->PMC_MCKR & ~PMC_MCKR_PRES_Msk) | (MCU_MCK_PRESCALER_VALUE << 4);
 
-    mcu_mck_ready_wait (2);
-
-    if (PMC->PMC_MCKR != 0x11)
-        mcu_mck_ready_wait (11);
+        mcu_mck_ready_wait (2);
+    }
 
     /* Could disable internal fast RC oscillator here if not being used.  */
 
     /* Disable PLLA if it is running and reset fields.  */
     PMC->CKGR_PLLAR = CKGR_PLLAR_ONE | CKGR_PLLAR_MULA (0);
 
-    /* Configure and start PLLA.  The PLLA start delay is MCU_PLL_COUNT
+    DELAY_US (1);
+
+    /* Configure and start PLLA.  The PLLA start delay is MCU_PLLA_COUNT
        SLCK cycles.  Note, PLLA (but not PLLB) needs the mysterious
        bit CKGR_PLLAR_ONE set.  */
     PMC->CKGR_PLLAR = CKGR_PLLAR_MULA (MCU_PLLA_MUL - 1)
         | CKGR_PLLAR_DIVA (MCU_PLLA_DIV)
-        | CKGR_PLLAR_PLLACOUNT (MCU_PLL_COUNT) | CKGR_PLLAR_ONE;
+        | CKGR_PLLAR_PLLACOUNT (MCU_PLLA_COUNT) | CKGR_PLLAR_ONE;
 
-    #ifdef MCU_PLLB_MUL
+    /* Wait for PLLA to start up.  This will fail if the main XTAL
+       oscillator does not have a long enough startup time as
+       specified by MCU_MAINCK_COUNT.  */
+    while (! (PMC->PMC_SR & PMC_SR_LOCKA))
+        continue;
+
+#ifdef MCU_PLLB_MUL
+    /* Disable PLLB if it is running and reset fields.  */
+    PMC->CKGR_PLLBR = CKGR_PLLBR_MULB (0);
+
     /* Configure and start PLLB.  The PLLB start delay is MCU_PLLB_COUNT
        SLCK cycles.  */
     PMC->CKGR_PLLBR = CKGR_PLLBR_MULB (MCU_PLLB_MUL - 1)
         | CKGR_PLLBR_DIVB (MCU_PLLB_DIV)
-        | CKGR_PLLBR_PLLBCOUNT (MCU_PLL_COUNT);
-    #endif
+        | CKGR_PLLBR_PLLBCOUNT (MCU_PLLB_COUNT);
 
-    /* Wait for PLLA to start up.  */
-    while (! (PMC->PMC_SR & PMC_SR_LOCKA))
-        continue;
-
-    #ifdef MCU_PLLB_MUL
     /* Wait for PLLB to start up.  */
     while (! (PMC->PMC_SR & PMC_SR_LOCKB))
         continue;
-    #endif
-
-    if (PMC->PMC_MCKR != 0x11)
-        mcu_mck_ready_wait (13);
+#endif
 
     /* Switch to PLLA_CLK for MCK.  */
     PMC->PMC_MCKR = (PMC->PMC_MCKR & ~PMC_MCKR_CSS_Msk)
         | PMC_MCKR_CSS_PLLA_CLK;
     mcu_mck_ready_wait (3);
 
-    if (PMC->PMC_MCKR != 0x02)
+    if (mcu_mck_css_get () != PMC_MCKR_CSS_PLLA_CLK)
         mcu_clock_error (12);
+
+    if (mcu_mck_pres_get () != MCU_MCK_PRESCALER_VALUE)
+        mcu_clock_error (13);
+
+    mcu_flash_wait_states_set (MCU_FLASH_WAIT_STATES);
 
     return 1;
 }
@@ -455,12 +485,10 @@ mcu_init (void)
 {
     int i;
 
-    /* Set number of flash states assuming final clock frequency
-       is faster than the current clock frequency.  */
-
     mcu_flash_init ();
 
-    /* Disable all interrupts to be sure when debugging.  */
+    /* Disable all interrupts to be sure when debugging.  This is only
+       needed if jump to reset.  */
     for (i = 0; i < 8; i++)
         NVIC->ICER[i] = ~0;
 
@@ -472,6 +500,7 @@ mcu_init (void)
 
     mcu_mem_fault_enable ();
 
+    /* Enable reset pin.  */
     mcu_reset_enable ();
 
     mcu_watchdog_disable ();
