@@ -11,6 +11,8 @@
 #include "delay.h"
 #include "pio.h"
 
+/* CHIPID_CDR register specifies the MCU, SRAM size, and flash size.  */
+
 
 #define MCU_FLASH_WAIT_STATES ((MCU_FLASH_READ_CYCLES) - 1)
 
