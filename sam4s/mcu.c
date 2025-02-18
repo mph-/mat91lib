@@ -20,7 +20,6 @@
 
 
 #ifndef MCU_MCK_PRESCALE
-#error MCU_MCK_PRESCALE undefined, also check MCU_PLLA_MUL since this no longer assumes a MCK prescale by 2
 #define MCU_MCK_PRESCALE 2
 #endif
 
